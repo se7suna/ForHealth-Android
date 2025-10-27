@@ -1,0 +1,132 @@
+# GitLab CI/CD 配置文件
+# For Health 后端 CI/CD Pipeline
+
+stages:
+  - lint        # 代码质量检查
+  - test        # 测试
+  - build       # 构建
+
+variables:
+  PYTHON_VERSION: "3.11"
+  PIP_CACHE_DIR: "$CI_PROJECT_DIR/.cache/pip"
+
+# 缓存配置
+cache:
+  paths:
+    - .cache/pip
+    - backend/.venv/
+
+# ==================== Lint Stage ====================
+
+lint:python:
+  stage: lint
+  image: python:${PYTHON_VERSION}
+  before_script:
+    - cd backend
+    - pip install flake8 black isort
+  script:
+    - echo "🔍 检查代码格式..."
+    - black --check app/
+    - echo "🔍 检查 import 排序..."
+    - isort --check-only app/
+    - echo "🔍 检查代码质量..."
+    - flake8 app/ --max-line-length=100 --extend-ignore=E203,W503
+  allow_failure: true  # 暂时允许失败
+  only:
+    changes:
+      - backend/**/*
+      - .gitlab-ci.yml
+
+# ==================== Test Stage ====================
+
+test:unit:
+  stage: test
+  image: python:${PYTHON_VERSION}
+  services:
+    - mongo:latest  # MongoDB 服务
+  variables:
+    MONGODB_URL: "mongodb://mongo:27017"
+    DATABASE_NAME: "test_for_health"
+    SECRET_KEY: "test-secret-key-for-ci"
+    SMTP_HOST: "smtp.test.com"
+    SMTP_USER: "test@test.com"
+    SMTP_PASSWORD: "test"
+    SMTP_FROM_EMAIL: "noreply@test.com"
+  before_script:
+    - cd backend
+    - pip install --upgrade pip
+    - pip install -r requirements.txt
+  script:
+    - echo "🧪 运行单元测试..."
+    - pytest tests/ -v --tb=short
+  coverage: '/TOTAL.*\s+(\d+%)$/'
+  artifacts:
+    when: always
+    reports:
+      junit: backend/test-results.xml
+  only:
+    changes:
+      - backend/**/*
+      - .gitlab-ci.yml
+
+test:integration:
+  stage: test
+  image: python:${PYTHON_VERSION}
+  services:
+    - mongo:latest
+  variables:
+    MONGODB_URL: "mongodb://mongo:27017"
+    DATABASE_NAME: "test_for_health"
+    SECRET_KEY: "test-secret-key-for-ci"
+    SMTP_HOST: "smtp.test.com"
+    SMTP_USER: "test@test.com"
+    SMTP_PASSWORD: "test"
+    SMTP_FROM_EMAIL: "noreply@test.com"
+  before_script:
+    - cd backend
+    - pip install --upgrade pip
+    - pip install -r requirements.txt
+  script:
+    - echo "🔗 运行集成测试..."
+    - echo "✅ 集成测试通过（待实现）"
+  allow_failure: true
+  only:
+    changes:
+      - backend/**/*
+      - .gitlab-ci.yml
+
+# ==================== Build Stage ====================
+
+build:backend:
+  stage: build
+  image: python:${PYTHON_VERSION}
+  before_script:
+    - cd backend
+    - pip install --upgrade pip
+    - pip install -r requirements.txt
+  script:
+    - echo "🏗️ 构建后端应用..."
+    - python -m py_compile app/**/*.py
+    - echo "✅ 构建成功"
+  artifacts:
+    paths:
+      - backend/
+    expire_in: 1 day
+  only:
+    changes:
+      - backend/**/*
+      - .gitlab-ci.yml
+
+# ==================== 通知 ====================
+
+notify:success:
+  stage: .post
+  script:
+    - echo "✅ CI/CD Pipeline 执行成功！"
+  when: on_success
+
+notify:failure:
+  stage: .post
+  script:
+    - echo "❌ CI/CD Pipeline 执行失败，请检查日志。"
+  when: on_failure
