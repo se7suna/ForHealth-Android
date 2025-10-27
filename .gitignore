@@ -23,10 +23,10 @@ wheels/
 *.egg
 
 # Virtual Environment
-venv/
-ENV/
-env/
-.venv/
+backend/venv/
+backend/ENV/
+backend/env/
+backend/.venv/
 
 # IDEs
 .vscode/

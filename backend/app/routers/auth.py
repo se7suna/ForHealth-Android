@@ -1,5 +1,5 @@
 from fastapi import APIRouter, HTTPException, status, Depends
-from fastapi.security import HTTPBearer, HTTPAuthCredential
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from app.schemas.user import (
     UserRegisterRequest,
     UserLoginRequest,
@@ -144,7 +144,7 @@ async def reset_password(reset_data: PasswordResetVerify):
 
 
 # 依赖项：获取当前登录用户
-async def get_current_user(credentials: HTTPAuthCredential = Depends(security)) -> str:
+async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security)) -> str:
     """从 JWT token 中获取当前用户邮箱"""
     token = credentials.credentials
     payload = decode_access_token(token)
