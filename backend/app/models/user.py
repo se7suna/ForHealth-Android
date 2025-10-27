@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, date
 from typing import Optional
 from pydantic import BaseModel, EmailStr, Field
 from enum import Enum
@@ -45,7 +45,8 @@ class UserInDB(BaseModel):
     # 身体基本数据
     height: Optional[float] = None  # 身高（厘米）
     weight: Optional[float] = None  # 体重（公斤）
-    age: Optional[int] = None  # 年龄
+    birthdate: Optional[date] = None  # 出生日期
+    age: Optional[int] = None  # 年龄（由后端根据出生日期计算）
     gender: Optional[Gender] = None  # 性别
 
     # 活动水平

@@ -22,10 +22,10 @@ async def update_body_data(
 
     - **height**: 身高（厘米，50-250）
     - **weight**: 体重（公斤，20-300）
-    - **age**: 年龄（岁，10-120）
+    - **birthdate**: 出生日期（格式：YYYY-MM-DD）
     - **gender**: 性别（male/female）
 
-    系统会自动计算并保存基础代谢率（BMR）
+    系统会自动根据出生日期计算年龄，并计算保存基础代谢率（BMR）
     """
     user = await user_service.update_body_data(current_user, body_data)
 
@@ -119,6 +119,8 @@ async def get_profile(current_user: str = Depends(get_current_user)):
     - 活动水平
     - 健康目标
     - 计算结果（BMR、TDEE、每日卡路里目标）
+
+    注意：年龄是根据出生日期动态计算的
     """
     user = await user_service.get_user_profile(current_user)
 
@@ -145,13 +147,14 @@ async def update_profile(
     - **username**: 用户名
     - **height**: 身高
     - **weight**: 体重
-    - **age**: 年龄
+    - **birthdate**: 出生日期（格式：YYYY-MM-DD）
     - **gender**: 性别
     - **activity_level**: 活动水平
     - **health_goal_type**: 健康目标类型
     - **target_weight**: 目标体重
     - **goal_period_weeks**: 目标周期
 
+    如果修改了出生日期，系统会自动重新计算年龄
     如果修改了相关字段，系统会自动重新计算 BMR、TDEE 和每日卡路里目标
     """
     user = await user_service.update_user_profile(current_user, profile_data)

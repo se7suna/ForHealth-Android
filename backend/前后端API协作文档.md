@@ -1,6 +1,6 @@
 # For Health 前后端 API 协作文档
 
-版本：v1.0.0
+版本：v1.1.0
 更新时间：2025-10-27
 后端负责人：hayasiakane
 
@@ -159,7 +159,7 @@ Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 
 **端点**: `POST /api/user/body-data`
 **认证**: ✅ 需要 JWT Token
-**说明**: 提交用户身体基本数据，系统会自动计算 BMR
+**说明**: 提交用户身体基本数据，系统会自动根据出生日期计算年龄，并计算 BMR
 
 #### 请求参数
 
@@ -167,17 +167,22 @@ Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 {
   "height": 175.0,
   "weight": 70.0,
-  "age": 25,
+  "birthdate": "1998-05-15",
   "gender": "male"
 }
 ```
 
-| 字段 | 类型 | 必填 | 范围 | 说明 |
+| 字段 | 类型 | 必填 | 范围/格式 | 说明 |
 |------|------|------|------|------|
 | height | float | ✅ | 50-250 | 身高（厘米） |
 | weight | float | ✅ | 20-300 | 体重（公斤） |
-| age | int | ✅ | 10-120 | 年龄 |
+| birthdate | string | ✅ | YYYY-MM-DD | 出生日期 |
 | gender | string | ✅ | male/female | 性别 |
+
+**注意**：
+- 出生日期格式必须为 `YYYY-MM-DD`（例如：1998-05-15）
+- 系统会根据出生日期自动计算年龄（周岁）
+- 计算出的年龄必须在 10-120 岁之间
 
 #### 响应示例
 
@@ -315,7 +320,7 @@ Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
   "username": "张三",
   "height": 175.0,
   "weight": 70.0,
-  "age": 25,
+  "age": 27,
   "gender": "male",
   "activity_level": "moderately_active",
   "health_goal_type": "lose_weight",
@@ -326,6 +331,10 @@ Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
   "daily_calorie_goal": 2105.16
 }
 ```
+
+**注意**：
+- 响应中的 `age` 是根据用户出生日期动态计算的当前年龄（周岁）
+- 每次请求都会返回最新计算的年龄
 
 ---
 
@@ -341,11 +350,27 @@ Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 {
   "username": "李四",
   "weight": 68.0,
+  "birthdate": "1998-08-20",
   "activity_level": "very_active"
 }
 ```
 
 所有字段都是可选的，只需要传递需要更新的字段。
+
+**可更新字段**：
+- `username`: 用户名
+- `height`: 身高
+- `weight`: 体重
+- `birthdate`: 出生日期（格式：YYYY-MM-DD）
+- `gender`: 性别
+- `activity_level`: 活动水平
+- `health_goal_type`: 健康目标类型
+- `target_weight`: 目标体重
+- `goal_period_weeks`: 目标周期
+
+**注意**：
+- 如果更新了 `birthdate`，系统会自动重新计算年龄
+- 如果修改了相关字段（身高、体重、出生日期等），系统会自动重新计算 BMR、TDEE 和每日卡路里目标
 
 #### 响应示例
 
@@ -356,7 +381,7 @@ Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
   "username": "李四",
   "height": 175.0,
   "weight": 68.0,
-  "age": 25,
+  "age": 27,
   "gender": "male",
   "activity_level": "very_active",
   "health_goal_type": "lose_weight",
@@ -480,7 +505,7 @@ interface UserProfile {
   username: string;
   height?: number;              // 身高（厘米）
   weight?: number;              // 体重（公斤）
-  age?: number;                 // 年龄
+  age?: number;                 // 年龄（周岁，由后端根据出生日期动态计算）
   gender?: Gender;              // 性别
   activity_level?: ActivityLevel;  // 活动水平
   health_goal_type?: HealthGoalType; // 健康目标类型
@@ -491,6 +516,12 @@ interface UserProfile {
   daily_calorie_goal?: number;  // 每日卡路里目标（卡路里/天）
 }
 ```
+
+**重要说明**：
+- 前端在提交身体数据时，需要发送 `birthdate`（出生日期，格式：YYYY-MM-DD）
+- 后端会根据 `birthdate` 自动计算当前年龄（周岁）
+- 前端在获取用户资料时，可以直接读取已计算好的 `age` 字段
+- 数据库同时存储 `birthdate` 和 `age` 两个字段
 
 ---
 
@@ -563,8 +594,8 @@ graph TD
    - 获取 JWT Token
 
 3. **填写身体基本数据** (`POST /api/user/body-data`)
-   - 提供身高、体重、年龄、性别
-   - 系统计算 BMR
+   - 提供身高、体重、出生日期、性别
+   - 系统自动计算年龄和 BMR
 
 4. **选择活动水平** (`POST /api/user/activity-level`)
    - 选择日常活动水平
@@ -638,7 +669,9 @@ async function apiRequest(url: string, options: RequestInit = {}) {
 
 - 邮箱格式验证
 - 密码长度验证（至少6个字符）
-- 数值范围验证（身高、体重、年龄等）
+- 数值范围验证（身高、体重等）
+- 出生日期格式验证（YYYY-MM-DD）
+- 出生日期合理性验证（计算出的年龄应在 10-120 岁之间）
 - 两次密码输入一致性验证
 
 ### 4. 错误处理
@@ -691,6 +724,16 @@ async function handleSubmit() {
 ---
 
 ## 更新日志
+
+### v1.1.0 (2025-10-27)
+
+- **重大变更**：身体数据提交方式调整
+  - 前端提交 `birthdate`（出生日期）代替 `age`（年龄）
+  - 后端自动根据出生日期计算年龄（周岁）
+  - 数据库同时存储出生日期和计算后的年龄
+  - 前端可直接读取已计算好的年龄字段
+- 优化年龄计算逻辑，确保准确计算周岁
+- 更新所有相关 API 文档和数据模型说明
 
 ### v1.0.0 (2025-10-27)
 

@@ -1,4 +1,25 @@
 from app.models.user import PAL_COEFFICIENTS, Gender, ActivityLevel, HealthGoalType
+from datetime import date
+
+
+def calculate_age(birthdate: date) -> int:
+    """
+    根据出生日期计算当前年龄
+
+    Args:
+        birthdate: 出生日期
+
+    Returns:
+        年龄（周岁）
+    """
+    today = date.today()
+    age = today.year - birthdate.year
+
+    # 如果今年生日还没到，年龄减1
+    if (today.month, today.day) < (birthdate.month, birthdate.day):
+        age -= 1
+
+    return age
 
 
 def calculate_bmr(weight: float, height: float, age: int, gender: Gender) -> float:

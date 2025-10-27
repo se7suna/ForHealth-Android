@@ -12,6 +12,7 @@ from app.services.calculation_service import (
     calculate_bmr,
     calculate_tdee,
     calculate_daily_calorie_goal,
+    calculate_age,
 )
 
 
@@ -38,16 +39,20 @@ async def update_body_data(email: str, body_data: BodyDataRequest) -> Optional[d
     """更新用户身体基本数据并计算 BMR"""
     db = get_database()
 
+    # 根据出生日期计算年龄
+    age = calculate_age(body_data.birthdate)
+
     # 计算 BMR
     bmr = calculate_bmr(
-        body_data.weight, body_data.height, body_data.age, body_data.gender
+        body_data.weight, body_data.height, age, body_data.gender
     )
 
-    # 更新数据
+    # 更新数据（同时保存 birthdate 和计算出的 age）
     update_data = {
         "height": body_data.height,
         "weight": body_data.weight,
-        "age": body_data.age,
+        "birthdate": body_data.birthdate,
+        "age": age,
         "gender": body_data.gender.value,
         "bmr": bmr,
         "updated_at": datetime.utcnow(),
@@ -151,11 +156,18 @@ async def update_user_profile(
         return None
 
     # 如果更新了身体数据，重新计算 BMR
-    if any(k in update_data for k in ["height", "weight", "age", "gender"]):
+    if any(k in update_data for k in ["height", "weight", "birthdate", "gender"]):
         height = update_data.get("height", user.get("height"))
         weight = update_data.get("weight", user.get("weight"))
-        age = update_data.get("age", user.get("age"))
+        birthdate = update_data.get("birthdate", user.get("birthdate"))
         gender = update_data.get("gender", user.get("gender"))
+
+        # 如果提供了 birthdate，重新计算 age
+        if birthdate:
+            age = calculate_age(birthdate)
+            update_data["age"] = age
+        else:
+            age = user.get("age")
 
         if all([height, weight, age, gender]):
             bmr = calculate_bmr(weight, height, age, gender)

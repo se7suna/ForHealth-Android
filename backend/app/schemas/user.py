@@ -1,5 +1,6 @@
 from pydantic import BaseModel, EmailStr, Field, validator
 from typing import Optional
+from datetime import date
 from app.models.user import ActivityLevel, HealthGoalType, Gender
 
 
@@ -28,7 +29,7 @@ class BodyDataRequest(BaseModel):
     """用户身体基本数据请求"""
     height: float = Field(..., ge=50, le=250, description="身高（厘米）")
     weight: float = Field(..., ge=20, le=300, description="体重（公斤）")
-    age: int = Field(..., ge=10, le=120, description="年龄")
+    birthdate: date = Field(..., description="出生日期")
     gender: Gender
 
     @validator("height")
@@ -41,6 +42,15 @@ class BodyDataRequest(BaseModel):
     def validate_weight(cls, v):
         if v < 20 or v > 300:
             raise ValueError("体重必须在 20-300kg 之间")
+        return v
+
+    @validator("birthdate")
+    def validate_birthdate(cls, v):
+        from datetime import date
+        today = date.today()
+        age = today.year - v.year - ((today.month, today.day) < (v.month, v.day))
+        if age < 10 or age > 120:
+            raise ValueError("年龄必须在 10-120 岁之间")
         return v
 
 
@@ -80,7 +90,7 @@ class UserProfileUpdate(BaseModel):
     username: Optional[str] = Field(None, min_length=2, max_length=50)
     height: Optional[float] = Field(None, ge=50, le=250)
     weight: Optional[float] = Field(None, ge=20, le=300)
-    age: Optional[int] = Field(None, ge=10, le=120)
+    birthdate: Optional[date] = None
     gender: Optional[Gender] = None
     activity_level: Optional[ActivityLevel] = None
     health_goal_type: Optional[HealthGoalType] = None
