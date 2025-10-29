@@ -4,8 +4,10 @@
     <string name="app_name">For Health</string>
 
     <!-- 登录注册界面 -->
+    <string name="hint_username">请输入用户名</string>
     <string name="hint_email">请输入邮箱</string>
     <string name="hint_password">请输入密码</string>
+    <string name="hint_password_confirm">请确认密码</string>
     <string name="btn_login">登录</string>
     <string name="btn_register">注册</string>
 

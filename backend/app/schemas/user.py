@@ -106,6 +106,7 @@ class UserProfileResponse(BaseModel):
     weight: Optional[float] = None
     age: Optional[int] = None
     gender: Optional[Gender] = None
+    birthdate: Optional[str] = None  # 出生日期（格式：YYYY-MM-DD）
     activity_level: Optional[ActivityLevel] = None
     health_goal_type: Optional[HealthGoalType] = None
     target_weight: Optional[float] = None
