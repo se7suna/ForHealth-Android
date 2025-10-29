@@ -1,6 +1,7 @@
 package com.example.forhealth.user
 
 import com.example.forhealth.R
+import com.example.forhealth.HomeActivity
 import android.content.Intent
 import android.widget.Button
 import android.os.Bundle
@@ -8,6 +9,12 @@ import android.widget.NumberPicker
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
+import com.example.forhealth.network.RetrofitClient
+import com.example.forhealth.utils.DataMapper
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 class HealthGoalActivity : AppCompatActivity() {
 
@@ -50,13 +57,89 @@ class HealthGoalActivity : AppCompatActivity() {
             val goalWeight = npGoalWeight.value
             val goalWeeks = npGoalWeeks.value
 
-            Toast.makeText(this,
-                "目标: $goalType\n目标体重: $goalWeight kg\n周期: $goalWeeks 周",
-                Toast.LENGTH_LONG
-            ).show()
+            // 获取之前传递的数据
+            val gender = intent.getStringExtra("gender") ?: "男"
+            val birthYear = intent.getIntExtra("birthYear", 1990)
+            val birthMonth = intent.getIntExtra("birthMonth", 1)
+            val birthDay = intent.getIntExtra("birthDay", 1)
+            val height = intent.getIntExtra("height", 170)
+            val weight = intent.getIntExtra("weight", 60)
+            val activityLevel = intent.getStringExtra("activityLevel") ?: "中度活跃"
 
-            // TODO: 跳转到下一页面或保存数据
-            finish()
+            // 保存所有用户数据到后端
+            saveUserData(gender, birthYear, birthMonth, birthDay, height, weight, activityLevel, goalType, goalWeight, goalWeeks)
+        }
+    }
+
+    private fun saveUserData(
+        gender: String,
+        birthYear: Int,
+        birthMonth: Int,
+        birthDay: Int,
+        height: Int,
+        weight: Int,
+        activityLevel: String,
+        goalType: String,
+        goalWeight: Int,
+        goalWeeks: Int
+    ) {
+        // 显示加载提示
+        val loadingToast = Toast.makeText(this, "正在保存...", Toast.LENGTH_SHORT)
+        loadingToast.show()
+        
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                // 使用DataMapper转换数据为后端格式
+                val userData = mapOf(
+                    "gender" to DataMapper.genderToBackend(gender),
+                    "birthdate" to DataMapper.birthDateToBackend(birthYear, birthMonth, birthDay),
+                    "height" to height.toDouble(),
+                    "weight" to weight.toDouble(),
+                    "activity_level" to DataMapper.activityLevelToBackend(activityLevel),
+                    "health_goal_type" to DataMapper.goalTypeToBackend(goalType),
+                    "target_weight" to goalWeight.toDouble(),
+                    "goal_period_weeks" to goalWeeks
+                )
+                
+                // 记录发送的数据，方便调试
+                android.util.Log.d("HealthGoalActivity", "准备发送数据: $userData")
+                android.util.Log.d("HealthGoalActivity", "性别: ${DataMapper.genderToBackend(gender)}")
+                android.util.Log.d("HealthGoalActivity", "出生日期: ${DataMapper.birthDateToBackend(birthYear, birthMonth, birthDay)}")
+                android.util.Log.d("HealthGoalActivity", "活动水平: ${DataMapper.activityLevelToBackend(activityLevel)}")
+                android.util.Log.d("HealthGoalActivity", "目标类型: ${DataMapper.goalTypeToBackend(goalType)}")
+
+                val result = RetrofitClient.apiService.updateProfile(userData)
+                result.fold(
+                    onSuccess = { user ->
+                        withContext(Dispatchers.Main) {
+                            loadingToast.cancel()
+                            Toast.makeText(this@HealthGoalActivity, "信息保存成功", Toast.LENGTH_SHORT).show()
+                            // 跳转到主页
+                            val intent = Intent(this@HealthGoalActivity, HomeActivity::class.java)
+                            intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+                            startActivity(intent)
+                            finish()
+                        }
+                    },
+                    onFailure = { e ->
+                        withContext(Dispatchers.Main) {
+                            loadingToast.cancel()
+                            // 显示详细的错误信息
+                            val errorMsg = e.message ?: "保存失败"
+                            Toast.makeText(this@HealthGoalActivity, errorMsg, Toast.LENGTH_LONG).show()
+                            // 同时在Log中输出详细错误，方便调试
+                            android.util.Log.e("HealthGoalActivity", "保存失败: ${e.message}", e)
+                        }
+                    }
+                )
+            } catch (e: Exception) {
+                withContext(Dispatchers.Main) {
+                    loadingToast.cancel()
+                    val errorMsg = "网络错误: ${e.message ?: e.javaClass.simpleName}"
+                    Toast.makeText(this@HealthGoalActivity, errorMsg, Toast.LENGTH_LONG).show()
+                    android.util.Log.e("HealthGoalActivity", "异常: ${e.message}", e)
+                }
+            }
         }
     }
 }

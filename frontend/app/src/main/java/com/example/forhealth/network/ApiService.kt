@@ -1,6 +1,7 @@
 package com.example.forhealth.network
 
 import com.example.forhealth.model.TokenResponse
+import com.example.forhealth.model.User
 
 interface ApiService {
 
@@ -16,5 +17,14 @@ interface ApiService {
      */
     suspend fun register(params: Map<String, String>): Result<TokenResponse>
 
-    // 后续可以增加身体数据、活动水平、健康目标上传接口
+    /**
+     * 获取用户资料
+     */
+    suspend fun getProfile(): Result<User>
+
+    /**
+     * 更新用户资料
+     * @param params 用户数据（所有字段可选）
+     */
+    suspend fun updateProfile(params: Map<String, Any>): Result<User>
 }
