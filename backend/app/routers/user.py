@@ -133,6 +133,12 @@ async def get_profile(current_user: str = Depends(get_current_user)):
     user.pop("hashed_password", None)
     user.pop("_id", None)
 
+    # 将birthdate从datetime转换为字符串格式（YYYY-MM-DD）
+    if "birthdate" in user and user["birthdate"]:
+        from datetime import datetime as dt
+        if isinstance(user["birthdate"], dt):
+            user["birthdate"] = user["birthdate"].strftime("%Y-%m-%d")
+
     return UserProfileResponse(**user)
 
 
@@ -167,5 +173,11 @@ async def update_profile(
     # 移除敏感信息
     user.pop("hashed_password", None)
     user.pop("_id", None)
+
+    # 将birthdate从datetime转换为字符串格式（YYYY-MM-DD）
+    if "birthdate" in user and user["birthdate"]:
+        from datetime import datetime as dt
+        if isinstance(user["birthdate"], dt):
+            user["birthdate"] = user["birthdate"].strftime("%Y-%m-%d")
 
     return UserProfileResponse(**user)
