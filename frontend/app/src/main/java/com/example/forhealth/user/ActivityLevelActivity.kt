@@ -53,7 +53,15 @@ class ActivityLevelActivity : AppCompatActivity() {
 
         btnNext.setOnClickListener {
             val intent = Intent(this, HealthGoalActivity::class.java)
+            // 传递活动水平数据
             intent.putExtra("activityLevel", activityLevels[npActivity.value])
+            // 传递之前的数据
+            intent.putExtra("gender", getIntent().getStringExtra("gender"))
+            intent.putExtra("birthYear", getIntent().getIntExtra("birthYear", 1990))
+            intent.putExtra("birthMonth", getIntent().getIntExtra("birthMonth", 1))
+            intent.putExtra("birthDay", getIntent().getIntExtra("birthDay", 1))
+            intent.putExtra("height", getIntent().getIntExtra("height", 170))
+            intent.putExtra("weight", getIntent().getIntExtra("weight", 60))
             startActivity(intent)
             finish()
         }

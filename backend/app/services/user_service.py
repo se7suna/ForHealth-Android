@@ -1,5 +1,5 @@
 from typing import Optional
-from datetime import datetime
+from datetime import datetime, date
 from app.database import get_database
 from app.models.user import UserInDB, ActivityLevel, HealthGoalType
 from app.schemas.user import (
@@ -48,10 +48,13 @@ async def update_body_data(email: str, body_data: BodyDataRequest) -> Optional[d
     )
 
     # 更新数据（同时保存 birthdate 和计算出的 age）
+    # 将birthdate从date转换为datetime（MongoDB要求）
+    birthdate_datetime = datetime.combine(body_data.birthdate, datetime.min.time())
+    
     update_data = {
         "height": body_data.height,
         "weight": body_data.weight,
-        "birthdate": body_data.birthdate,
+        "birthdate": birthdate_datetime,
         "age": age,
         "gender": body_data.gender.value,
         "bmr": bmr,
@@ -147,6 +150,11 @@ async def update_user_profile(
         k: v for k, v in profile_data.dict(exclude_unset=True).items() if v is not None
     }
 
+    # 如果包含birthdate，需要将date转换为datetime（MongoDB要求）
+    if "birthdate" in update_data and isinstance(update_data["birthdate"], date):
+        # 将date转换为datetime（时间设为00:00:00）
+        update_data["birthdate"] = datetime.combine(update_data["birthdate"], datetime.min.time())
+
     if not update_data:
         return await get_user_profile(email)
 
@@ -164,7 +172,12 @@ async def update_user_profile(
 
         # 如果提供了 birthdate，重新计算 age
         if birthdate:
-            age = calculate_age(birthdate)
+            # 如果birthdate是datetime，转换为date用于计算年龄
+            if isinstance(birthdate, datetime):
+                birthdate_date = birthdate.date()
+            else:
+                birthdate_date = birthdate
+            age = calculate_age(birthdate_date)
             update_data["age"] = age
         else:
             age = user.get("age")
@@ -191,7 +204,9 @@ async def update_user_profile(
     if "activity_level" in update_data:
         bmr = user.get("bmr")
         if bmr:
-            tdee = calculate_tdee(bmr, update_data["activity_level"])
+            # 将字符串转换为枚举类型
+            activity_level_enum = ActivityLevel(update_data["activity_level"])
+            tdee = calculate_tdee(bmr, activity_level_enum)
             update_data["tdee"] = tdee
 
             # 如果有健康目标，重新计算每日卡路里目标
@@ -199,8 +214,10 @@ async def update_user_profile(
                 "health_goal_type", user.get("health_goal_type")
             )
             if health_goal_type:
+                # 将字符串转换为枚举类型
+                health_goal_enum = HealthGoalType(health_goal_type)
                 daily_calorie_goal = calculate_daily_calorie_goal(
-                    tdee, HealthGoalType(health_goal_type)
+                    tdee, health_goal_enum
                 )
                 update_data["daily_calorie_goal"] = daily_calorie_goal
 
@@ -208,8 +225,10 @@ async def update_user_profile(
     if "health_goal_type" in update_data:
         tdee = user.get("tdee")
         if tdee:
+            # 将字符串转换为枚举类型
+            health_goal_enum = HealthGoalType(update_data["health_goal_type"])
             daily_calorie_goal = calculate_daily_calorie_goal(
-                tdee, update_data["health_goal_type"]
+                tdee, health_goal_enum
             )
             update_data["daily_calorie_goal"] = daily_calorie_goal
 
