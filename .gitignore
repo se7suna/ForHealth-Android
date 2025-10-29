@@ -1,5 +1,3 @@
-就要健康_卡路里消耗记录系统SRS需求文档.pdf
-
 # Python
 __pycache__/
 *.py[cod]
@@ -57,3 +55,20 @@ logs/
 
 # CI/CD
 .cache/
+
+# 前端部分
+*.iml
+.gradle
+/local.properties
+/.idea/caches
+/.idea/libraries
+/.idea/modules.xml
+/.idea/workspace.xml
+/.idea/navEditor.xml
+/.idea/assetWizardSettings.xml
+.DS_Store
+/build
+/captures
+.externalNativeBuild
+.cxx
+local.properties
