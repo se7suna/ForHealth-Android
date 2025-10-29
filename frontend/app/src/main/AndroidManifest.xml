@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <application
+        android:allowBackup="true"
+        android:dataExtractionRules="@xml/data_extraction_rules"
+        android:fullBackupContent="@xml/backup_rules"
+        android:icon="@mipmap/ic_launcher"
+        android:label="@string/app_name"
+        android:roundIcon="@mipmap/ic_launcher_round"
+        android:supportsRtl="true"
+        android:theme="@style/AppTheme">
+
+        <!-- 启动入口 Activity -->
+        <activity
+            android:name=".MainActivity"
+            android:exported="true"
+            android:label="@string/app_name"
+            android:theme="@style/AppTheme">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <!-- 登录 Activity -->
+        <activity
+            android:name=".auth.LoginActivity"
+            android:exported="false"
+            android:theme="@style/AppTheme" />
+
+        <!-- 注册 Activity -->
+        <activity
+            android:name=".auth.RegisterActivity"
+            android:exported="false"
+            android:theme="@style/AppTheme" />
+
+        <!-- 身体数据录入 -->
+        <activity
+            android:name=".user.BodyDataActivity"
+            android:exported="false"
+            android:theme="@style/AppTheme" />
+
+        <!-- 活动水平录入 -->
+        <activity
+            android:name=".user.ActivityLevelActivity"
+            android:exported="false"
+            android:theme="@style/AppTheme" />
+
+        <!-- 健康目标录入 -->
+        <activity
+            android:name=".user.HealthGoalActivity"
+            android:exported="false"
+            android:theme="@style/AppTheme" />
+
+    </application>
+
+</manifest>
