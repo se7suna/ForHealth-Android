@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- 应用主题 -->
+    <style name="AppTheme" parent="Theme.AppCompat.Light.NoActionBar">
+        <item name="android:colorBackground">@color/background_white</item>
+        <item name="android:textColorPrimary">@color/text_primary</item>
+        <item name="android:editTextColor">@color/text_primary</item>
+        <item name="android:textColorSecondary">@color/text_secondary</item>
+        <item name="android:buttonStyle">@style/GreenButton</item>
+    </style>
+
+    <!-- 绿色圆角按钮 -->
+    <style name="GreenButton">
+        <item name="android:background">@drawable/bg_button_green</item>
+        <item name="android:textColor">@color/button_text</item>
+        <item name="android:gravity">center</item>
+        <item name="android:textAlignment">center</item>
+
+    </style>
+
+    <!-- 输入框样式 -->
+    <style name="InputField">
+        <item name="android:background">@drawable/bg_input_field</item>
+        <item name="android:textColor">@color/text_primary</item>
+        <item name="android:textColorSecondary">@color/text_secondary</item>
+        <item name="android:padding">12dp</item>
+    </style>
+</resources>

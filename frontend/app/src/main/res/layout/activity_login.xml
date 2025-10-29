@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:orientation="vertical"
+    android:padding="80dp"
+    android:background="@color/background_white"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+    <Space
+        android:layout_width="match_parent"
+        android:layout_height="120dp"/>
+
+    <TextView
+        android:id="@+id/tvPrompt"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="欢迎来到"
+        android:textSize="28sp"
+        android:textColor="@android:color/black"
+        android:layout_gravity="center_horizontal" 
+        android:layout_marginBottom="20dp"/>
+
+    <TextView
+        android:id="@+id/tvPrompt"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="For Health"
+        android:textSize="44sp"
+        android:textColor="@android:color/black"
+        android:layout_gravity="center_horizontal"
+        android:layout_marginBottom="60dp"/>
+
+    <EditText
+        android:id="@+id/etEmail"
+        style="@style/InputField"
+        android:hint="@string/hint_email"
+        android:layout_width="240dp"
+        android:textSize="16sp"
+        android:layout_height="wrap_content"
+        android:inputType="textEmailAddress"
+        android:layout_marginBottom="24dp" 
+        android:layout_gravity="center_horizontal"/>
+
+    <EditText
+        android:id="@+id/etPassword"
+        style="@style/InputField"
+        android:hint="@string/hint_password"
+        android:layout_width="240dp"
+        android:textSize="16sp"
+        android:layout_height="wrap_content"
+        android:inputType="textPassword"
+        android:layout_marginBottom="32dp" 
+        android:layout_gravity="center_horizontal"/>
+
+    <Button
+        android:id="@+id/btnLogin"
+        style="@style/GreenButton"
+        android:layout_width="80dp"
+        android:textSize="16sp"
+        android:layout_height="wrap_content"
+        android:text="@string/btn_login"
+        android:layout_marginBottom="12dp"
+        android:layout_gravity="center_horizontal" />
+
+    <Button
+        android:id="@+id/btnRegister"
+        style="@style/GreenButton"
+        android:layout_width="80dp"
+        android:textSize="16sp"
+        android:layout_height="wrap_content"
+        android:text="@string/btn_register"
+        android:layout_marginTop="12dp"
+        android:layout_gravity="center_horizontal"/>
+</LinearLayout>
