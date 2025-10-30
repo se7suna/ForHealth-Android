@@ -62,6 +62,8 @@ test:unit:
   coverage: '/TOTAL.*\s+(\d+%)$/'
   artifacts:
     when: always
+    paths:
+      - backend/test-results.xml
     reports:
       junit: backend/test-results.xml
   only:
