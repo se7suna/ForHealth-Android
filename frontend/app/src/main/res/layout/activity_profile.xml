@@ -96,6 +96,15 @@
             android:id="@+id/tvGoalWeeks"
             style="@style/ProfileText"
             android:text="目标周期："/>
+        
+        <Button
+            android:id="@+id/btnEdit"
+            android:textSize="14sp"
+            android:layout_width="80dp"
+            android:layout_gravity="center_horizontal"
+            android:layout_height="wrap_content"
+            android:text="修改"
+            android:layout_marginTop="32dp"/>
 
     </LinearLayout>
 </ScrollView>

@@ -1,6 +1,8 @@
 package com.example.forhealth.user
 
+import android.content.Intent
 import android.os.Bundle
+import android.widget.Button
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
@@ -25,6 +27,8 @@ class ProfileActivity : AppCompatActivity() {
     private lateinit var tvGoalWeight: TextView
     private lateinit var tvGoalWeeks: TextView
 
+    private lateinit var btnEdit: Button
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_profile)
@@ -43,9 +47,16 @@ class ProfileActivity : AppCompatActivity() {
         tvGoalType = findViewById(R.id.tvGoalType)
         tvGoalWeight = findViewById(R.id.tvGoalWeight)
         tvGoalWeeks = findViewById(R.id.tvGoalWeeks)
+        btnEdit = findViewById(R.id.btnEdit)
 
         // 加载用户信息
         loadUserProfile()
+
+        // 按下"修改"可以重新录入身体信息
+        btnEdit.setOnClickListener {
+            val intent = Intent(this, BodyDataActivity::class.java)
+            startActivity(intent)
+        }
     }
 
     private fun loadUserProfile() {
