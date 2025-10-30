@@ -58,7 +58,7 @@ test:unit:
     - pip install -r requirements.txt
   script:
     - echo "🧪 运行单元测试..."
-    - pytest tests/ -v --tb=short
+    - pytest tests/ -v --tb=short --junitxml=test-results.xml
   coverage: '/TOTAL.*\s+(\d+%)$/'
   artifacts:
     when: always
