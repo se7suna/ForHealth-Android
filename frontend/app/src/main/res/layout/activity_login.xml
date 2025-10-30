@@ -25,10 +25,11 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="For Health"
-        android:textSize="44sp"
-        android:textColor="@android:color/black"
+        android:textSize="40sp"
+        android:textStyle="bold"
+        android:textColor="@color/primary_green"
         android:layout_gravity="center_horizontal"
-        android:layout_marginBottom="60dp"/>
+        android:layout_marginBottom="40dp"/>
 
     <EditText
         android:id="@+id/etEmail"
