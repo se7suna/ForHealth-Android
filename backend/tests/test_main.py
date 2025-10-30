@@ -1,6 +1,12 @@
+# 将 backend 目录添加到 Python 路径
+import sys
+from pathlib import Path
+backend_path = str(Path(__file__).parent.parent.absolute())# 获取 backend 目录的绝对路径
+sys.path.insert(0, backend_path)
+
 import pytest
-from httpx import AsyncClient
 from app.main import app
+from httpx import AsyncClient
 
 
 @pytest.mark.asyncio
