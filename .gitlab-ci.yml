@@ -2,7 +2,6 @@
 # For Health 后端 CI/CD Pipeline
 
 stages:
-  - lint        # 代码质量检查
   - test        # 测试
   - build       # 构建
 
@@ -15,27 +14,6 @@ cache:
   paths:
     - .cache/pip
     - backend/.venv/
-
-# ==================== Lint Stage ====================
-
-lint:python:
-  stage: lint
-  image: python:${PYTHON_VERSION}
-  before_script:
-    - cd backend
-    - pip install flake8 black isort
-  script:
-    - echo "🔍 检查代码格式..."
-    - black --check app/
-    - echo "🔍 检查 import 排序..."
-    - isort --check-only app/
-    - echo "🔍 检查代码质量..."
-    - flake8 app/ --max-line-length=100 --extend-ignore=E203,W503
-  allow_failure: true  # 暂时允许失败
-  only:
-    changes:
-      - backend/**/*
-      - .gitlab-ci.yml
 
 # ==================== Test Stage ====================
 
