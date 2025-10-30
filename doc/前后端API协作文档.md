@@ -22,30 +22,6 @@
 - **开发环境**: `http://localhost:8000`
 - **生产环境**: TBD
 
-### API 文档
-
-- **Swagger UI**: `http://localhost:8000/docs` （推荐，可直接测试）
-- **ReDoc**: `http://localhost:8000/redoc` （更适合阅读）
-
-### 技术栈
-
-- **后端框架**: FastAPI
-- **数据库**: MongoDB
-- **认证方式**: JWT Bearer Token
-- **数据格式**: JSON
-
----
-
-## 认证机制
-
-### JWT Token 认证
-
-除了注册和登录接口，其他接口都需要在 HTTP Header 中携带 JWT Token：
-
-```http
-Authorization: Bearer <access_token>
-```
-
 ### 获取 Token
 
 通过登录接口获取：
@@ -712,33 +688,3 @@ async function handleSubmit() {
   }
 }
 ```
-
----
-
-## 联系方式
-
-- **后端负责人**: hayasiakane
-- **GitLab 项目**: https://gitlab.com/tj-cs-swe/CS10102302-2025/group12/for_health
-- **相关 Issues**: #5, #6, #7, #8
-
----
-
-## 更新日志
-
-### v1.1.0 (2025-10-27)
-
-- **重大变更**：身体数据提交方式调整
-  - 前端提交 `birthdate`（出生日期）代替 `age`（年龄）
-  - 后端自动根据出生日期计算年龄（周岁）
-  - 数据库同时存储出生日期和计算后的年龄
-  - 前端可直接读取已计算好的年龄字段
-- 优化年龄计算逻辑，确保准确计算周岁
-- 更新所有相关 API 文档和数据模型说明
-
-### v1.0.0 (2025-10-27)
-
-- 初始版本
-- 实现账户信息管理模块所有 API
-- 支持用户注册、登录、身体数据管理、活动水平设置、健康目标设定
-- 支持密码重置功能
-- 自动计算 BMR、TDEE 和每日卡路里目标
