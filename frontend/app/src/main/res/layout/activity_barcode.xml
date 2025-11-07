@@ -1,0 +1,76 @@
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:padding="16dp">
+
+    <!-- 扫描条形码按钮 -->
+    <Button
+        android:id="@+id/scanBarcodeButton"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="扫描条形码"
+        android:onClick="scanBarcode"
+        android:layout_marginTop="30dp"
+        android:layout_gravity="right"/>
+
+    <!-- 食物名称 -->
+    <TextView
+        android:id="@+id/foodNameTextView"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="食物名称"
+        android:textColor="@android:color/black"
+        android:textSize="24sp"
+        android:layout_marginTop="30dp" />
+
+    <!-- 食物热量 -->
+    <TextView
+        android:id="@+id/caloriesTextView"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="热量"
+        android:textSize="24sp"
+        android:textColor="@android:color/black"
+        android:layout_marginTop="16dp" />
+
+    <!-- 食物蛋白质 -->
+    <TextView
+        android:id="@+id/proteinTextView"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="蛋白质"
+        android:textSize="24sp"
+        android:textColor="@android:color/black"
+        android:layout_marginTop="16dp"/>
+
+    <!-- 食物脂肪 -->
+    <TextView
+        android:id="@+id/fatTextView"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="脂肪"
+        android:textSize="24sp"
+        android:textColor="@android:color/black"
+        android:layout_marginTop="16dp" />
+
+    <!-- 食物碳水化合物 -->
+    <TextView
+        android:id="@+id/carbsTextView"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="碳水"
+        android:textSize="24sp"
+        android:textColor="@android:color/black"
+        android:layout_marginTop="16dp"/>
+
+    <!-- 修改按钮 -->
+    <Button
+        android:id="@+id/modifyFoodButton"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="修改食物信息"
+        android:layout_marginTop="50dp"
+        android:onClick="modifyFoodInfo"
+        android:layout_gravity="center"/>
+</LinearLayout>

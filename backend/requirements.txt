@@ -18,10 +18,9 @@ bcrypt>=3.2.0,<4.0.0  # 兼容passlib的版本
 pydantic>=2.0.0
 pydantic-settings>=2.0.0
 
-# 邮件
-# 如果需要邮件功能，取消下面的注释
-# aiosmtplib>=2.0.0
-# jinja2>=3.1.0
+# 邮件如果需要邮件功能，取消下面的注释
+aiosmtplib>=2.0.0
+jinja2>=3.1.0
 
 # 开发工具（可选）
 # pytest>=7.4.0

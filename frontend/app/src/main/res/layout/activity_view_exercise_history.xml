@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:padding="16dp">
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:padding="80dp"/>
+    <!-- Start Date -->
+    <EditText
+        android:id="@+id/startDateEditText"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:padding="18dp"
+        android:hint="开始日期(YYYY-MM--DD)" />
+
+    <!-- End Date -->
+    <EditText
+        android:id="@+id/endDateEditText"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:padding="18dp"
+        android:hint="结束日期(YYYY-MM-DD)" />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:padding="8dp"/>
+    <!-- Filter Button -->
+    <Button
+        android:id="@+id/filterButton"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:padding="10dp"
+        android:text="记录" />
+
+    <!-- Exercise History Text -->
+    <TextView
+        android:id="@+id/exerciseHistoryTextView"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="你的运动记录将会出现在这里"
+        android:layout_marginTop="16dp" />
+
+</LinearLayout>

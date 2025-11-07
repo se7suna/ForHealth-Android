@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:padding="16dp">
+
+    <TextView
+        android:layout_width="376dp"
+        android:layout_height="wrap_content"
+        android:padding="60dp" />
+    <!-- 标题 -->
+    <TextView
+        android:id="@+id/tvTitle"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="选择自定义食物或食谱"
+        android:textSize="20sp"
+        android:padding="16dp"
+        android:layout_marginBottom="16dp"
+        android:textAlignment="center"/>
+
+    <!-- 食物/食谱选择列表 -->
+    <Spinner
+        android:id="@+id/spinnerFoodRecipe"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:padding="16dp"
+        android:layout_marginBottom="16dp"/>
+
+    <!-- 输入摄入份数 -->
+    <EditText
+        android:id="@+id/etPortionSize"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="输入摄入份数"
+        android:inputType="text"
+        android:padding="16dp"
+        android:layout_marginBottom="16dp"
+        android:textSize="16sp"/>
+
+    <!-- 显示热量和营养成分 -->
+    <TextView
+        android:id="@+id/tvCalories"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="热量: 0 kcal"
+        android:textSize="16sp"
+        android:padding="16dp"
+        android:layout_marginBottom="8dp"/>
+
+    <TextView
+        android:id="@+id/tvNutrients"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="营养成分: "
+        android:textSize="16sp"
+        android:padding="16dp"
+        android:layout_marginBottom="16dp"/>
+
+    <!-- 记录按钮 -->
+    <Button
+        android:id="@+id/btnRecord"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="记录"
+        android:textSize="18sp"/>
+
+</LinearLayout>

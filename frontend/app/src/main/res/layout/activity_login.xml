@@ -11,7 +11,7 @@
         android:layout_height="120dp"/>
 
     <TextView
-        android:id="@+id/tvPrompt"
+        android:id="@+id/tvPrompt1"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="欢迎来到"
@@ -21,7 +21,7 @@
         android:layout_marginBottom="20dp"/>
 
     <TextView
-        android:id="@+id/tvPrompt"
+        android:id="@+id/tvPrompt2"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="For Health"
