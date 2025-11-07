@@ -10,7 +10,7 @@
     <!-- 输入框和按钮 -->
     <color name="input_background">#F5F5F5</color>
     <color name="button_text">#FFFFFF</color>
-
+    <color name="colorPrimary">#6200EE</color>
     <!-- 文本颜色 -->
     <color name="text_primary">#333333</color>
     <color name="text_secondary">#AAAAAA</color>

@@ -26,6 +26,26 @@
     <string name="very_active">非常活跃</string>
     <string name="extremely_active">重度活跃</string>
 
+    <!-- 健康目标 -->
+    <string-array name="goal_options">
+        <item>Weight Loss</item>
+        <item>Muscle Gain</item>
+        <item>Maintenance</item>
+    </string-array>
+
+    <!-- 体能水平 -->
+    <string-array name="fitness_level_options">
+        <item>Beginner</item>
+        <item>Intermediate</item>
+        <item>Advanced</item>
+    </string-array>
+
+    <!-- 运动强度 -->
+    <string-array name="intensity_options">
+        <item>Light</item>
+        <item>Moderate</item>
+        <item>High</item>
+    </string-array>
 
     <!-- 健康目标设定 -->
     <string name="title_health_goal">设定健康目标</string>
