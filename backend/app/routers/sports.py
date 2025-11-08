@@ -88,11 +88,12 @@ async def history_sports(history_request: HistorySportsRequest, current_user: st
     """
     return await sports_service.history_sports(history_request,current_user)  
 
-# 获取全部运动记录，用于生成周报
+# 获取全部运动记录，用于生成报告
 @router.get("/sports-report",response_model=list[HistorySportsResponse])
 async def sports_report(current_user: str = Depends(get_current_user)):
     history_request=HistorySportsRequest(
         start_date=None,
         end_date=None
     )
+    # 需要添加一个函数生成报告内容
     return await sports_service.history_sports(history_request,current_user)
