@@ -8,10 +8,16 @@ from app.routers import auth, user,sports
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """应用生命周期管理"""
+    """应用生命周期管理""" 
     # 启动时执行
     print("🚀 启动 FastAPI 应用...")
     await connect_to_mongo()
+    from app.services.user_service import create_user
+    from app.utils.security import get_password_hash
+    await create_user("user@example.com","testuser",get_password_hash("string"))
+    from app.services.sports_service import initialize_sports_table
+    await initialize_sports_table()
+    print(11111111111)
     yield
     # 关闭时执行
     print("👋 关闭 FastAPI 应用...")
