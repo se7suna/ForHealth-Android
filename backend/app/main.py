@@ -3,7 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 from app.config import settings
 from app.database import connect_to_mongo, close_mongo_connection
-from app.routers import auth, user
+from app.routers import auth, user,sports
 
 
 @asynccontextmanager
@@ -40,6 +40,7 @@ app.add_middleware(
 # 注册路由
 app.include_router(auth.router, prefix="/api")
 app.include_router(user.router, prefix="/api")
+app.include_router(sports.router, prefix="/api")
 
 
 @app.get("/")
