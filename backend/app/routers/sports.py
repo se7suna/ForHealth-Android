@@ -78,6 +78,7 @@ async def search_sports(search_request: SearchSportsRequest, current_user: str =
     """
     return sports_service.search_sports(search_request,current_user)
 
+# 搜索运动历史
 @router.post("/history-sports",response_model=list[HistorySportsResponse])
 async def history_sports(history_request: HistorySportsRequest, current_user: str = Depends(get_current_user)):
     """
@@ -86,3 +87,12 @@ async def history_sports(history_request: HistorySportsRequest, current_user: st
     - **end_date**: 结束日期
     """
     return await sports_service.history_sports(history_request,current_user)  
+
+# 获取全部运动记录，用于生成周报
+@router.get("/sports-report",response_model=list[HistorySportsResponse])
+async def sports_report(current_user: str = Depends(get_current_user)):
+    history_request=HistorySportsRequest(
+        start_date=None,
+        end_date=None
+    )
+    return await sports_service.history_sports(history_request,current_user)
