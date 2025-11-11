@@ -40,6 +40,11 @@ android {
     }
 }
 
+// 全局排除旧的Support库，避免与AndroidX冲突
+configurations.all {
+    exclude(group = "com.android.support", module = "support-v4")
+}
+
 dependencies {
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
@@ -52,11 +57,16 @@ dependencies {
     implementation(libs.androidx.appcompat)
     implementation(libs.androidx.compose.animation.core)
     implementation("androidx.appcompat:appcompat:1.4.1")
-    implementation("com.github.PhilJay:MPAndroidChart:v3.1.0")
+    // MPAndroidChart - 排除旧的Support库
+    implementation("com.github.PhilJay:MPAndroidChart:v3.1.0") {
+        exclude(group = "com.android.support", module = "support-v4")
+    }
     implementation("androidx.cardview:cardview:1.0.0")
     implementation("androidx.recyclerview:recyclerview:1.2.1")
-    // Zxing - 条形码扫描
-    implementation("com.journeyapps:zxing-android-embedded:3.3.0")
+    // Zxing - 条形码扫描，排除旧的Support库
+    implementation("com.journeyapps:zxing-android-embedded:3.3.0") {
+        exclude(group = "com.android.support", module = "support-v4")
+    }
     implementation("com.google.zxing:core:3.3.0") // ZXing核心库
 // Room 依赖
     implementation ("androidx.room:room-runtime:2.3.0")  // Room 库
