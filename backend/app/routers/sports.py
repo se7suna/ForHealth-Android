@@ -33,6 +33,17 @@ async def log_sports(log_request: LogSportsRequest, current_user: str = Depends(
             detail="保存运动记录失败"
         )
 
+# 获取全部运动记录
+@router.get("/history-sports",response_model=list[HistorySportsResponse])
+async def history_sports(current_user: str = Depends(get_current_user)):
+    """
+    获取运动记录
+    """
+    history_request = type('obj', (object,), {})()
+    history_request.start_date = None
+    history_request.end_date = None
+    return sports_service.history_sports(history_request,current_user)
+
 # 新建运动类型：自定义并写入表
 @router.post("/create-sports",response_model=SimpleSportsResponse)
 async def create_sports(create_request: CreateSportsRequest, current_user: str = Depends(get_current_user)):
