@@ -110,7 +110,7 @@ class RecipeInDB(BaseModel):
     prep_time: Optional[int] = Field(None, gt=0, description="准备时间（分钟）")
     
     # 权限和元数据
-    created_by: Optional[str] = Field(None, description="创建者邮箱（系统食谱为None）")
+    created_by: Optional[str] = Field(None, description="创建者邮箱（'all'表示所有人可见，用户邮箱表示仅创建者可见）")
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)
 

@@ -1,14 +1,22 @@
 from fastapi import APIRouter, HTTPException, status, Depends, Query
-from typing import Optional
+from typing import Optional, Union
 from datetime import date
 from app.schemas.food import (
     FoodCreateRequest,
     FoodUpdateRequest,
     FoodResponse,
+    FoodSearchRequest,
     FoodListResponse,
+    SimplifiedFoodListResponse,
+    SimplifiedFoodSearchItem,
+    SimplifiedNutritionData,
+    FoodNameSearchRequest,
+    FoodIdSearchResponse,
+    FoodIdItem,
     FoodRecordCreateRequest,
     FoodRecordUpdateRequest,
     FoodRecordResponse,
+    FoodRecordQueryRequest,
     FoodRecordListResponse,
     DailyNutritionSummary,
     MessageResponse,
@@ -82,14 +90,9 @@ async def create_food(
     )
 
 
-@router.get("/search", response_model=FoodListResponse)
+@router.get("/search", response_model=Union[FoodListResponse, SimplifiedFoodListResponse])
 async def search_foods(
-    keyword: Optional[str] = Query(None, description="搜索关键词，对应薄荷API的 q 参数"),
-    page: int = Query(1, ge=1, le=10, description="页码（薄荷API最多返回前10页）"),
-    include_full_nutrition: bool = Query(
-        True,
-        description="是否为每个搜索结果请求完整营养信息（调用 /api/v2/foods/ingredients）",
-    ),
+    query: FoodSearchRequest = Depends(),
     current_user: str = Depends(get_current_user)
 ):
     """
@@ -98,17 +101,98 @@ async def search_foods(
     - **keyword**: 搜索关键词（建议填写，若为空返回空结果）
     - **page**: 页码（薄荷API默认每页30条，最多10页）
     - **include_full_nutrition**: 是否为每个结果同步拉取完整营养信息
+    - **simplified**: 是否返回简化版本（仅主要营养信息：能量、蛋白质、脂肪、碳水化合物、糖、钠）
+    
+    当 simplified=True 时，返回简化版本，只包含主要营养信息，减少数据传输量。
     """
     _ = current_user  # 保留依赖，用于权限控制
 
     result = await food_service.search_foods(
-        keyword=keyword,
-        page=page,
-        include_full_nutrition=include_full_nutrition,
+        keyword=query.keyword,
+        page=query.page,
+        include_full_nutrition=query.include_full_nutrition if not query.simplified else False,
         user_email=current_user,
     )
 
+    # 如果请求简化版本，转换数据格式
+    if query.simplified:
+        simplified_foods = []
+        for food in result.get("foods", []):
+            # 从 nutrition_per_serving 提取主要营养信息
+            nutrition_data = food.get("nutrition_per_serving", {})
+            simplified_nutrition = SimplifiedNutritionData(
+                calories=nutrition_data.get("calories", 0),
+                protein=nutrition_data.get("protein", 0),
+                fat=nutrition_data.get("fat", 0),
+                carbohydrates=nutrition_data.get("carbohydrates", 0),
+                sugar=nutrition_data.get("sugar"),
+                sodium=nutrition_data.get("sodium"),
+            )
+            
+            simplified_item = SimplifiedFoodSearchItem(
+                source=food.get("source", "local"),
+                food_id=food.get("food_id"),
+                boohee_id=food.get("boohee_id"),
+                code=food.get("code", ""),
+                name=food.get("name", ""),
+                weight=food.get("weight", 100),
+                weight_unit=food.get("weight_unit", "克"),
+                brand=food.get("brand"),
+                image_url=food.get("image_url"),
+                nutrition=simplified_nutrition,
+            )
+            simplified_foods.append(simplified_item)
+        
+        return SimplifiedFoodListResponse(
+            page=result.get("page", 1),
+            total_pages=result.get("total_pages", 0),
+            foods=simplified_foods,
+        )
+    
     return FoodListResponse(**result)
+
+
+@router.get("/search-id", response_model=FoodIdSearchResponse)
+async def search_food_by_name(
+    query: FoodNameSearchRequest = Depends(),
+    current_user: str = Depends(get_current_user)
+):
+    """
+    通过食物名称搜索本地数据库，仅返回食物ID和名称
+    
+    - **keyword**: 搜索关键词（必填）
+    - **limit**: 返回数量限制（默认20，最大100）
+    
+    **仅搜索本地数据库**：
+    - 包括用户自己创建的食物（created_by=用户邮箱）
+    - 包括所有人可见的食物（created_by="all"，包含薄荷缓存数据）
+    - 不包括其他用户的私有食物
+    
+    返回本地数据库的 ObjectId，适用于创建食谱、饮食记录等场景。
+    """
+    # 只搜索本地数据库
+    local_foods = await food_service.search_local_foods_only(
+        keyword=query.keyword,
+        user_email=current_user,
+        limit=query.limit,
+    )
+    
+    # 转换为仅包含ID和名称的格式
+    food_id_items = []
+    for food in local_foods:
+        food_id_item = FoodIdItem(
+            food_id=food.get("food_id", ""),  # 本地数据库的 ObjectId
+            name=food.get("name", ""),
+            source="local",  # 全部来自本地库
+            brand=food.get("brand"),
+            boohee_id=food.get("boohee_id"),  # 如果是缓存的薄荷食物，会有这个字段
+        )
+        food_id_items.append(food_id_item)
+    
+    return FoodIdSearchResponse(
+        total=len(food_id_items),
+        foods=food_id_items,
+    )
 
 
 @router.get("/categories", response_model=list)
@@ -140,7 +224,8 @@ async def get_food(
             detail="食物不存在"
         )
 
-    if food.get("created_by") is not None and food.get("created_by") != current_user:
+    # 权限检查：created_by="all" 所有人可见，否则只有创建者可见
+    if food.get("created_by") != "all" and food.get("created_by") != current_user:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="无权访问此食物"
@@ -300,11 +385,7 @@ async def create_food_record(
 
 @router.get("/record/list", response_model=FoodRecordListResponse)
 async def get_food_records(
-    start_date: Optional[date] = Query(None, description="开始日期（YYYY-MM-DD）"),
-    end_date: Optional[date] = Query(None, description="结束日期（YYYY-MM-DD）"),
-    meal_type: Optional[str] = Query(None, description="餐次类型"),
-    limit: int = Query(100, ge=1, le=500, description="返回数量限制"),
-    offset: int = Query(0, ge=0, description="偏移量"),
+    query: FoodRecordQueryRequest = Depends(),
     current_user: str = Depends(get_current_user)
 ):
     """
@@ -312,7 +393,7 @@ async def get_food_records(
     
     - **start_date**: 开始日期（可选，格式：YYYY-MM-DD）
     - **end_date**: 结束日期（可选，格式：YYYY-MM-DD）
-    - **meal_type**: 餐次类型筛选（可选）
+    - **meal_type**: 餐次类型筛选（可选，早餐、午餐、晚餐、加餐）
     - **limit**: 返回数量限制（默认100，最大500）
     - **offset**: 偏移量（用于分页，默认0）
     
@@ -320,11 +401,11 @@ async def get_food_records(
     """
     records, total = await food_service.get_food_records(
         user_email=current_user,
-        start_date=start_date,
-        end_date=end_date,
-        meal_type=meal_type,
-        limit=limit,
-        offset=offset,
+        start_date=query.start_date,
+        end_date=query.end_date,
+        meal_type=query.meal_type,
+        limit=query.limit,
+        offset=query.offset,
     )
     
     record_responses = [
