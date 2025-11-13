@@ -2,10 +2,11 @@
 
 ## 概述
 
-食物/食谱库模块提供了完整的食物信息管理、食谱管理和食物记录功能，包括：
+食物/食谱库模块提供了完整的食物信息管理、食谱管理、食物记录和食谱记录功能，包括：
 - **食物管理**：创建、搜索、查询、删除食物信息
 - **食谱管理**：创建、搜索、更新、删除食谱
 - **食物记录**：记录每日食物摄入（支持单个和批量记录）、查询历史记录、营养统计
+- **食谱记录**：通过食谱快速记录摄入，自动创建多条食物记录
 - **批量记录**：一次记录多个食物或通过食谱快速记录
 - **条形码扫描**：通过条形码查询食品信息
 - **条形码图片识别**：上传图片自动识别条形码（使用 pyzbar + opencv）
@@ -390,11 +391,141 @@ file: <条形码图片文件>
 - 支持 EAN-13, EAN-8, UPC-A, CODE128, QR Code 等格式
 - 识别成功后可用条形码查询食品信息
 
-#### 8. 删除食谱
+#### 8. 通过名称搜索食谱ID
+```http
+GET /api/recipe/search-id?keyword=健康&limit=10
+Authorization: Bearer {access_token}
+```
+
+**查询参数**：
+- `keyword` (必填): 搜索关键词
+- `limit` (可选): 返回数量限制（默认10，最大50）
+
+**排序规则**：
+- 用户自己创建的食谱排在最前面（按创建时间倒序）
+- 公共食谱排在后面（按创建时间倒序）
+
+**说明**：
+- 仅搜索本地数据库
+- 返回简化的食谱信息（仅ID、名称、分类）
+- 适用于创建食物记录、快速选择食谱等场景
+
+#### 9. 删除食谱
 ```http
 DELETE /api/recipe/{recipe_id}
 Authorization: Bearer {access_token}
 ```
+
+### 食谱记录管理
+
+#### 1. 创建食谱记录
+```http
+POST /api/recipe/record
+Authorization: Bearer {access_token}
+Content-Type: application/json
+
+{
+  "recipe_id": "64f1f0c2e13e5f7b12345678",
+  "scale": 1.0,
+  "recorded_at": "2025-11-13T12:30:00",
+  "meal_type": "午餐",
+  "notes": "按食谱准备的午餐"
+}
+```
+
+**重要说明**：
+- `recipe_id`: 食谱ID（本地数据库ObjectId）
+- `scale`: 份量倍数（如：1.0表示1份，0.5表示半份，2.0表示2份）
+- `recorded_at`: 摄入时间（必填）
+- `meal_type`: 餐次类型（可选：早餐、午餐、晚餐、加餐）
+- `notes`: 备注（可选）
+
+**返回数据**：
+```json
+{
+  "message": "食谱记录成功",
+  "recipe_name": "健康早餐套餐",
+  "batch_id": "64f1f0c2e13e5f7b12345abc",
+  "total_records": 3,
+  "record_ids": ["...", "..."],
+  "total_nutrition": {...}
+}
+```
+
+**处理逻辑**：
+- 系统会为食谱中的每个食物创建一条食物记录
+- 所有记录共享同一个 `batch_id`（用于后续查询和管理）
+- 每条记录的备注会自动添加 `[来自食谱: {食谱名称}]` 标记
+- 营养数据根据 `scale` 自动计算
+
+#### 2. 查询食谱记录
+```http
+GET /api/recipe/record?start_date=2025-11-01&end_date=2025-11-13&meal_type=午餐&limit=100&offset=0
+Authorization: Bearer {access_token}
+```
+
+**查询参数**：
+- `start_date` (可选): 开始日期（YYYY-MM-DD）
+- `end_date` (可选): 结束日期（YYYY-MM-DD）
+- `meal_type` (可选): 餐次类型筛选
+- `limit` (可选): 返回数量（默认100，最大500）
+- `offset` (可选): 偏移量（分页）
+
+**返回数据**：
+```json
+{
+  "total": 3,
+  "batches": [
+    {
+      "batch_id": "64f1f0c2e13e5f7b12345abc",
+      "recipe_name": "健康早餐套餐",
+      "total_records": 3,
+      "recorded_at": "2025-11-13T08:00:00",
+      "meal_type": "早餐",
+      "total_nutrition": {...},
+      "notes": "按食谱准备"
+    }
+  ],
+  "total_nutrition": {...}
+}
+```
+
+**说明**：
+- 按批次（batch）返回，每个批次代表一次食谱记录
+- 自动计算每个批次和总体的营养数据
+- 按记录时间倒序排列
+
+#### 3. 更新食谱记录
+```http
+PUT /api/recipe/record/{batch_id}
+Authorization: Bearer {access_token}
+Content-Type: application/json
+
+{
+  "recorded_at": "2025-11-13T18:30:00",
+  "meal_type": "晚餐",
+  "notes": "更新备注"
+}
+```
+
+**可更新字段**：
+- `recorded_at`: 摄入时间
+- `meal_type`: 餐次类型
+- `notes`: 备注
+
+**重要限制**：
+- ❌ **不支持修改 `scale`（份量倍数）**
+- 如需修改份量，请删除后重新创建
+
+#### 4. 删除食谱记录
+```http
+DELETE /api/recipe/record/{batch_id}
+Authorization: Bearer {access_token}
+```
+
+**说明**：
+- 删除指定批次的所有食物记录
+- 此操作不可恢复
 
 ### 食物记录
 
@@ -527,23 +658,40 @@ POST /api/food/record/batch
 }
 ```
 
-### 场景3：通过食谱记录
+### 场景3：通过食谱记录（推荐方式）
 用户按"健康早餐套餐"食谱准备早餐：
 ```json
-POST /api/food/record/batch
+POST /api/recipe/record
 {
+  "recipe_id": "64f1f0c2e13e5f7b12345678",
+  "scale": 1.0,
   "recorded_at": "2025-11-03T08:00:00",
   "meal_type": "早餐",
-  "recipes": [
-    {
-      "recipe_id": "...",
-      "recipe_name": "健康早餐套餐",
-      "scale": 1.0,
-      "foods": [...]  // 从食谱详情获取
-    }
-  ]
+  "notes": "按食谱准备的早餐"
 }
 ```
+
+**响应**：
+```json
+{
+  "message": "食谱记录成功",
+  "recipe_name": "健康早餐套餐",
+  "batch_id": "64f1f0c2e13e5f7b12345abc",
+  "total_records": 3,
+  "record_ids": ["...", "...", "..."],
+  "total_nutrition": {
+    "calories": 493,
+    "protein": 26.6,
+    ...
+  }
+}
+```
+
+**优势**：
+- ✅ 简单：只需提供 `recipe_id` 和 `scale`
+- ✅ 自动：后端自动处理所有食物记录
+- ✅ 批量管理：通过 `batch_id` 统一管理
+- ✅ 可追溯：每条记录标记了来源食谱
 
 ### 场景4：混合记录（食物+食谱）
 用户吃了"减脂午餐"食谱，额外加了一个苹果：
@@ -568,7 +716,52 @@ GET /api/food/record/daily-summary?date=2025-11-03
 
 返回今日所有进食记录和总营养摄入，可与用户的每日卡路里目标对比。
 
-### 场景6：与用户健康目标整合
+### 场景6：查询食谱记录
+查询本周的食谱记录：
+```http
+GET /api/recipe/record?start_date=2025-11-07&end_date=2025-11-13&limit=50
+```
+
+**返回**：
+```json
+{
+  "total": 5,
+  "batches": [
+    {
+      "batch_id": "...",
+      "recipe_name": "健康早餐套餐",
+      "total_records": 3,
+      "recorded_at": "2025-11-13T08:00:00",
+      "meal_type": "早餐",
+      "total_nutrition": {...},
+      "notes": "按食谱准备"
+    },
+    ...
+  ],
+  "total_nutrition": {...}
+}
+```
+
+### 场景7：更新食谱记录
+修改记录时间和备注：
+```json
+PUT /api/recipe/record/{batch_id}
+{
+  "recorded_at": "2025-11-13T19:00:00",
+  "meal_type": "晚餐",
+  "notes": "晚上才吃"
+}
+```
+
+### 场景8：删除食谱记录
+删除某次食谱记录：
+```http
+DELETE /api/recipe/record/{batch_id}
+```
+
+**说明**：删除后，该批次的所有食物记录都会被删除。
+
+### 场景9：与用户健康目标整合
 ```python
 # 获取用户资料（包含每日卡路里目标）
 user_profile = GET /api/user/profile
@@ -618,9 +811,10 @@ remaining = daily_goal - actual_intake  # 还可以摄入150千卡
 - `meal_type`: 餐次类型（早餐/午餐/晚餐/加餐）
 - `notes`: 备注
 - `food_id`: 关联的食物ID（可选）
+- `recipe_record_batch_id`: 食谱记录批次ID（可选，标识来自同一次食谱记录）
 - `created_at`: 记录时间（系统生成）
 
-**索引**：`user_email`, `recorded_at`, `(user_email, recorded_at)`
+**索引**：`user_email`, `recorded_at`, `(user_email, recorded_at)`, `recipe_record_batch_id`
 
 ### 集合3: `recipes` - 食谱库
 存储所有食谱数据。
@@ -669,10 +863,15 @@ backend/app/
 #### recipe_service.py
 - `create_recipe()` - 创建食谱
 - `search_recipes()` - 搜索食谱
+- `search_recipe_by_name()` - 按名称搜索食谱ID
 - `get_recipe_by_id()` - 获取详情
 - `update_recipe()` - 更新食谱
 - `delete_recipe()` - 删除食谱
 - `calculate_recipe_nutrition()` - 计算总营养
+- `create_recipe_record()` - 创建食谱记录
+- `get_recipe_records()` - 批量查询食谱记录
+- `update_recipe_record()` - 更新食谱记录
+- `delete_recipe_record()` - 删除食谱记录
 
 #### food_service.py
 - `create_food()` - 创建食物
@@ -781,11 +980,17 @@ function scaleNutrition(nutrition, scale) {
    - **食物**：公共食物（`created_by="all"`）所有用户可见，用户创建的食物只有创建者自己可见（私有）
    - **食谱**：系统食谱（`created_by="all"`）所有用户可见，用户创建的食谱只有创建者自己可见（私有）
    - **食物记录**：仅所属用户可见
+   - **食谱记录**：仅所属用户可见
 3. **数据快照**：食物记录保存时会快照营养数据，避免后续修改食物信息影响历史记录
 4. **时区处理**：所有时间使用UTC，前端需要转换为本地时间
 5. **食谱中的食物必须来自食物库**：确保 `food_id` 正确
 6. **重名检查**：食物和食谱名称不能重复
-7. **前端需处理 scale**：调整食谱份量时前端负责计算
+7. **食谱记录**：
+   - 使用 `POST /api/recipe/record` 创建食谱记录（推荐）
+   - 每次食谱记录会生成一个 `batch_id` 用于管理
+   - 不支持修改 `scale`，如需修改份量请删除后重新创建
+   - 删除食谱记录会删除该批次的所有食物记录
+8. **批量管理**：通过 `recipe_record_batch_id` 可以识别和管理来自同一食谱的记录
 
 ---
 

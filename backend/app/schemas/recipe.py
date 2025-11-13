@@ -1,6 +1,6 @@
-from pydantic import BaseModel, Field, ConfigDict
+from pydantic import BaseModel, Field, ConfigDict, field_validator
 from typing import Optional, List
-from datetime import datetime
+from datetime import datetime, date
 from app.models.food import NutritionData, FullNutritionData
 from app.models.recipe import RecipeFoodItem
 
@@ -220,10 +220,265 @@ class RecipeSearchRequest(BaseModel):
     )
 
 
+class RecipeIdSearchRequest(BaseModel):
+    """食谱ID搜索请求（用于快速查找和自动完成）"""
+    keyword: str = Field(..., min_length=1, description="搜索关键词（食谱名称）")
+    limit: int = Field(default=10, ge=1, le=50, description="返回数量限制")
+
+    model_config = ConfigDict(
+        extra="forbid",
+        json_schema_extra={
+            "example": {
+                "keyword": "早餐",
+                "limit": 10
+            }
+        }
+    )
+
+
+class RecipeIdItem(BaseModel):
+    """食谱ID项（用于快速查找和自动完成）"""
+    id: str = Field(..., description="食谱ID（本地数据库ObjectId）")
+    name: str = Field(..., description="食谱名称")
+    category: Optional[str] = Field(None, description="分类")
+    created_by: Optional[str] = Field(None, description="创建者（'all'表示公开，用户邮箱表示私有）")
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "id": "64f1f0c2e13e5f7b12345678",
+                "name": "健康早餐套餐",
+                "category": "早餐",
+                "created_by": "all"
+            }
+        }
+    )
+
+
+class RecipeIdSearchResponse(BaseModel):
+    """食谱ID搜索响应"""
+    total: int = Field(..., description="匹配的食谱总数")
+    recipes: List[RecipeIdItem] = Field(..., description="食谱ID列表（优先显示用户创建的食谱）")
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "total": 2,
+                "recipes": [
+                    {
+                        "id": "64f1f0c2e13e5f7b12345678",
+                        "name": "健康早餐套餐",
+                        "category": "早餐",
+                        "created_by": "user@example.com"
+                    },
+                    {
+                        "id": "64f1f0c2e13e5f7b12345679",
+                        "name": "营养早餐组合",
+                        "category": "早餐",
+                        "created_by": "all"
+                    }
+                ]
+            }
+        }
+    )
+
+
 class RecipeListResponse(BaseModel):
     """食谱列表响应"""
     total: int = Field(..., description="总数量")
     recipes: List[RecipeResponse] = Field(..., description="食谱列表")
+
+
+# ========== 食谱记录 ==========
+class RecipeRecordQueryRequest(BaseModel):
+    """食谱记录查询请求"""
+    start_date: Optional[date] = Field(None, description="开始日期（YYYY-MM-DD）")
+    end_date: Optional[date] = Field(None, description="结束日期（YYYY-MM-DD）")
+    meal_type: Optional[str] = Field(None, description="餐次类型")
+    limit: int = Field(default=100, ge=1, le=500, description="返回数量限制")
+    offset: int = Field(default=0, ge=0, description="偏移量")
+
+    @field_validator("meal_type")
+    @classmethod
+    def validate_meal_type(cls, v):
+        if v and v not in ["早餐", "午餐", "晚餐", "加餐", "breakfast", "lunch", "dinner", "snack"]:
+            raise ValueError("餐次类型必须是：早餐、午餐、晚餐、加餐 之一")
+        return v
+
+    model_config = ConfigDict(
+        extra="forbid",
+        json_schema_extra={
+            "example": {
+                "start_date": "2025-11-01",
+                "end_date": "2025-11-13",
+                "meal_type": "午餐",
+                "limit": 100,
+                "offset": 0
+            }
+        }
+    )
+
+
+class RecipeRecordBatchItem(BaseModel):
+    """食谱记录批次项"""
+    batch_id: str = Field(..., description="批次ID")
+    recipe_name: str = Field(..., description="食谱名称")
+    total_records: int = Field(..., description="该批次的记录数量")
+    recorded_at: datetime = Field(..., description="记录时间")
+    meal_type: Optional[str] = Field(None, description="餐次类型")
+    total_nutrition: NutritionData = Field(..., description="该批次的总营养")
+    notes: Optional[str] = Field(None, description="备注（不含食谱标记）")
+
+
+class RecipeRecordListResponse(BaseModel):
+    """食谱记录列表响应"""
+    total: int = Field(..., description="总批次数")
+    batches: List[RecipeRecordBatchItem] = Field(..., description="食谱记录批次列表")
+    total_nutrition: NutritionData = Field(..., description="所有批次的总营养摄入")
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "total": 3,
+                "batches": [
+                    {
+                        "batch_id": "64f1f0c2e13e5f7b12345abc",
+                        "recipe_name": "健康早餐套餐",
+                        "total_records": 3,
+                        "recorded_at": "2025-11-13T08:00:00",
+                        "meal_type": "早餐",
+                        "total_nutrition": {
+                            "calories": 493,
+                            "protein": 26.6,
+                            "carbohydrates": 46.2,
+                            "fat": 20,
+                            "fiber": 2.4,
+                            "sodium": 260
+                        },
+                        "notes": "按食谱准备的早餐"
+                    }
+                ],
+                "total_nutrition": {
+                    "calories": 1479,
+                    "protein": 79.8,
+                    "carbohydrates": 138.6,
+                    "fat": 60,
+                    "fiber": 7.2,
+                    "sodium": 780
+                }
+            }
+        }
+    )
+
+
+class RecipeRecordCreateRequest(BaseModel):
+    """创建食谱记录请求"""
+    recipe_id: str = Field(..., min_length=1, description="食谱ID（本地库ObjectId）")
+    scale: float = Field(default=1.0, gt=0, description="份量倍数（如：1.0表示1份，0.5表示半份）")
+    recorded_at: datetime = Field(..., description="摄入时间")
+    meal_type: Optional[str] = Field(None, description="餐次类型")
+    notes: Optional[str] = Field(None, max_length=500, description="备注")
+
+    @field_validator("meal_type")
+    @classmethod
+    def validate_meal_type(cls, v):
+        if v and v not in ["早餐", "午餐", "晚餐", "加餐", "breakfast", "lunch", "dinner", "snack"]:
+            raise ValueError("餐次类型必须是：早餐、午餐、晚餐、加餐 之一")
+        return v
+
+    model_config = ConfigDict(
+        extra="forbid",
+        json_schema_extra={
+            "example": {
+                "recipe_id": "64f1f0c2e13e5f7b12345678",
+                "scale": 1.0,
+                "recorded_at": "2025-11-13T12:30:00",
+                "meal_type": "午餐",
+                "notes": "按食谱准备的午餐"
+            }
+        }
+    )
+
+
+class RecipeRecordUpdateRequest(BaseModel):
+    """更新食谱记录请求"""
+    recorded_at: Optional[datetime] = Field(None, description="新的摄入时间")
+    meal_type: Optional[str] = Field(None, description="新的餐次类型")
+    notes: Optional[str] = Field(None, max_length=500, description="新的备注（不包括自动添加的食谱标记）")
+
+    @field_validator("meal_type")
+    @classmethod
+    def validate_meal_type(cls, v):
+        if v and v not in ["早餐", "午餐", "晚餐", "加餐", "breakfast", "lunch", "dinner", "snack"]:
+            raise ValueError("餐次类型必须是：早餐、午餐、晚餐、加餐 之一")
+        return v
+
+    model_config = ConfigDict(
+        extra="forbid",
+        json_schema_extra={
+            "example": {
+                "recorded_at": "2025-11-13T18:30:00",
+                "meal_type": "晚餐",
+                "notes": "更新备注"
+            }
+        }
+    )
+
+
+class RecipeRecordResponse(BaseModel):
+    """食谱记录响应"""
+    message: str = Field(..., description="操作消息")
+    recipe_name: str = Field(..., description="食谱名称")
+    batch_id: str = Field(..., description="批次ID（用于查询/更新/删除此次食谱记录）")
+    total_records: int = Field(..., description="创建的记录数量")
+    record_ids: List[str] = Field(..., description="创建的食物记录ID列表")
+    total_nutrition: NutritionData = Field(..., description="总营养数据")
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "message": "食谱记录成功",
+                "recipe_name": "健康早餐套餐",
+                "batch_id": "64f1f0c2e13e5f7b12345abc",
+                "total_records": 3,
+                "record_ids": ["64f1f0c2e13e5f7b12345678", "64f1f0c2e13e5f7b12345679"],
+                "total_nutrition": {
+                    "calories": 493,
+                    "protein": 26.6,
+                    "carbohydrates": 46.2,
+                    "fat": 20,
+                    "fiber": 2.4,
+                    "sodium": 260
+                }
+            }
+        }
+
+
+class RecipeRecordUpdateResponse(BaseModel):
+    """更新食谱记录响应"""
+    message: str = Field(..., description="操作消息")
+    recipe_name: str = Field(..., description="食谱名称")
+    batch_id: str = Field(..., description="批次ID")
+    updated_count: int = Field(..., description="更新的记录数量")
+    total_nutrition: NutritionData = Field(..., description="更新后的总营养数据")
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "message": "食谱记录更新成功",
+                "recipe_name": "健康早餐套餐",
+                "batch_id": "64f1f0c2e13e5f7b12345abc",
+                "updated_count": 3,
+                "total_nutrition": {
+                    "calories": 739.5,
+                    "protein": 39.9,
+                    "carbohydrates": 69.3,
+                    "fat": 30,
+                    "fiber": 3.6,
+                    "sodium": 390
+                }
+            }
+        }
 
 
 # ========== 通用响应 ==========

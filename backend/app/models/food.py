@@ -382,6 +382,7 @@ class FoodRecordInDB(BaseModel):
     
     # 元数据
     food_id: Optional[str] = Field(None, description="关联的食物ID（如果从食物库选择）")
+    recipe_record_batch_id: Optional[str] = Field(None, description="食谱记录批次ID（如果来自食谱记录）")
     created_at: datetime = Field(default_factory=datetime.utcnow, description="记录时间")
 
     class Config:
