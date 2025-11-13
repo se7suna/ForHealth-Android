@@ -151,8 +151,8 @@ async def search_foods(
             page=result.get("page", 1),
             total_pages=result.get("total_pages", 0),
             foods=simplified_foods,
-        )
-    
+    )
+
     return FoodListResponse(**result)
 
 

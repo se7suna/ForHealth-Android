@@ -403,3 +403,520 @@ async def delete_recipe(recipe_id: str, user_email: str) -> bool:
     except Exception:
         return False
 
+
+async def create_recipe_record(
+    user_email: str,
+    recipe_id: str,
+    scale: float,
+    recorded_at: datetime,
+    meal_type: Optional[str] = None,
+    notes: Optional[str] = None
+) -> Dict[str, Any]:
+    """
+    创建食谱记录（为食谱中的每个食物创建记录）
+    
+    Args:
+        user_email: 用户邮箱
+        recipe_id: 食谱ID
+        scale: 份量倍数
+        recorded_at: 摄入时间
+        meal_type: 餐次类型
+        notes: 备注
+    
+    Returns:
+        包含创建的记录ID列表和总营养的字典
+    """
+    from app.models.food import FoodRecordInDB
+    from bson import ObjectId as BsonObjectId
+    
+    db = get_database()
+    
+    # 生成批次ID，用于关联这次食谱记录的所有食物记录
+    batch_id = str(BsonObjectId())
+    
+    # 获取食谱详情
+    recipe = await get_recipe_by_id(recipe_id)
+    if not recipe:
+        raise ValueError("食谱不存在")
+    
+    # 权限检查：created_by="all" 所有人可见，否则只有创建者可见
+    if recipe.get("created_by") != "all" and recipe.get("created_by") != user_email:
+        raise ValueError("无权访问此食谱")
+    
+    recipe_name = recipe.get("name", "未命名食谱")
+    foods = recipe.get("foods", [])
+    
+    if not foods:
+        raise ValueError("食谱中没有食物")
+    
+    # 为每个食物创建记录
+    record_ids = []
+    all_nutrition = []
+    
+    for food_item in foods:
+        # 获取食物信息
+        food_id = food_item.get("food_id")
+        food_name = food_item.get("food_name") or "未命名食物"
+        
+        # 使用 or 运算符处理 None 值
+        serving_amount_raw = food_item.get("serving_amount")
+        if serving_amount_raw is None:
+            serving_amount_raw = 1.0
+        serving_amount = serving_amount_raw * scale
+        
+        serving_size = food_item.get("serving_size")
+        if serving_size is None:
+            serving_size = 100.0
+            
+        serving_unit = food_item.get("serving_unit") or "克"
+        
+        # 获取营养数据并按 scale 调整
+        nutrition_dict = food_item.get("nutrition", {})
+        if not nutrition_dict:
+            nutrition_dict = {}
+            
+        if isinstance(nutrition_dict, dict):
+            # 使用辅助函数处理 None 值
+            def get_nutrition_value(key):
+                value = nutrition_dict.get(key, 0)
+                return 0 if value is None else value
+            
+            scaled_nutrition = {
+                "calories": get_nutrition_value("calories") * scale,
+                "protein": get_nutrition_value("protein") * scale,
+                "carbohydrates": get_nutrition_value("carbohydrates") * scale,
+                "fat": get_nutrition_value("fat") * scale,
+                "fiber": get_nutrition_value("fiber") * scale,
+                "sugar": get_nutrition_value("sugar") * scale,
+                "sodium": get_nutrition_value("sodium") * scale,
+            }
+        else:
+            # 如果是 Pydantic 模型，转为字典
+            nutrition_dict = nutrition_dict.dict() if hasattr(nutrition_dict, 'dict') else {}
+            
+            def get_nutrition_value(key):
+                value = nutrition_dict.get(key, 0)
+                return 0 if value is None else value
+            
+            scaled_nutrition = {
+                "calories": get_nutrition_value("calories") * scale,
+                "protein": get_nutrition_value("protein") * scale,
+                "carbohydrates": get_nutrition_value("carbohydrates") * scale,
+                "fat": get_nutrition_value("fat") * scale,
+                "fiber": get_nutrition_value("fiber") * scale,
+                "sugar": get_nutrition_value("sugar") * scale,
+                "sodium": get_nutrition_value("sodium") * scale,
+            }
+        
+        # 四舍五入
+        for key in scaled_nutrition:
+            scaled_nutrition[key] = round(scaled_nutrition[key], 2)
+        
+        nutrition_snapshot = NutritionData(**scaled_nutrition)
+        
+        # 暂不处理完整营养信息（full_nutrition）
+        # 因为食谱记录主要关注基础营养数据
+        full_nutrition_snapshot = None
+        
+        # 构建备注（添加来自食谱的标记）
+        notes_parts = []
+        if notes:
+            notes_parts.append(notes)
+        notes_parts.append(f"[来自食谱: {recipe_name}]")
+        combined_notes = " ".join(notes_parts)
+        
+        # 创建食物记录
+        record = FoodRecordInDB(
+            user_email=user_email,
+            food_name=food_name,
+            serving_amount=serving_amount,
+            serving_size=serving_size,
+            serving_unit=serving_unit,
+            nutrition_data=nutrition_snapshot,
+            full_nutrition=full_nutrition_snapshot,
+            recorded_at=recorded_at,
+            meal_type=meal_type,
+            notes=combined_notes,
+            food_id=food_id,
+            recipe_record_batch_id=batch_id,  # 添加批次ID
+        )
+        
+        record_dict = record.dict()
+        result = await db.food_records.insert_one(record_dict)
+        record_ids.append(str(result.inserted_id))
+        all_nutrition.append(scaled_nutrition)
+    
+    # 计算总营养
+    total_nutrition = {
+        "calories": 0.0,
+        "protein": 0.0,
+        "carbohydrates": 0.0,
+        "fat": 0.0,
+        "fiber": 0.0,
+        "sugar": 0.0,
+        "sodium": 0.0,
+    }
+    
+    for nutrition in all_nutrition:
+        total_nutrition["calories"] += nutrition.get("calories", 0) or 0
+        total_nutrition["protein"] += nutrition.get("protein", 0) or 0
+        total_nutrition["carbohydrates"] += nutrition.get("carbohydrates", 0) or 0
+        total_nutrition["fat"] += nutrition.get("fat", 0) or 0
+        total_nutrition["fiber"] += nutrition.get("fiber", 0) or 0
+        total_nutrition["sugar"] += nutrition.get("sugar", 0) or 0
+        total_nutrition["sodium"] += nutrition.get("sodium", 0) or 0
+    
+    # 四舍五入
+    for key in total_nutrition:
+        total_nutrition[key] = round(total_nutrition[key], 2)
+    
+    return {
+        "message": "食谱记录成功",
+        "recipe_name": recipe_name,
+        "batch_id": batch_id,  # 返回批次ID，用于后续查询/更新/删除
+        "total_records": len(record_ids),
+        "record_ids": record_ids,
+        "total_nutrition": NutritionData(**total_nutrition),
+    }
+
+
+async def get_recipe_records(
+    user_email: str,
+    start_date: Optional[datetime] = None,
+    end_date: Optional[datetime] = None,
+    meal_type: Optional[str] = None,
+    limit: int = 100,
+    offset: int = 0
+) -> tuple[List[Dict[str, Any]], int]:
+    """
+    批量获取食谱记录（按日期和餐次筛选）
+    
+    Args:
+        user_email: 用户邮箱
+        start_date: 开始日期
+        end_date: 结束日期
+        meal_type: 餐次类型
+        limit: 返回数量限制
+        offset: 偏移量
+    
+    Returns:
+        (批次列表, 总数)
+    """
+    from datetime import datetime as dt, time
+    
+    db = get_database()
+    
+    # 构建查询条件
+    query = {
+        "user_email": user_email,
+        "recipe_record_batch_id": {"$exists": True, "$ne": None}  # 只查询来自食谱的记录
+    }
+    
+    # 日期范围筛选
+    if start_date or end_date:
+        query["recorded_at"] = {}
+        if start_date:
+            # 转换 date 到 datetime（当天开始）
+            start_datetime = dt.combine(start_date, time.min)
+            query["recorded_at"]["$gte"] = start_datetime
+        if end_date:
+            # 转换 date 到 datetime（当天结束）
+            end_datetime = dt.combine(end_date, time.max)
+            query["recorded_at"]["$lte"] = end_datetime
+    
+    # 餐次类型筛选
+    if meal_type:
+        query["meal_type"] = meal_type
+    
+    # 查询所有匹配的食物记录
+    all_records = await db.food_records.find(query).sort("recorded_at", -1).to_list(length=None)
+    
+    # 按 batch_id 分组
+    batch_dict = {}
+    for record in all_records:
+        batch_id = record.get("recipe_record_batch_id")
+        if not batch_id:
+            continue
+            
+        if batch_id not in batch_dict:
+            batch_dict[batch_id] = {
+                "batch_id": batch_id,
+                "records": [],
+                "recorded_at": record.get("recorded_at"),
+                "meal_type": record.get("meal_type"),
+                "notes": record.get("notes", "")
+            }
+        batch_dict[batch_id]["records"].append(record)
+    
+    # 转换为批次列表
+    batch_items = []
+    for batch_id, batch_data in batch_dict.items():
+        records = batch_data["records"]
+        
+        # 从备注中提取食谱名称
+        recipe_name = "未命名食谱"
+        notes_text = batch_data["notes"]
+        if notes_text and "[来自食谱:" in notes_text:
+            start = notes_text.find("[来自食谱:") + len("[来自食谱:")
+            end = notes_text.find("]", start)
+            if end > start:
+                recipe_name = notes_text[start:end].strip()
+        
+        # 提取用户备注（去除食谱标记）
+        user_notes = None
+        if notes_text:
+            if "[来自食谱:" in notes_text:
+                user_notes = notes_text[:notes_text.find("[来自食谱:")].strip()
+            else:
+                user_notes = notes_text
+        
+        # 计算总营养
+        total_nutrition = {
+            "calories": 0.0,
+            "protein": 0.0,
+            "carbohydrates": 0.0,
+            "fat": 0.0,
+            "fiber": 0.0,
+            "sugar": 0.0,
+            "sodium": 0.0,
+        }
+        
+        for record in records:
+            nutrition = record.get("nutrition_data", {})
+            if not nutrition:
+                nutrition = {}
+            total_nutrition["calories"] += nutrition.get("calories", 0) or 0
+            total_nutrition["protein"] += nutrition.get("protein", 0) or 0
+            total_nutrition["carbohydrates"] += nutrition.get("carbohydrates", 0) or 0
+            total_nutrition["fat"] += nutrition.get("fat", 0) or 0
+            total_nutrition["fiber"] += nutrition.get("fiber", 0) or 0
+            total_nutrition["sugar"] += nutrition.get("sugar", 0) or 0
+            total_nutrition["sodium"] += nutrition.get("sodium", 0) or 0
+        
+        # 四舍五入
+        for key in total_nutrition:
+            total_nutrition[key] = round(total_nutrition[key], 2)
+        
+        batch_items.append({
+            "batch_id": batch_id,
+            "recipe_name": recipe_name,
+            "total_records": len(records),
+            "recorded_at": batch_data["recorded_at"],
+            "meal_type": batch_data["meal_type"],
+            "total_nutrition": NutritionData(**total_nutrition),
+            "notes": user_notes
+        })
+    
+    # 按时间倒序排序
+    batch_items.sort(key=lambda x: x["recorded_at"], reverse=True)
+    
+    # 统计总数
+    total = len(batch_items)
+    
+    # 应用分页
+    paginated_items = batch_items[offset:offset + limit]
+    
+    return paginated_items, total
+
+
+async def update_recipe_record(
+    user_email: str,
+    batch_id: str,
+    recorded_at: Optional[datetime] = None,
+    meal_type: Optional[str] = None,
+    notes: Optional[str] = None
+) -> Dict[str, Any]:
+    """
+    更新食谱记录（批量更新该批次的所有食物记录）
+    
+    Args:
+        user_email: 用户邮箱
+        batch_id: 批次ID
+        recorded_at: 新的摄入时间
+        meal_type: 新的餐次类型
+        notes: 新的备注（不包括食谱标记）
+    
+    Returns:
+        更新结果
+    """
+    db = get_database()
+    
+    # 先查询确认记录存在
+    records = await db.food_records.find({
+        "user_email": user_email,
+        "recipe_record_batch_id": batch_id
+    }).to_list(length=None)
+    
+    if not records:
+        raise ValueError("食谱记录不存在")
+    
+    # 从备注中提取食谱名称
+    recipe_name = "未命名食谱"
+    if records and records[0].get("notes"):
+        notes_text = records[0]["notes"]
+        if "[来自食谱:" in notes_text:
+            start = notes_text.find("[来自食谱:") + len("[来自食谱:")
+            end = notes_text.find("]", start)
+            if end > start:
+                recipe_name = notes_text[start:end].strip()
+    
+    # 构建更新字典
+    update_dict = {}
+    if recorded_at is not None:
+        update_dict["recorded_at"] = recorded_at
+    if meal_type is not None:
+        update_dict["meal_type"] = meal_type
+    if notes is not None:
+        # 保留食谱标记
+        update_dict["notes"] = f"{notes} [来自食谱: {recipe_name}]"
+    
+    # 批量更新其他字段
+    if update_dict:
+        await db.food_records.update_many(
+            {
+                "user_email": user_email,
+                "recipe_record_batch_id": batch_id
+            },
+            {"$set": update_dict}
+        )
+    
+    # 重新查询获取更新后的数据
+    updated_records = await db.food_records.find({
+        "user_email": user_email,
+        "recipe_record_batch_id": batch_id
+    }).to_list(length=None)
+    
+    # 计算总营养
+    total_nutrition = {
+        "calories": 0.0,
+        "protein": 0.0,
+        "carbohydrates": 0.0,
+        "fat": 0.0,
+        "fiber": 0.0,
+        "sugar": 0.0,
+        "sodium": 0.0,
+    }
+    
+    for record in updated_records:
+        nutrition = record.get("nutrition_data", {})
+        if not nutrition:
+            nutrition = {}
+        total_nutrition["calories"] += nutrition.get("calories", 0) or 0
+        total_nutrition["protein"] += nutrition.get("protein", 0) or 0
+        total_nutrition["carbohydrates"] += nutrition.get("carbohydrates", 0) or 0
+        total_nutrition["fat"] += nutrition.get("fat", 0) or 0
+        total_nutrition["fiber"] += nutrition.get("fiber", 0) or 0
+        total_nutrition["sugar"] += nutrition.get("sugar", 0) or 0
+        total_nutrition["sodium"] += nutrition.get("sodium", 0) or 0
+    
+    # 四舍五入
+    for key in total_nutrition:
+        total_nutrition[key] = round(total_nutrition[key], 2)
+    
+    return {
+        "message": "食谱记录更新成功",
+        "recipe_name": recipe_name,
+        "batch_id": batch_id,
+        "updated_count": len(updated_records),
+        "total_nutrition": NutritionData(**total_nutrition),
+    }
+
+
+async def search_recipe_by_name(user_email: str, keyword: str, limit: int = 10) -> Dict[str, Any]:
+    """
+    通过食谱名称搜索食谱ID（用于快速查找和自动完成）
+    
+    Args:
+        user_email: 用户邮箱
+        keyword: 搜索关键词
+        limit: 返回数量限制
+    
+    Returns:
+        包含食谱ID列表的字典
+    """
+    db = get_database()
+    
+    # 构建查询条件
+    query = {
+        "$and": [
+            # 权限过滤：created_by="all" 或 user_email
+            {"$or": [
+                {"created_by": "all"},
+                {"created_by": user_email}
+            ]},
+            # 名称匹配
+            {"name": {"$regex": keyword, "$options": "i"}}
+        ]
+    }
+    
+    # 分两步查询：先查用户自己的，再查公开的
+    # 1. 查询用户创建的食谱
+    user_recipes = await db.recipes.find({
+        "created_by": user_email,
+        "name": {"$regex": keyword, "$options": "i"}
+    }).limit(limit).to_list(length=limit)
+    
+    # 2. 查询公开的食谱
+    remaining_limit = limit - len(user_recipes)
+    public_recipes = []
+    if remaining_limit > 0:
+        public_recipes = await db.recipes.find({
+            "created_by": "all",
+            "name": {"$regex": keyword, "$options": "i"}
+        }).limit(remaining_limit).to_list(length=remaining_limit)
+    
+    # 合并结果（用户创建的在前）
+    all_recipes = user_recipes + public_recipes
+    
+    # 转换为简化格式
+    recipe_items = []
+    for recipe in all_recipes:
+        recipe_items.append({
+            "id": str(recipe["_id"]),
+            "name": recipe.get("name", "未命名食谱"),
+            "category": recipe.get("category"),
+            "created_by": recipe.get("created_by")
+        })
+    
+    # 统计总数（用于分页）
+    total = await db.recipes.count_documents(query)
+    
+    return {
+        "total": total,
+        "recipes": recipe_items
+    }
+
+
+async def delete_recipe_record(user_email: str, batch_id: str) -> Dict[str, Any]:
+    """
+    删除食谱记录（删除该批次的所有食物记录）
+    
+    Args:
+        user_email: 用户邮箱
+        batch_id: 批次ID
+    
+    Returns:
+        删除结果
+    """
+    db = get_database()
+    
+    # 先查询确认记录存在
+    records = await db.food_records.find({
+        "user_email": user_email,
+        "recipe_record_batch_id": batch_id
+    }).to_list(length=None)
+    
+    if not records:
+        raise ValueError("食谱记录不存在")
+    
+    # 删除该批次的所有食物记录
+    result = await db.food_records.delete_many({
+        "user_email": user_email,
+        "recipe_record_batch_id": batch_id
+    })
+    
+    return {
+        "message": "食谱记录删除成功",
+        "deleted_count": result.deleted_count,
+    }
+
