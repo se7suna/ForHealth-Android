@@ -1,28 +1,32 @@
 from pydantic import BaseModel, Field, validator
 from typing import Optional
 from datetime import datetime,date
+from bson import ObjectId
 
 # 记录运动及消耗卡路里的请求
 class LogSportsRequest(BaseModel):
     sport_type: Optional[str] = None
-    crearted_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=datetime.utcnow)
     duration_time: Optional[int] = Field(None, gt=0)
 
-# class LogSportsResponse(BaseModel): 为通用消息响应
+# 更新运动记录的请求
+class UpdateSportsRecordRequest(BaseModel):
+    _id: Optional[str] = None
+    sport_type: Optional[str] = None
+    created_at: Optional[datetime] = None
+    duration_time: Optional[int] = Field(None, gt=0)
 
 # 创建运动类型的请求
 class CreateSportsRequest(BaseModel):
     sport_type: Optional[str] = None
+    describe: Optional[str] = None
     METs: Optional[int] = Field(None, gt=0)
-
-# class CreateSportsResponse(BaseModel): 为通用消息响应
 
 # 更新自定义运动类型的请求
 class UpdateSportsRequest(BaseModel):
     sport_type: Optional[str] = None
+    describe: Optional[str] = None
     METs: Optional[int] = Field(None, gt=0)
-
-# class UpdateSportsResponse(BaseModel): 为通用消息响应
 
 # 搜索运动类型的请求
 class SearchSportsRequest(BaseModel):
@@ -30,10 +34,12 @@ class SearchSportsRequest(BaseModel):
 
 class SearchSportsResponse(BaseModel):
     sport_type: Optional[str] = None
+    describe: Optional[str] = None
     METs: Optional[int] = None
 
-# 查看运动历史的请求
-class HistorySportsRequest(BaseModel):
+# 搜索运动记录的请求
+class SearchSportRecordsRequest(BaseModel):
+    sport_type: Optional[str] = None
     start_date: Optional[date] = None
     end_date: Optional[date] = None
 
@@ -44,11 +50,12 @@ class HistorySportsRequest(BaseModel):
             raise ValueError('end_date must be after start_date')
         return v
 
-class HistorySportsResponse(BaseModel):
+class SearchSportRecordsResponse(BaseModel):
     sport_type: Optional[str] = None
-    crearted_at: Optional[datetime] = None
+    created_at: Optional[datetime] = None
     duration_time: Optional[int] = None
     calories_burned: Optional[float] = None
+    _id: ObjectId
 
 class SimpleSportsResponse(BaseModel):
     success: bool
