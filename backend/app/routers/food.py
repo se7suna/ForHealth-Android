@@ -1,6 +1,8 @@
-from fastapi import APIRouter, HTTPException, status, Depends, Query
+from fastapi import APIRouter, HTTPException, status, Depends, Query, UploadFile, File
 from typing import Optional, Union
 from datetime import date
+import os
+import tempfile
 from app.schemas.food import (
     FoodCreateRequest,
     FoodUpdateRequest,
@@ -21,10 +23,12 @@ from app.schemas.food import (
     DailyNutritionSummary,
     MessageResponse,
     BarcodeScanResponse,
+    BarcodeImageRecognitionResponse,
 )
 from app.services import food_service
 from app.services import external_api_service
 from app.routers.auth import get_current_user
+from app.utils.barcode_scanner import decode_barcode_from_image
 
 router = APIRouter(prefix="/food", tags=["食物管理"])
 
@@ -168,6 +172,10 @@ async def search_food_by_name(
     - 包括所有人可见的食物（created_by="all"，包含薄荷缓存数据）
     - 不包括其他用户的私有食物
     
+    **排序规则**：
+    - 用户自己创建的食物排在最前面（按创建时间倒序）
+    - 公共食物排在后面（按创建时间倒序）
+    
     返回本地数据库的 ObjectId，适用于创建食谱、饮食记录等场景。
     """
     # 只搜索本地数据库
@@ -193,17 +201,6 @@ async def search_food_by_name(
         total=len(food_id_items),
         foods=food_id_items,
     )
-
-
-@router.get("/categories", response_model=list)
-async def get_food_categories(current_user: str = Depends(get_current_user)):
-    """
-    获取所有食物分类
-    
-    返回系统中已有的所有食物分类列表
-    """
-    categories = await food_service.get_food_categories(current_user)
-    return categories
 
 
 @router.get("/{food_id}", response_model=FoodResponse)
@@ -552,6 +549,85 @@ async def delete_food_record(
 
 
 # ========== 条形码扫描 ==========
+@router.post("/barcode/recognize", response_model=BarcodeImageRecognitionResponse)
+async def recognize_barcode_from_image(
+    file: UploadFile = File(...),
+    current_user: str = Depends(get_current_user)
+):
+    """
+    从上传的图片中识别条形码数字
+    
+    工作流程：
+    1. 接收上传的图片文件
+    2. 使用图像识别技术识别条形码
+    3. 返回识别到的条形码数字
+    
+    返回内容：
+    - success: 是否成功识别
+    - barcode: 识别到的条形码数字（如：6901939613702）
+    - barcode_type: 条形码类型（如：EAN13, CODE128）
+    - message: 响应消息
+    
+    后续步骤：
+    - 前端获取到条形码后，可以调用 GET /api/food/barcode/{barcode} 查询食品信息
+    
+    支持的图片格式：JPG, PNG, BMP 等常见格式
+    支持的条形码类型：EAN-13, EAN-8, UPC-A, CODE128, QR Code 等
+    """
+    # 验证文件类型
+    if not file.content_type or not file.content_type.startswith("image/"):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="请上传图片文件（支持 JPG, PNG, BMP 等格式）"
+        )
+    
+    # 创建临时文件保存上传的图片
+    temp_file = None
+    try:
+        # 创建临时文件
+        suffix = os.path.splitext(file.filename)[1] if file.filename else ".jpg"
+        with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as temp_file:
+            # 读取上传的文件内容并保存
+            content = await file.read()
+            temp_file.write(content)
+            temp_file_path = temp_file.name
+        
+        # 识别条形码
+        result = decode_barcode_from_image(temp_file_path)
+        
+        if result:
+            # 识别成功
+            return BarcodeImageRecognitionResponse(
+                success=True,
+                barcode=result['barcode'],
+                barcode_type=result['type'],
+                message="成功识别到条形码"
+            )
+        else:
+            # 识别失败
+            return BarcodeImageRecognitionResponse(
+                success=False,
+                barcode=None,
+                barcode_type=None,
+                message="未识别到条形码，请确保图片清晰且包含完整的条形码"
+            )
+    
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"处理图片时发生错误: {str(e)}"
+        )
+    
+    finally:
+        # 清理临时文件
+        if temp_file and os.path.exists(temp_file_path):
+            try:
+                os.unlink(temp_file_path)
+            except Exception as e:
+                # 临时文件清理失败不影响主流程
+                pass
+
+
 @router.get("/barcode/{barcode}", response_model=BarcodeScanResponse)
 async def scan_barcode(
     barcode: str,

@@ -700,6 +700,24 @@ class MessageResponse(BaseModel):
 
 
 # ========== 条形码扫描 ==========
+class BarcodeImageRecognitionResponse(BaseModel):
+    """条形码图片识别响应（只返回识别的条形码数字）"""
+    success: bool = Field(..., description="是否成功识别")
+    barcode: Optional[str] = Field(None, description="识别到的条形码数字")
+    message: str = Field(..., description="响应消息")
+    barcode_type: Optional[str] = Field(None, description="条形码类型（如 EAN13, CODE128）")
+    
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "success": True,
+                "barcode": "6901939613702",
+                "message": "成功识别到条形码",
+                "barcode_type": "EAN13"
+            }
+        }
+
+
 class BarcodeScanResponse(BaseModel):
     """条形码扫描响应"""
     found: bool = Field(..., description="是否找到食品信息")

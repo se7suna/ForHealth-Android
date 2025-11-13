@@ -7,6 +7,8 @@
 - **食谱管理**：创建、搜索、更新、删除食谱
 - **食物记录**：记录每日食物摄入（支持单个和批量记录）、查询历史记录、营养统计
 - **批量记录**：一次记录多个食物或通过食谱快速记录
+- **条形码扫描**：通过条形码查询食品信息
+- **条形码图片识别**：上传图片自动识别条形码（使用 pyzbar + opencv）
 
 ---
 
@@ -129,9 +131,9 @@
 | 删除 | ✗ | ✓ | ✗ |
 
 **说明**：
-- 系统食物（`created_by = null`）：所有用户可见
+- 公共食物（`created_by = "all"`）：所有用户可见，包括系统预置食物和薄荷健康缓存食物
 - 用户创建的食物（`created_by = 用户邮箱`）：只有创建者自己可见，其他用户无法查看、搜索或使用
-- 薄荷健康搜索结果会自动以 `source = "boohee"` 的形式同步到本地库，供后续统一管理
+- 薄荷健康搜索结果会自动以 `created_by = "all"` 和 `source = "boohee"` 的形式同步到本地库，供所有用户使用
 
 ### 二、食谱管理
 
@@ -143,7 +145,7 @@
 - 标签、准备时间等可选信息
 
 #### 食谱类型
-1. **系统食谱**（`created_by = null`）
+1. **系统食谱**（`created_by = "all"`）
    - 由系统预置，对所有用户可见
    - 用户无法编辑或删除
    - 通过 `init_recipe_data.py` 脚本初始化
@@ -164,7 +166,7 @@
 | 使用记录 | ✓ | ✓ | ✗ |
 
 **说明**：
-- 系统食谱（`created_by = null`）：所有用户可见
+- 系统食谱（`created_by = "all"`）：所有用户可见
 - 用户创建的食谱（`created_by = 用户邮箱`）：只有创建者自己可见，其他用户无法查看、搜索或使用
 
 #### 搜索功能
@@ -175,8 +177,8 @@
 - **limit/offset**：分页
 
 **搜索结果包含**：
-- 所有系统食谱（`created_by = null`）
-- 自己创建的所有食谱（无论公开或私有）
+- 所有系统食谱（`created_by = "all"`）
+- 自己创建的所有食谱
 - **不包含**其他用户创建的食谱
 
 #### 初始化数据
@@ -247,7 +249,7 @@ Content-Type: application/json
 
 #### 2. 搜索食物
 ```http
-GET /api/food/search?keyword=鸡&page=1&include_full_nutrition=true
+GET /api/food/search?keyword=鸡&page=1&include_full_nutrition=true&simplified=false
 Authorization: Bearer {access_token}
 ```
 
@@ -255,17 +257,31 @@ Authorization: Bearer {access_token}
 - `keyword` (可选): 搜索关键词（名称或品牌，支持模糊匹配）
 - `page` (可选): 页码，默认 1，最大 10
 - `include_full_nutrition` (可选): 是否同步拉取完整营养信息（默认 `true`）
+- `simplified` (可选): 是否返回简化版本（仅主要营养信息，默认 `false`）
 
 **说明**：
 - 请求会优先返回本地食物；若提供了关键词，也会调用薄荷健康搜索。
-- 薄荷健康返回的数据会自动写入本地数据库（`source = "boohee"`），避免重复搜索。
+- 薄荷健康返回的数据会自动写入本地数据库（`created_by="all"`, `source="boohee"`），所有用户可见。
 - 响应中的每个条目都包含 `source`、`boohee_id`、`boohee_code`（若存在），使用返回的 `food_id`/`code` 作为后续操作的本地ID。
 
-#### 3. 获取食物分类
+#### 3. 通过名称搜索食物ID
 ```http
-GET /api/food/categories
+GET /api/food/search-id?keyword=鸡蛋&limit=20
 Authorization: Bearer {access_token}
 ```
+
+**查询参数**：
+- `keyword` (必填): 搜索关键词
+- `limit` (可选): 返回数量限制（默认20，最大100）
+
+**排序规则**：
+- 用户自己创建的食物排在最前面（按创建时间倒序）
+- 公共食物排在后面（按创建时间倒序）
+
+**说明**：
+- 仅搜索本地数据库，不调用外部API
+- 返回本地数据库的 ObjectId
+- 适用于创建食谱、饮食记录等场景
 
 #### 4. 获取食物详情
 ```http
@@ -340,19 +356,41 @@ GET /api/recipe/{recipe_id}
 Authorization: Bearer {access_token}
 ```
 
-#### 4. 获取食谱分类列表
-```http
-GET /api/recipe/categories
-Authorization: Bearer {access_token}
-```
-
-#### 5. 更新食谱
+#### 4. 更新食谱
 ```http
 PUT /api/recipe/{recipe_id}
 Authorization: Bearer {access_token}
 ```
 
-#### 6. 删除食谱
+#### 6. 扫描条形码查询食品（新增）
+```http
+GET /api/food/barcode/{barcode}
+Authorization: Bearer {access_token}
+```
+
+**说明**：
+- 验证条形码格式（8-14位数字）
+- 优先查询本地数据库
+- 本地没有则调用薄荷健康API
+- 返回食品详细信息
+
+#### 7. 条形码图片识别（新增）
+```http
+POST /api/food/barcode/recognize
+Authorization: Bearer {access_token}
+Content-Type: multipart/form-data
+
+file: <条形码图片文件>
+```
+
+**说明**：
+- 上传包含条形码的图片
+- 使用图像识别技术识别条形码
+- 返回识别到的条形码数字
+- 支持 EAN-13, EAN-8, UPC-A, CODE128, QR Code 等格式
+- 识别成功后可用条形码查询食品信息
+
+#### 8. 删除食谱
 ```http
 DELETE /api/recipe/{recipe_id}
 Authorization: Bearer {access_token}
@@ -560,7 +598,7 @@ remaining = daily_goal - actual_intake  # 还可以摄入150千卡
 - `brand`: 品牌（可选）
 - `barcode`: 条形码（可选）
 - `image_url`: 图片URL（可选）
-- `created_by`: 创建者（系统食物为null）
+- `created_by`: 创建者（公共食物为"all"，用户创建为用户邮箱）
 - `created_at`: 创建时间
 - `updated_at`: 更新时间
 
@@ -596,7 +634,7 @@ remaining = daily_goal - actual_intake  # 还可以摄入150千卡
 - `tags`: 标签列表
 - `image_url`: 图片URL（可选）
 - `prep_time`: 准备时间（分钟，可选）
-- `created_by`: 创建者邮箱（系统食谱为null）
+- `created_by`: 创建者邮箱（系统食谱为"all"）
 - `created_at`: 创建时间
 - `updated_at`: 更新时间
 
@@ -740,8 +778,8 @@ function scaleNutrition(nutrition, scale) {
 
 1. **营养计算**：记录食物时，`nutrition_data` 应该是实际摄入量（份量数 × 每份营养）
 2. **权限控制**：
-   - **食物**：系统食物（`created_by=null`）所有用户可见，用户创建的食物只有创建者自己可见（私有）
-   - **食谱**：系统食谱（`created_by=null`）所有用户可见，用户创建的食谱只有创建者自己可见（私有）
+   - **食物**：公共食物（`created_by="all"`）所有用户可见，用户创建的食物只有创建者自己可见（私有）
+   - **食谱**：系统食谱（`created_by="all"`）所有用户可见，用户创建的食谱只有创建者自己可见（私有）
    - **食物记录**：仅所属用户可见
 3. **数据快照**：食物记录保存时会快照营养数据，避免后续修改食物信息影响历史记录
 4. **时区处理**：所有时间使用UTC，前端需要转换为本地时间
