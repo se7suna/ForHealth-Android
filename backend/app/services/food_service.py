@@ -308,52 +308,58 @@ async def search_local_foods_only(
     """
     仅搜索本地数据库中的食物（不调用薄荷API）
     
+    用户自己创建的食物会排在最前面
+    
     Args:
         keyword: 搜索关键词
         user_email: 用户邮箱
         limit: 返回数量限制
     
     Returns:
-        本地食物列表，包含 created_by="all" 和用户自己的食物
+        本地食物列表，用户自己的食物在前，公共食物在后
     """
     db = get_database()
     
-    # 构建查询条件
-    query_conditions = []
-    
-    # 权限过滤：created_by="all" 或 created_by=用户邮箱
-    if user_email:
-        query_conditions.append({
-            "$or": [
-                {"created_by": "all"},
-                {"created_by": user_email}
-            ]
-        })
-    else:
-        query_conditions.append({"created_by": "all"})
-    
-    # 关键词搜索
+    # 构建关键词搜索条件
+    keyword_condition = {}
     if keyword:
-        query_conditions.append({
+        keyword_condition = {
             "$or": [
                 {"name": {"$regex": keyword, "$options": "i"}},
                 {"brand": {"$regex": keyword, "$options": "i"}},
             ]
-        })
+        }
     
-    # 合并查询条件
-    final_query = {"$and": query_conditions} if query_conditions else {}
-    
-    # 执行查询
-    cursor = db.foods.find(final_query).sort("created_at", -1).limit(limit)
-    foods = await cursor.to_list(length=limit)
-    
-    # 转换 ObjectId 为字符串
     result = []
-    for food in foods:
-        food["_id"] = str(food["_id"])
-        food["food_id"] = str(food["_id"])  # 添加 food_id 字段
-        result.append(food)
+    
+    # 第一步：查询用户自己创建的食物（优先显示）
+    if user_email:
+        user_query = {"created_by": user_email}
+        if keyword_condition:
+            user_query.update(keyword_condition)
+        
+        user_cursor = db.foods.find(user_query).sort("created_at", -1).limit(limit)
+        user_foods = await user_cursor.to_list(length=limit)
+        
+        for food in user_foods:
+            food["_id"] = str(food["_id"])
+            food["food_id"] = str(food["_id"])
+            result.append(food)
+    
+    # 第二步：查询公共食物（created_by="all"）
+    remaining = limit - len(result)
+    if remaining > 0:
+        public_query = {"created_by": "all"}
+        if keyword_condition:
+            public_query.update(keyword_condition)
+        
+        public_cursor = db.foods.find(public_query).sort("created_at", -1).limit(remaining)
+        public_foods = await public_cursor.to_list(length=remaining)
+        
+        for food in public_foods:
+            food["_id"] = str(food["_id"])
+            food["food_id"] = str(food["_id"])
+            result.append(food)
     
     return result
 
@@ -506,26 +512,6 @@ def _scale_full_nutrition(full_nutrition: Optional[Dict[str, Any]], factor: floa
                 scaled[key].append(item_dict)
 
     return scaled
-
-
-async def get_food_categories(user_email: Optional[str] = None) -> List[str]:
-    """获取所有食物分类（只包含系统食物和自己创建的食物）"""
-    db = get_database()
-    
-    # 构建查询条件
-    query = {}
-    if user_email:
-        query["$or"] = [
-            {"created_by": "all"},  # 所有人可见的食物
-            {"created_by": user_email}  # 自己创建的食物
-        ]
-    else:
-        # 未登录用户只能看到所有人可见的食物
-        query["created_by"] = "all"
-    
-    # 获取所有不同的分类
-    categories = await db.foods.distinct("category", query)
-    return [cat for cat in categories if cat]
 
 
 async def update_food(
