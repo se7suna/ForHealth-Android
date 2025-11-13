@@ -235,7 +235,7 @@ async def _cache_boohee_food_item(
         return existing
 
     payload["created_at"] = datetime.utcnow()
-    payload["created_by"] = None
+    payload["created_by"] = "all"  # 薄荷食物所有人可见
 
     result = await db.foods.insert_one(payload)
     payload["_id"] = str(result.inserted_id)
@@ -252,12 +252,9 @@ async def _search_local_foods(
     remaining = max(limit, 0)
     results: List[Dict[str, Any]] = []
 
-    def build_query(created_by_value: Optional[str]) -> Dict[str, Any]:
+    def build_query(created_by_value: str) -> Dict[str, Any]:
         filters = []
-        if created_by_value is None:
-            filters.append({"created_by": None})
-        else:
-            filters.append({"created_by": created_by_value})
+        filters.append({"created_by": created_by_value})
 
         if keyword:
             filters.append({
@@ -289,8 +286,8 @@ async def _search_local_foods(
     if user_email:
         remaining = await fetch_and_append(build_query(user_email), remaining)
 
-    # 再获取系统食物
-    remaining = await fetch_and_append(build_query(None), remaining)
+    # 再获取所有人可见的食物 (created_by="all")
+    remaining = await fetch_and_append(build_query("all"), remaining)
 
     # 通过Pydantic规范化数据结构
     normalized: List[Dict[str, Any]] = []
@@ -301,6 +298,64 @@ async def _search_local_foods(
             normalized.append(item)
 
     return normalized
+
+
+async def search_local_foods_only(
+    keyword: Optional[str],
+    user_email: Optional[str],
+    limit: int = 20,
+) -> List[Dict[str, Any]]:
+    """
+    仅搜索本地数据库中的食物（不调用薄荷API）
+    
+    Args:
+        keyword: 搜索关键词
+        user_email: 用户邮箱
+        limit: 返回数量限制
+    
+    Returns:
+        本地食物列表，包含 created_by="all" 和用户自己的食物
+    """
+    db = get_database()
+    
+    # 构建查询条件
+    query_conditions = []
+    
+    # 权限过滤：created_by="all" 或 created_by=用户邮箱
+    if user_email:
+        query_conditions.append({
+            "$or": [
+                {"created_by": "all"},
+                {"created_by": user_email}
+            ]
+        })
+    else:
+        query_conditions.append({"created_by": "all"})
+    
+    # 关键词搜索
+    if keyword:
+        query_conditions.append({
+            "$or": [
+                {"name": {"$regex": keyword, "$options": "i"}},
+                {"brand": {"$regex": keyword, "$options": "i"}},
+            ]
+        })
+    
+    # 合并查询条件
+    final_query = {"$and": query_conditions} if query_conditions else {}
+    
+    # 执行查询
+    cursor = db.foods.find(final_query).sort("created_at", -1).limit(limit)
+    foods = await cursor.to_list(length=limit)
+    
+    # 转换 ObjectId 为字符串
+    result = []
+    for food in foods:
+        food["_id"] = str(food["_id"])
+        food["food_id"] = str(food["_id"])  # 添加 food_id 字段
+        result.append(food)
+    
+    return result
 
 
 async def search_foods(
@@ -461,12 +516,12 @@ async def get_food_categories(user_email: Optional[str] = None) -> List[str]:
     query = {}
     if user_email:
         query["$or"] = [
-            {"created_by": None},  # 系统食物
+            {"created_by": "all"},  # 所有人可见的食物
             {"created_by": user_email}  # 自己创建的食物
         ]
     else:
-        # 未登录用户只能看到系统食物
-        query["created_by"] = None
+        # 未登录用户只能看到所有人可见的食物
+        query["created_by"] = "all"
     
     # 获取所有不同的分类
     categories = await db.foods.distinct("category", query)
@@ -601,7 +656,8 @@ async def create_food_record(
     if not local_food:
         raise ValueError("食物不存在")
 
-    if local_food.get("created_by") is not None and local_food.get("created_by") != user_email:
+    # 权限检查：created_by="all" 所有人可见，否则只有创建者可见
+    if local_food.get("created_by") != "all" and local_food.get("created_by") != user_email:
         raise ValueError("无权访问此食物")
 
     serving_amount = record_data.serving_amount

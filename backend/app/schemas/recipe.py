@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ConfigDict
 from typing import Optional, List
 from datetime import datetime
 from app.models.food import NutritionData, FullNutritionData
@@ -196,6 +196,28 @@ class RecipeResponse(BaseModel):
     created_by: Optional[str] = None
     created_at: datetime
     updated_at: datetime
+
+
+class RecipeSearchRequest(BaseModel):
+    """食谱搜索请求"""
+    keyword: Optional[str] = Field(None, description="搜索关键词")
+    category: Optional[str] = Field(None, description="分类筛选")
+    tags: Optional[List[str]] = Field(None, description="标签筛选")
+    limit: int = Field(default=20, ge=1, le=100, description="返回数量限制")
+    offset: int = Field(default=0, ge=0, description="偏移量")
+
+    model_config = ConfigDict(
+        extra="forbid",
+        json_schema_extra={
+            "example": {
+                "keyword": "午餐",
+                "category": "午餐",
+                "tags": ["高蛋白", "轻食"],
+                "limit": 20,
+                "offset": 0
+            }
+        }
+    )
 
 
 class RecipeListResponse(BaseModel):

@@ -245,13 +245,13 @@ async def search_recipes(
     if user_email:
         conditions.append({
             "$or": [
-                {"created_by": None},  # 系统食谱（所有人可见）
+                {"created_by": "all"},  # 所有人可见的食谱
                 {"created_by": user_email}  # 自己创建的食谱
             ]
         })
     else:
-        # 未登录用户只能看到系统食谱
-        conditions.append({"created_by": None})
+        # 未登录用户只能看到所有人可见的食谱
+        conditions.append({"created_by": "all"})
     
     # 关键词搜索
     if keyword:
@@ -289,12 +289,12 @@ async def get_recipe_categories(user_email: Optional[str] = None) -> List[str]:
     query = {}
     if user_email:
         query["$or"] = [
-            {"created_by": None},  # 系统食谱
+            {"created_by": "all"},  # 所有人可见的食谱
             {"created_by": user_email}  # 自己创建的食谱
         ]
     else:
-        # 未登录用户只能看到系统食谱
-        query["created_by"] = None
+        # 未登录用户只能看到所有人可见的食谱
+        query["created_by"] = "all"
     
     categories = await db.recipes.distinct("category", query)
     return [cat for cat in categories if cat]

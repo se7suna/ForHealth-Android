@@ -293,7 +293,7 @@ class FoodInDB(BaseModel):
     image_url: Optional[str] = Field(None, description="食物图片URL")
     
     # 元数据
-    created_by: Optional[str] = Field(None, description="创建者邮箱（系统食物为None）")
+    created_by: Optional[str] = Field(None, description="创建者邮箱（'all'表示所有人可见，用户邮箱表示仅创建者可见）")
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)
 

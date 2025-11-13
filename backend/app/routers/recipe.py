@@ -4,6 +4,7 @@ from app.schemas.recipe import (
     RecipeCreateRequest,
     RecipeUpdateRequest,
     RecipeResponse,
+    RecipeSearchRequest,
     RecipeListResponse,
     MessageResponse,
 )
@@ -58,21 +59,25 @@ async def create_recipe(
 
 @router.get("/search", response_model=RecipeListResponse)
 async def search_recipes(
-    keyword: Optional[str] = Query(None, description="搜索关键词"),
-    category: Optional[str] = Query(None, description="分类筛选"),
-    tags: Optional[List[str]] = Query(None, description="标签筛选"),
-    limit: int = Query(20, ge=1, le=100),
-    offset: int = Query(0, ge=0),
+    query: RecipeSearchRequest = Depends(),
     current_user: str = Depends(get_current_user)
 ):
-    """搜索食谱"""
+    """
+    搜索食谱
+    
+    - **keyword**: 搜索关键词（可选，搜索名称、描述）
+    - **category**: 分类筛选（可选）
+    - **tags**: 标签筛选（可选，多个标签）
+    - **limit**: 返回数量限制（默认20，最大100）
+    - **offset**: 偏移量（用于分页，默认0）
+    """
     recipes, total = await recipe_service.search_recipes(
-        keyword=keyword,
-        category=category,
-        tags=tags,
+        keyword=query.keyword,
+        category=query.category,
+        tags=query.tags,
         user_email=current_user,
-        limit=limit,
-        offset=offset,
+        limit=query.limit,
+        offset=query.offset,
     )
     
     recipe_responses = [
@@ -117,8 +122,8 @@ async def get_recipe(
             detail="食谱不存在"
         )
     
-    # 检查权限：只能查看系统食谱或自己创建的食谱
-    if recipe.get("created_by") is not None and recipe.get("created_by") != current_user:
+    # 检查权限：created_by="all" 所有人可见，否则只有创建者可见
+    if recipe.get("created_by") != "all" and recipe.get("created_by") != current_user:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="无权访问此食谱"

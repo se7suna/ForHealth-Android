@@ -1,5 +1,5 @@
 from pydantic import BaseModel, Field, field_validator, ConfigDict
-from typing import Optional, List, Dict, Any
+from typing import Optional, List, Dict, Any, Union
 from datetime import datetime, date
 from app.models.food import NutritionData, FullNutritionData, BooheeFoodSearchItem
 
@@ -193,9 +193,93 @@ class FoodUpdateRequest(BaseModel):
         }
 
 
+class SimplifiedNutritionData(BaseModel):
+    """简化的营养数据（仅主要营养素）"""
+    calories: float = Field(..., description="热量（千卡）")
+    protein: float = Field(..., description="蛋白质（克）")
+    fat: float = Field(..., description="脂肪（克）")
+    carbohydrates: float = Field(..., description="碳水化合物（克）")
+    sugar: Optional[float] = Field(None, description="糖（克）")
+    sodium: Optional[float] = Field(None, description="钠（毫克）")
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "calories": 54,
+                "protein": 0.3,
+                "fat": 0.2,
+                "carbohydrates": 13.5,
+                "sugar": 10.2,
+                "sodium": 1
+            }
+        }
+
+
 class FoodSearchItemResponse(BooheeFoodSearchItem):
     """食物搜索结果条目"""
     pass
+
+
+class SimplifiedFoodSearchItem(BaseModel):
+    """简化的食物搜索结果条目（仅显示主要营养信息）"""
+    source: str = Field(..., description="数据来源：local 或 boohee")
+    food_id: Optional[str] = Field(None, description="本地食物ID（本地食物）")
+    boohee_id: Optional[int] = Field(None, description="薄荷健康食物ID（薄荷食物）")
+    code: str = Field(..., description="食物编码")
+    name: str = Field(..., description="食物名称")
+    weight: float = Field(..., description="标准份量")
+    weight_unit: str = Field(default="克", description="份量单位")
+    brand: Optional[str] = Field(None, description="品牌")
+    image_url: Optional[str] = Field(None, description="图片URL")
+    nutrition: SimplifiedNutritionData = Field(..., description="简化营养信息（仅主要营养素）")
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "source": "boohee",
+                "boohee_id": 469,
+                "code": "pingguo_junzhi",
+                "name": "苹果",
+                "weight": 100,
+                "weight_unit": "克",
+                "brand": None,
+                "image_url": "http://s.boohee.cn/house/food_mid/mid_photo_2015126214658469.jpg",
+                "nutrition": {
+                    "calories": 54,
+                    "protein": 0.3,
+                    "fat": 0.2,
+                    "carbohydrates": 13.5,
+                    "sugar": 10.2,
+                    "sodium": 1
+                }
+            }
+        }
+
+
+class FoodSearchRequest(BaseModel):
+    """食物搜索请求"""
+    keyword: Optional[str] = Field(None, description="搜索关键词，对应薄荷API的 q 参数")
+    page: int = Field(default=1, ge=1, le=10, description="页码（薄荷API最多返回前10页）")
+    include_full_nutrition: bool = Field(
+        default=True,
+        description="是否为每个搜索结果请求完整营养信息（调用 /api/v2/foods/ingredients）"
+    )
+    simplified: bool = Field(
+        default=False,
+        description="是否返回简化版本（仅主要营养信息：能量、蛋白质、脂肪、碳水化合物、糖、钠）"
+    )
+
+    model_config = ConfigDict(
+        extra="forbid",
+        json_schema_extra={
+            "example": {
+                "keyword": "苹果",
+                "page": 1,
+                "include_full_nutrition": True,
+                "simplified": False
+            }
+        }
+    )
 
 
 class FoodListResponse(BaseModel):
@@ -271,6 +355,131 @@ class FoodListResponse(BaseModel):
                             "sugar": 10.2,
                             "sodium": 1
                         }
+                    }
+                ]
+            }
+        }
+
+
+class SimplifiedFoodListResponse(BaseModel):
+    """简化版食物搜索结果响应（仅主要营养信息）"""
+    page: int = Field(..., ge=1, description="当前页码")
+    total_pages: int = Field(..., ge=0, description="总页数（最大10）")
+    foods: List[SimplifiedFoodSearchItem] = Field(..., description="简化搜索结果列表")
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "page": 1,
+                "total_pages": 3,
+                "foods": [
+                    {
+                        "source": "local",
+                        "food_id": "64f1f0c2e13e5f7b12345678",
+                        "code": "64f1f0c2e13e5f7b12345678",
+                        "name": "同济牛排",
+                        "weight": 100,
+                        "weight_unit": "克",
+                        "brand": "同济食堂",
+                        "image_url": None,
+                        "nutrition": {
+                            "calories": 260,
+                            "protein": 28,
+                            "carbohydrates": 0,
+                            "fat": 16,
+                            "sugar": 0,
+                            "sodium": 60
+                        }
+                    },
+                    {
+                        "source": "boohee",
+                        "boohee_id": 469,
+                        "code": "pingguo_junzhi",
+                        "name": "苹果",
+                        "weight": 100,
+                        "weight_unit": "克",
+                        "brand": None,
+                        "image_url": "http://s.boohee.cn/house/food_mid/mid_photo_2015126214658469.jpg",
+                        "nutrition": {
+                            "calories": 54,
+                            "protein": 0.3,
+                            "carbohydrates": 13.5,
+                            "fat": 0.2,
+                            "sugar": 10.2,
+                            "sodium": 1
+                        }
+                    }
+                ]
+            }
+        }
+
+
+class FoodNameSearchRequest(BaseModel):
+    """食物名称搜索请求（仅返回ID和名称）"""
+    keyword: str = Field(..., min_length=1, description="搜索关键词（食物名称）")
+    limit: int = Field(default=20, ge=1, le=100, description="返回数量限制")
+
+    model_config = ConfigDict(
+        extra="forbid",
+        json_schema_extra={
+            "example": {
+                "keyword": "苹果",
+                "limit": 20
+            }
+        }
+    )
+
+
+class FoodIdItem(BaseModel):
+    """食物ID条目（仅本地数据库）"""
+    food_id: str = Field(..., description="食物ID（本地数据库的ObjectId）")
+    name: str = Field(..., description="食物名称")
+    source: str = Field(..., description="数据来源：固定为 local（本地数据库）")
+    brand: Optional[str] = Field(None, description="品牌")
+    boohee_id: Optional[int] = Field(None, description="薄荷健康食物ID（如果是缓存的薄荷食物则有此字段）")
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "food_id": "64f1f0c2e13e5f7b12345678",
+                "name": "苹果",
+                "source": "local",
+                "brand": "红富士",
+                "boohee_id": 469
+            }
+        }
+
+
+class FoodIdSearchResponse(BaseModel):
+    """食物ID搜索响应（仅本地数据库）"""
+    total: int = Field(..., description="总数量")
+    foods: List[FoodIdItem] = Field(..., description="食物ID列表（仅来自本地数据库）")
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "total": 3,
+                "foods": [
+                    {
+                        "food_id": "64f1f0c2e13e5f7b12345678",
+                        "name": "苹果（红富士）",
+                        "source": "local",
+                        "brand": "红富士",
+                        "boohee_id": None
+                    },
+                    {
+                        "food_id": "64f1f0c2e13e5f7b12345679",
+                        "name": "苹果",
+                        "source": "local",
+                        "brand": None,
+                        "boohee_id": 469
+                    },
+                    {
+                        "food_id": "64f1f0c2e13e5f7b87654321",
+                        "name": "苹果汁",
+                        "source": "local",
+                        "brand": None,
+                        "boohee_id": None
                     }
                 ]
             }
@@ -425,6 +634,35 @@ class FoodRecordUpdateRequest(BaseModel):
                 "notes": "加了生菜和柠檬汁"
             }
         }
+
+
+class FoodRecordQueryRequest(BaseModel):
+    """食物记录查询请求"""
+    start_date: Optional[date] = Field(None, description="开始日期（YYYY-MM-DD）")
+    end_date: Optional[date] = Field(None, description="结束日期（YYYY-MM-DD）")
+    meal_type: Optional[str] = Field(None, description="餐次类型")
+    limit: int = Field(default=100, ge=1, le=500, description="返回数量限制")
+    offset: int = Field(default=0, ge=0, description="偏移量")
+
+    @field_validator("meal_type")
+    @classmethod
+    def validate_meal_type(cls, v):
+        if v and v not in ["早餐", "午餐", "晚餐", "加餐", "breakfast", "lunch", "dinner", "snack"]:
+            raise ValueError("餐次类型必须是：早餐、午餐、晚餐、加餐 之一")
+        return v
+
+    model_config = ConfigDict(
+        extra="forbid",
+        json_schema_extra={
+            "example": {
+                "start_date": "2025-11-01",
+                "end_date": "2025-11-13",
+                "meal_type": "午餐",
+                "limit": 50,
+                "offset": 0
+            }
+        }
+    )
 
 
 class FoodRecordListResponse(BaseModel):
