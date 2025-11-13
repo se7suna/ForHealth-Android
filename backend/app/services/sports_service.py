@@ -103,7 +103,7 @@ async def search_sports(search_request,current_user):
         query["sport_type"] = {"$regex": search_request.sport_type, "$options": "i"}
     return await db["sports"].find(query,{"sport_type":1,"METs":1,"_id":0}).to_list(length=100)
     
-
+# 根据开始和结束时间检索运动记录
 async def history_sports(history_request,current_user):
     db = get_database()
     query = {
@@ -120,3 +120,78 @@ async def history_sports(history_request,current_user):
             query["crearted_at"] = {"$lte": end_datetime}
     return await db["sports_log"].find(query,
     {"sport_type":1,"crearted_at":1,"duration_time":1,"calories_burned":1,"_id":0}).to_list(length=100)
+
+# 生成运动报告
+async def generate_sports_report(email: str):
+    """
+    生成用户运动报告，包括：
+    - 总运动次数
+    - 总运动时长
+    - 总消耗卡路里
+    - 最常进行的运动类型
+    - 按运动类型统计的详情
+    """
+    from datetime import datetime, timedelta
+    
+    db = get_database()
+    
+    # 计算上一周的日期范围
+    today = datetime.now().date()
+    # 找到上周一
+    last_day = today - timedelta(days=1)
+    # 上周日
+    last_7day = last_day - timedelta(days=6)
+    
+    # 获取用户上一周的运动记录
+    history_request = type('obj', (object,), {})()
+    history_request.start_date = last_7day
+    history_request.end_date = last_day
+    
+    sports_logs = await history_sports(history_request, email)
+    
+    if not sports_logs:
+        return {
+            "total_activities": 0,
+            "total_duration": 0,
+            "total_calories": 0,
+            "favorite_sport": None,
+            "sport_details": {}
+        }
+    
+    # 计算各项统计数据
+    total_activities = len(sports_logs)
+    total_duration = sum(log["duration_time"] for log in sports_logs)
+    total_calories = sum(log["calories_burned"] for log in sports_logs)
+    
+    # 统计各运动类型的详情
+    sport_details = {}
+    for log in sports_logs:
+        sport_type = log["sport_type"]
+        if sport_type not in sport_details:
+            sport_details[sport_type] = {
+                "count": 0,
+                "total_duration": 0,
+                "total_calories": 0,
+                "avg_duration": 0,
+                "avg_calories": 0
+            }
+        
+        sport_details[sport_type]["count"] += 1
+        sport_details[sport_type]["total_duration"] += log["duration_time"]
+        sport_details[sport_type]["total_calories"] += log["calories_burned"]
+    
+    # 计算平均值
+    for sport_type, details in sport_details.items():
+        details["avg_duration"] = details["total_duration"] / details["count"]
+        details["avg_calories"] = details["total_calories"] / details["count"]
+    
+    # 找出最常进行的运动类型
+    favorite_sport = max(sport_details.items(), key=lambda x: x[1]["count"])[0] if sport_details else None
+    
+    return {
+        "total_activities": total_activities,
+        "total_duration": total_duration,
+        "total_calories": round(total_calories, 2),
+        "favorite_sport": favorite_sport,
+        "sport_details": sport_details
+    }
