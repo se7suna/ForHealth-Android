@@ -44,6 +44,8 @@ test:unit:
       - backend/test-results.xml
     reports:
       junit: backend/test-results.xml
+  tags:
+    - docker
   only:
     changes:
       - backend/**/*
@@ -70,6 +72,8 @@ test:integration:
     - echo "🔗 运行集成测试..."
     - echo "✅ 集成测试通过（待实现）"
   allow_failure: true
+  tags:
+    - docker
   only:
     changes:
       - backend/**/*
