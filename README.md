@@ -23,6 +23,7 @@
 - **认证**: JWT (python-jose)
 - **密码加密**: BCrypt
 - **邮件发送**: aiosmtplib
+- **开发邮件服务器**: MailHog (Docker)
 
 ### 目录结构
 ```
@@ -48,16 +49,39 @@ backend/
 ├── tests/                   # 测试
 ├── requirements.txt         # Python 依赖
 ├── .env.example            # 环境变量示例
+docker-compose.yml          # Docker 编排配置（MongoDB + MailHog）
 ```
 
 ### 环境搭建
 **根目录为/for_health**
+
+#### 1. 启动 Docker 服务（MongoDB + MailHog 邮件服务器）
+
+```bash
+# 启动所有服务
+docker-compose up -d
+
+# 查看服务状态
+docker-compose ps
+
+# 查看日志
+docker-compose logs -f
+```
+
+服务端口：
+- **MongoDB**: `localhost:27017`
+- **MailHog SMTP**: `localhost:1025` (后端邮件发送)
+- **MailHog Web UI**: `http://localhost:8025` (查看邮件)
+
+#### 2. 安装 Python 依赖
 
 ```bash
 # python版本3.11 命令行运行下方命令下载所有依赖
 cd backend
 pip install -r requirements.txt
 ```
+
+#### 3. 配置环境变量
 
 ```bash
 # 复制 `.env.example` 为 `.env`
@@ -69,24 +93,27 @@ copy .env.example .env
 ```
 SECRET_KEY=your-random-secret-key-here
 
-# MongoDB (如果使用 Docker，保持默认即可)
+# MongoDB (使用 Docker Compose 启动，保持默认)
 MONGODB_URL=mongodb://localhost:27017
 DATABASE_NAME=for_health
 
-# SMTP 邮件配置（可选，用于测试密码重置）
-SMTP_HOST=smtp.gmail.com
-SMTP_PORT=587
-SMTP_USER=your-email@gmail.com
-SMTP_PASSWORD=your-app-password
+# 邮件配置 (开发环境使用 MailHog)
+SMTP_HOST=localhost
+SMTP_PORT=1025
+SMTP_USER=
+SMTP_PASSWORD=
 SMTP_FROM_EMAIL=noreply@forhealth.com
 ```
-**注意**: 如果不配置 SMTP，密码重置功能将无法发送邮件，但其他功能正常。
+**注意**:
+- 开发环境使用 MailHog (Docker)，无需配置真实 SMTP 账号
+- 生产环境需要配置真实 SMTP 服务器 (如 Gmail)
 
 ### 本地调试
 
 ```bash
-# docker运行mongodb数据库
-docker run -d -p 27017:27017 --name mongodb mongo:latest
+# 确保 Docker 服务已启动
+docker-compose up -d
+
 # 启动后端
 cd backend
 python -m app.main
@@ -97,21 +124,24 @@ FastAPI 自动生成交互式 API 文档：
 - **Swagger UI**: http://localhost:8000/docs
 - **ReDoc**: http://localhost:8000/redoc
 
+#### 查看邮件
+访问 MailHog Web UI: **http://localhost:8025**
+
+在这里可以查看系统发送的所有邮件（注册验证码、密码重置等）
+
 #### 删除 MongoDB 测试数据
 
 ```bash
-# 连接到 MongoDB
-mongo for_health
+# 方法1: 使用 docker-compose 重启服务（会清空所有数据）
+docker-compose down -v
+docker-compose up -d
 
-# 删除 users 集合
+# 方法2: 连接到 MongoDB 删除指定集合
+docker exec -it for_health_mongodb mongosh for_health
 db.users.drop()
+exit
 ```
 
-或使用 Docker 重启：
-
-```bash
-docker restart mongodb
-```
 #### 数据库操作
 
 使用 motor 异步驱动操作 MongoDB：
@@ -156,10 +186,16 @@ TDEE = BMR × PAL系数
 
 | 方法 | 端点 | 说明 | 认证 |
 |------|------|------|------|
-| POST | `/auth/register` | 用户注册 | ❌ |
+| POST | `/auth/send-verification-code` | 发送注册验证码 | ❌ |
+| POST | `/auth/register` | 用户注册（需验证码） | ❌ |
 | POST | `/auth/login` | 用户登录 | ❌ |
 | POST | `/auth/password-reset/send-code` | 发送密码重置验证码 | ❌ |
 | POST | `/auth/password-reset/verify` | 验证验证码并重置密码 | ❌ |
+
+**注册流程**：
+1. 调用 `/auth/send-verification-code` 发送验证码到邮箱
+2. 查看 MailHog Web UI (http://localhost:8025) 获取验证码
+3. 使用验证码调用 `/auth/register` 完成注册
 
 ##### 用户管理 (`/api/user`)
 
