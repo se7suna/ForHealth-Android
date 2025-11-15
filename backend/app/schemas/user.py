@@ -5,11 +5,17 @@ from app.models.user import ActivityLevel, HealthGoalType, Gender
 
 
 # ========== 注册和认证 ==========
+class SendRegistrationCodeRequest(BaseModel):
+    """发送注册验证码请求"""
+    email: EmailStr
+
+
 class UserRegisterRequest(BaseModel):
     """用户注册请求"""
     email: EmailStr
     username: str = Field(..., min_length=2, max_length=50)
     password: str = Field(..., min_length=6, max_length=100)
+    verification_code: str = Field(..., min_length=6, max_length=6, description="邮箱验证码")
 
 
 class UserLoginRequest(BaseModel):
