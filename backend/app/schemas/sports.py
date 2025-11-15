@@ -1,7 +1,6 @@
 from pydantic import BaseModel, Field, validator
 from typing import Optional
 from datetime import datetime,date
-from bson import ObjectId
 
 # 记录运动及消耗卡路里的请求
 class LogSportsRequest(BaseModel):
@@ -31,6 +30,11 @@ class UpdateSportsRequest(BaseModel):
 # 搜索运动类型的请求
 class SearchSportsRequest(BaseModel):
     sport_type: Optional[str] = None
+
+class SearchSportsResponse(BaseModel):
+    sport_type: Optional[str] = None
+    describe: Optional[str] = None
+    METs: Optional[int] = None
 
 class SearchSportsResponse(BaseModel):
     sport_type: Optional[str] = None

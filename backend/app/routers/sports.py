@@ -7,6 +7,7 @@ from app.schemas.sports import (
     CreateSportsRequest,
     UpdateSportsRequest,
     SearchSportRecordsRequest,
+    SearchSportsResponse,
     SearchSportRecordsResponse,
     SimpleSportsResponse,
 )
@@ -67,6 +68,15 @@ async def delete_sports(sport_type: str, current_user: str = Depends(get_current
             status_code=status.HTTP_404_NOT_FOUND,
             detail="删除自定义运动类型失败，运动类型不存在或无权删除"
         )
+
+# 获取用户可用运动类型列表
+@router.get("/get-available-sports-types", response_model=list[SearchSportsResponse])
+async def get_available_sports_types(current_user: str = Depends(get_current_user)):
+    """
+    获取用户可用的运动类型列表
+    包括系统默认运动类型和用户自定义的运动类型
+    """
+    return await sports_service.get_available_sports_types(current_user)
 
 # 记录运动记录
 @router.post("/log-sports",response_model=SimpleSportsResponse)

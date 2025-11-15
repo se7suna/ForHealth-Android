@@ -102,9 +102,23 @@ async def delete_sports(sport_type: str, current_user: str):
         "sport_type": sport_type,
         "email": current_user
     })
-    
+
     # 返回删除是否成功（删除了至少一条记录）
     return result.deleted_count > 0
+
+# 获取用户可用运动类型列表
+async def get_available_sports_types(current_user: str):
+    """
+    获取用户可用的运动类型列表，包括默认运动类型和用户自定义的运动类型
+    """
+    db = get_database()
+    # 查询默认运动类型和用户自定义的运动类型
+    sports_types = await db["sports"].find(
+        {"$or": [{"email": default_email}, {"email": current_user}]},
+        {"sport_type": 1, "describe": 1, "METs": 1, "_id": 0}
+    ).to_list(length=1000)
+
+    return sports_types
 
 # 记录运动
 async def log_sports_record(log_request,current_user):
