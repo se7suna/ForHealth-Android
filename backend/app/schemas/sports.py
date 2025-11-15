@@ -19,13 +19,13 @@ class UpdateSportsRecordRequest(BaseModel):
 class CreateSportsRequest(BaseModel):
     sport_type: Optional[str] = None
     describe: Optional[str] = None
-    METs: Optional[int] = Field(None, gt=0)
+    METs: Optional[float] = Field(None, gt=0)
 
 # 更新自定义运动类型的请求
 class UpdateSportsRequest(BaseModel):
     sport_type: Optional[str] = None
     describe: Optional[str] = None
-    METs: Optional[int] = Field(None, gt=0)
+    METs: Optional[float] = Field(None, gt=0)
 
 # 搜索运动类型的请求
 class SearchSportsRequest(BaseModel):
@@ -34,12 +34,12 @@ class SearchSportsRequest(BaseModel):
 class SearchSportsResponse(BaseModel):
     sport_type: Optional[str] = None
     describe: Optional[str] = None
-    METs: Optional[int] = None
+    METs: Optional[float] = None
 
 class SearchSportsResponse(BaseModel):
     sport_type: Optional[str] = None
     describe: Optional[str] = None
-    METs: Optional[int] = None
+    METs: Optional[float] = None
 
 # 搜索运动记录的请求
 class SearchSportRecordsRequest(BaseModel):
