@@ -96,21 +96,26 @@ build:backend:
     paths:
       - backend/
     expire_in: 1 day
+  tags:
+    - docker
   only:
     changes:
       - backend/**/*
       - .gitlab-ci.yml
 
 # ==================== 通知 ====================
-
 notify:success:
   stage: .post
   script:
     - echo "✅ CI/CD Pipeline 执行成功！"
+  tags:
+    - docker
   when: on_success
 
 notify:failure:
   stage: .post
   script:
     - echo "❌ CI/CD Pipeline 执行失败，请检查日志。"
+  tags:
+    - docker
   when: on_failure
