@@ -196,8 +196,18 @@ async def search_sports_record(search_request,current_user):
             query["created_at"] = {"$lte": end_datetime}
     if search_request.sport_type:
         query["sport_type"] = search_request.sport_type
-    return await db["sports_log"].find(query,
+
+    # 查询记录
+    records = await db["sports_log"].find(query,
     {"sport_type":1,"created_at":1,"duration_time":1,"calories_burned":1,"_id":1}).to_list(length=100)
+
+    # 将 ObjectId 转换为字符串,以便 Pydantic 可以正确序列化
+    for record in records:
+        if "_id" in record:
+            record["record_id"] = str(record["_id"])
+            del record["_id"]  # 删除原始的 _id 字段
+
+    return records
     # _id作为记录唯一标识符，对于定位记录很重要！
 
 # 生成运动报告

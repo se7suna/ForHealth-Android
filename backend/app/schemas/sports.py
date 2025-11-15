@@ -55,7 +55,7 @@ class SearchSportRecordsResponse(BaseModel):
     created_at: Optional[datetime] = None
     duration_time: Optional[int] = None
     calories_burned: Optional[float] = None
-    _id: ObjectId
+    record_id: Optional[str] = None
 
 class SimpleSportsResponse(BaseModel):
     success: bool
