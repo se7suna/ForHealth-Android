@@ -10,7 +10,7 @@ variables:
   PIP_CACHE_DIR: "$CI_PROJECT_DIR/.cache/pip"
   # 本地Python路径（根据服务器实际环境调整）
   PYTHON_PATH: "/usr/bin/python3.11"
-  PIP_PATH: "/usr/bin/pip3.11"
+  PIP_PATH: "/usr/local/bin/pip3.11"
   # MongoDB Docker 配置
   MONGO_CONTAINER_NAME: "ci-mongodb"
   MONGO_PORT: "27017"
