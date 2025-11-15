@@ -49,6 +49,8 @@ test:unit:
       - backend/test-results.xml
     reports:
       junit: backend/test-results.xml
+  tags:
+    - docker  # 使用带有 docker tag 的 runner
   only:
     changes:
       - backend/**/*
@@ -122,6 +124,8 @@ test:email-service:
           exit(1)
       EOF
     - echo "✅ 邮箱服务器测试完成！"
+  tags:
+    - docker  # 使用带有 docker tag 的 runner
   only:
     changes:
       - backend/**/*
@@ -149,6 +153,8 @@ test:integration:
     - echo "🔗 运行集成测试..."
     - echo "✅ 集成测试通过（待实现）"
   allow_failure: true
+  tags:
+    - docker  # 使用带有 docker tag 的 runner
   only:
     changes:
       - backend/**/*
@@ -171,6 +177,8 @@ build:backend:
     paths:
       - backend/
     expire_in: 1 day
+  tags:
+    - docker  # 使用带有 docker tag 的 runner
   only:
     changes:
       - backend/**/*
@@ -182,10 +190,14 @@ notify:success:
   stage: .post
   script:
     - echo "✅ CI/CD Pipeline 执行成功！"
+  tags:
+    - docker
   when: on_success
 
 notify:failure:
   stage: .post
   script:
     - echo "❌ CI/CD Pipeline 执行失败，请检查日志。"
+  tags:
+    - docker
   when: on_failure
