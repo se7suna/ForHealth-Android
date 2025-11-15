@@ -1,7 +1,6 @@
 from datetime import datetime
 from typing import Optional
 from pydantic import BaseModel, Field
-from enum import Enum
 
 # 用email做用户唯一凭证
 default_email="sport@default.com"# 表示公用运动类型
@@ -15,6 +14,7 @@ DefaultSports = (
 
 """数据库中的运动类型表"""
 class SportsTypeInDB(BaseModel):
+    
     email: str
     sport_type: str
     describe: str

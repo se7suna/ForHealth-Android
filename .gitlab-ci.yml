@@ -8,22 +8,27 @@ stages:
 variables:
   PYTHON_VERSION: "3.11"
   PIP_CACHE_DIR: "$CI_PROJECT_DIR/.cache/pip"
+  # 本地Python路径（根据服务器实际环境调整）
+  PYTHON_PATH: "/usr/bin/python3.11"
+  PIP_PATH: "/usr/bin/pip3.11"
+  # MongoDB Docker 配置
+  MONGO_CONTAINER_NAME: "ci-mongodb"
+  MONGO_PORT: "27017"
+  MONGO_IMAGE: "mongo:latest"
 
-# 缓存配置
+# 缓存配置（针对本地环境）
 cache:
   paths:
     - .cache/pip
     - backend/.venv/
+  key: "$CI_COMMIT_REF_SLUG"
 
 # ==================== Test Stage ====================
 
 test:unit:
   stage: test
-  image: python:${PYTHON_VERSION}
-  services:
-    - mongo:latest  # MongoDB 服务
   variables:
-    MONGODB_URL: "mongodb://mongo:27017"
+    MONGODB_URL: "mongodb://local:${MONGO_PORT}"
     DATABASE_NAME: "test_for_health"
     SECRET_KEY: "test-secret-key-for-ci"
     SMTP_HOST: "smtp.test.com"
@@ -31,12 +36,22 @@ test:unit:
     SMTP_PASSWORD: "test"
     SMTP_FROM_EMAIL: "noreply@test.com"
   before_script:
+    # 启动MongoDB容器
+    - echo "📦 启动MongoDB容器..."
+    - docker run -d --name ${MONGO_CONTAINER_NAME} -p ${MONGO_PORT}:27017 ${MONGO_IMAGE}
+    - sleep 5  # 等待容器启动
+    # 准备Python环境
     - cd backend
-    - pip install --upgrade pip
-    - pip install -r requirements.txt
+    - $PIP_PATH install --upgrade pip
+    - $PIP_PATH install -r requirements.txt
   script:
     - echo "🧪 运行单元测试..."
-    - pytest tests/ -v --tb=short --junitxml=test-results.xml
+    - $PYTHON_PATH -m pytest tests/ -v --tb=short --junitxml=test-results.xml
+  after_script:
+    # 清理MongoDB容器
+    - echo "🧹 清理MongoDB容器..."
+    - docker stop ${MONGO_CONTAINER_NAME} || true
+    - docker rm ${MONGO_CONTAINER_NAME} || true
   coverage: '/TOTAL.*\s+(\d+%)$/'
   artifacts:
     when: always
@@ -45,7 +60,7 @@ test:unit:
     reports:
       junit: backend/test-results.xml
   tags:
-    - docker
+    - shell  # 使用shell执行器（需提前配置）
   only:
     changes:
       - backend/**/*
@@ -53,11 +68,8 @@ test:unit:
 
 test:integration:
   stage: test
-  image: python:${PYTHON_VERSION}
-  services:
-    - mongo:latest
   variables:
-    MONGODB_URL: "mongodb://mongo:27017"
+    MONGODB_URL: "mongodb://localhost:${MONGO_PORT}"
     DATABASE_NAME: "test_for_health"
     SECRET_KEY: "test-secret-key-for-ci"
     SMTP_HOST: "smtp.test.com"
@@ -65,15 +77,25 @@ test:integration:
     SMTP_PASSWORD: "test"
     SMTP_FROM_EMAIL: "noreply@test.com"
   before_script:
+    # 启动MongoDB容器
+    - echo "📦 启动MongoDB容器..."
+    - docker run -d --name ${MONGO_CONTAINER_NAME} -p ${MONGO_PORT}:27017 ${MONGO_IMAGE}
+    - sleep 5  # 等待容器启动
+    # 准备Python环境
     - cd backend
-    - pip install --upgrade pip
-    - pip install -r requirements.txt
+    - $PIP_PATH install --upgrade pip
+    - $PIP_PATH install -r requirements.txt
   script:
     - echo "🔗 运行集成测试..."
     - echo "✅ 集成测试通过（待实现）"
+  after_script:
+    # 清理MongoDB容器
+    - echo "🧹 清理MongoDB容器..."
+    - docker stop ${MONGO_CONTAINER_NAME} || true
+    - docker rm ${MONGO_CONTAINER_NAME} || true
   allow_failure: true
   tags:
-    - docker
+    - shell
   only:
     changes:
       - backend/**/*
@@ -83,21 +105,20 @@ test:integration:
 
 build:backend:
   stage: build
-  image: python:${PYTHON_VERSION}
   before_script:
     - cd backend
-    - pip install --upgrade pip
-    - pip install -r requirements.txt
+    - $PIP_PATH install --upgrade pip
+    - $PIP_PATH install -r requirements.txt
   script:
     - echo "🏗️ 构建后端应用..."
-    - python -m py_compile app/**/*.py
+    - $PYTHON_PATH -m py_compile app/**/*.py
     - echo "✅ 构建成功"
   artifacts:
     paths:
       - backend/
     expire_in: 1 day
   tags:
-    - docker
+    - shell
   only:
     changes:
       - backend/**/*
@@ -109,7 +130,7 @@ notify:success:
   script:
     - echo "✅ CI/CD Pipeline 执行成功！"
   tags:
-    - docker
+    - shell
   when: on_success
 
 notify:failure:
@@ -117,5 +138,5 @@ notify:failure:
   script:
     - echo "❌ CI/CD Pipeline 执行失败，请检查日志。"
   tags:
-    - docker
+    - shell
   when: on_failure
