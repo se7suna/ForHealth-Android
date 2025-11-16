@@ -6,8 +6,6 @@ sys.path.insert(0, backend_path)
 import pytest
 import pytest_asyncio
 from httpx import AsyncClient
-from app.main import app
-from app.routers.auth import get_current_user
 
 # 测试用户凭证
 TEST_USER = {
@@ -23,17 +21,16 @@ async def auth_token():
     # 尝试先测试健康检查
     async with AsyncClient(base_url="http://127.0.0.1:8000", timeout=30.0, http2=False) as client:
         # 登录获取 token
-        try:
-            response = await client.post(
-                "/api/auth/login",
-                json={
-                    "email": TEST_USER["email"],
-                    "password": TEST_USER["password"]
-                }
-            )
-            assert response.status_code == 200, f"登录失败: 状态码={response.status_code}, 响应={response.text}"
-            token_data = response.json()
-            return token_data["access_token"]
+        response = await client.post(
+            "/api/auth/login",
+            json={
+                "email": TEST_USER["email"],
+                "password": TEST_USER["password"]
+            }
+        )
+    assert response.status_code == 200, f"登录失败: 状态码={response.status_code}, 响应={response.text}"
+    token_data = response.json()
+    return token_data["access_token"]
 
 
 
@@ -54,12 +51,16 @@ async def authenticated_client(auth_token):
 @pytest.mark.asyncio
 @pytest.mark.parametrize("sport_data,expected_status,expected_success", [
     # 正常情况
-    ({"sport_type": "自定义跑步", "describe": "户外跑步", "METs": 8.0}, 200, True),
+    ({"sport_type": "定义跑步", "describe": "户外跑步", "METs": 8.0}, 200, True),
+    # 边界情况：缺少必填字段
+    #({"sport_type": "", "describe": "户外跑步", "METs": 8.0}, 422, False),
+    # 边界情况：METs为负数
+    #({"sport_type": "自定义游泳", "describe": "室内游泳", "METs": -5.0}, 422, False),
 ])
 async def test_create_sports(authenticated_client,sport_data, expected_status, expected_success):
     """测试创建自定义运动类型 - 正常情况和边界条件"""
     response = await authenticated_client.post("/api/sports/create-sport", json=sport_data)
         
-    assert response.status_code == expected_status
+    assert response.status_code == expected_status # 若报错，响应内容为：response.detail
     result = response.json()
     assert result["success"] == expected_success
