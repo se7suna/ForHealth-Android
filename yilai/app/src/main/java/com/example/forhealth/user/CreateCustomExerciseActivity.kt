@@ -1,6 +1,7 @@
 package com.example.forhealth.user
 
 import android.os.Bundle
+import android.content.Intent
 import android.widget.EditText
 import android.widget.Button
 import android.widget.Toast
@@ -32,7 +33,13 @@ class CreateCustomExerciseActivity : AppCompatActivity() {
 
         // 初始化 Room 数据库
         db = Room.databaseBuilder(applicationContext, AppDatabase::class.java, "app_database").build()
-
+        val btnBack = findViewById<Button>(R.id.btnBack)
+        btnBack.setOnClickListener {
+            // 返回到 SportActivity
+            val intent = Intent(this, SportActivity::class.java)
+            startActivity(intent)
+            finish()  // 结束当前 Activity
+        }
         // 保存按钮点击事件
         saveButton.setOnClickListener {
             val exerciseName = exerciseNameEditText.text.toString().trim()

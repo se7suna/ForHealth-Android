@@ -1,6 +1,7 @@
 package com.example.forhealth.user
 import android.os.Bundle
 import android.view.View
+import android.content.Intent
 import android.widget.AdapterView
 import android.widget.ArrayAdapter
 import android.widget.EditText
@@ -29,7 +30,13 @@ class SelectFoodRecipeActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_select_food_recipe)
-
+        val btnBackToFood = findViewById<Button>(R.id.btnBack)
+        btnBackToFood.setOnClickListener {
+            // 跳转回 FoodActivity
+            val intent = Intent(this, FoodActivity::class.java)  // 返回到 FoodActivity
+            startActivity(intent)
+            finish()  // 结束当前页面
+        }
         // 初始化视图
         spinnerFoodRecipe = findViewById(R.id.spinnerFoodRecipe)
         etPortionSize = findViewById(R.id.etPortionSize)

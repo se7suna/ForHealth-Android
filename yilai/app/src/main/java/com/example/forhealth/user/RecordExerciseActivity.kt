@@ -5,6 +5,7 @@ import android.widget.Spinner
 import android.widget.EditText
 import android.widget.Button
 import android.widget.Toast
+import android.content.Intent
 import androidx.appcompat.app.AppCompatActivity
 import android.widget.ArrayAdapter
 import com.example.forhealth.R
@@ -37,7 +38,13 @@ class RecordExerciseActivity : AppCompatActivity() {
         val adapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, exerciseList)
         adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
         customExerciseSpinner.adapter = adapter
-
+        val btnBack = findViewById<Button>(R.id.btnBack)
+        btnBack.setOnClickListener {
+            // 返回到 SportActivity
+            val intent = Intent(this, SportActivity::class.java)
+            startActivity(intent)
+            finish()  // 结束当前 Activity
+        }
         // 计算按钮点击事件
         calculateButton.setOnClickListener {
             val selectedExercise = customExerciseSpinner.selectedItem.toString()

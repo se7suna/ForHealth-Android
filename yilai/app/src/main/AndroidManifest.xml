@@ -66,11 +66,45 @@
             android:exported="false"
             android:theme="@style/AppThemeWithActionBar" />
 
+        <activity
+            android:name=".user.MainActivity"
+            android:exported="true"
+            android:theme="@style/AppTheme" />
+
+        <activity
+            android:name=".user.FoodActivity"
+            android:exported="true"
+            android:theme="@style/AppTheme" />
         <!-- 个人信息 -->
         <activity
             android:name=".user.ProfileActivity"
             android:exported="false"
             android:theme="@style/AppThemeWithActionBar" />
+
+        <activity
+            android:name=".user.FoodSearchActivity"
+            android:exported="true"
+            android:theme="@style/AppTheme" />
+
+        <activity
+            android:name=".user.FoodRecordActivity"
+            android:exported="true"
+            android:theme="@style/AppTheme" />
+
+        <activity
+            android:name=".user.CreateCustomFoodActivity"
+            android:exported="true"
+            android:theme="@style/AppTheme" />
+
+        <activity
+            android:name=".user.RecipeActivity"
+            android:exported="true"
+            android:theme="@style/AppTheme" />
+
+        <activity
+            android:name=".user.SelectFoodRecipeActivity"
+            android:exported="true"
+            android:theme="@style/AppTheme" />
 
         <!-- 条形码扫描 -->
         <activity
@@ -79,6 +113,35 @@
             android:exported="false"
             tools:replace="android:theme"
             android:theme="@style/zxing_CaptureTheme" />
+
+        <activity
+            android:name=".user.SportActivity"
+            android:exported="true"
+            android:theme="@style/AppTheme" />
+
+        <activity
+            android:name=".user.SearchExerciseActivity"
+            android:exported="true"
+            android:theme="@style/AppTheme" />
+        <activity
+            android:name=".user.RecordExerciseActivity"
+            android:exported="true"
+            android:theme="@style/AppTheme" />
+
+        <activity
+            android:name=".user.GenerateExercisePlanActivity"
+            android:exported="true"
+            android:theme="@style/AppTheme" />
+
+        <activity
+            android:name=".user.ViewExerciseHistoryActivity"
+            android:exported="true"
+            android:theme="@style/AppTheme" />
+
+        <activity
+            android:name=".user.CreateCustomExerciseActivity"
+            android:exported="true"
+            android:theme="@style/AppTheme" />
 
 
     </application>

@@ -11,6 +11,21 @@
         android:orientation="vertical"
         android:padding="16dp">
 
+        <!-- 返回按钮 放入 LinearLayout 中 -->
+        <Button
+            android:id="@+id/btnBack"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="返回"
+            android:drawableLeft="@android:drawable/ic_menu_revert"
+            android:contentDescription="返回"
+            android:background="?android:attr/selectableItemBackgroundBorderless"
+            android:layout_gravity="start"
+            android:layout_marginBottom="16dp"
+            android:layout_marginStart="16dp"
+            android:paddingStart="8dp"
+            android:paddingEnd="8dp"/>
+
         <!-- 健康目标选择 -->
         <Spinner
             android:id="@+id/goalSpinner"
@@ -92,5 +107,5 @@
             android:text="生成的运动计划将显示在此处"
             android:layout_marginTop="16dp"/>
     </LinearLayout>
-
 </ScrollView>
+

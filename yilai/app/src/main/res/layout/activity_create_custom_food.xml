@@ -5,6 +5,19 @@
     android:orientation="vertical"
     android:padding="16dp">
 
+    <Button
+        android:id="@+id/btnBack"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="返回"
+        android:drawableLeft="@android:drawable/ic_menu_revert"
+        android:contentDescription="返回"
+        android:background="?android:attr/selectableItemBackgroundBorderless"
+        android:layout_gravity="start"
+        android:layout_marginBottom="16dp"
+        android:layout_marginStart="16dp"
+        android:paddingStart="8dp"
+        android:paddingEnd="8dp"/>
     <!-- 食物名称输入框 -->
     <EditText
         android:id="@+id/etFoodName"

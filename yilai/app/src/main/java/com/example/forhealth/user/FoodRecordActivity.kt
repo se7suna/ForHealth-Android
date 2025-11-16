@@ -3,6 +3,7 @@ package com.example.forhealth.user
 import android.os.Bundle
 import android.widget.Button
 import android.widget.EditText
+import android.content.Intent
 import android.widget.Spinner
 import android.widget.TextView
 import android.widget.Toast
@@ -36,7 +37,13 @@ class FoodRecordActivity : AppCompatActivity() {
         deleteButton = findViewById(R.id.deleteButton)
 
         dbHelper = DatabaseHelper(this)
-
+        val btnBackToFood = findViewById<Button>(R.id.btnBack)
+        btnBackToFood.setOnClickListener {
+            // 跳转回 FoodActivity
+            val intent = Intent(this, FoodActivity::class.java)  // 返回到 FoodActivity
+            startActivity(intent)
+            finish()  // 结束当前页面
+        }
         // 获取传递过来的记录ID和其他数据
         recordId = intent.getLongExtra("RECORD_ID", -1)
         foodName = intent.getStringExtra("FOOD_NAME") ?: ""

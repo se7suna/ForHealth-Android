@@ -2,6 +2,7 @@ package com.example.forhealth.user
 
 import android.os.Bundle
 import android.widget.Button
+import android.content.Intent
 import android.widget.EditText
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
@@ -33,7 +34,13 @@ class CreateCustomFoodActivity : AppCompatActivity() {
         btnSave = findViewById(R.id.btnSave)
 
         dbHelper = CustomFoodDatabaseHelper(this)
-
+        val btnBackToFood = findViewById<Button>(R.id.btnBack)
+        btnBackToFood.setOnClickListener {
+            // 跳转回 FoodActivity
+            val intent = Intent(this, FoodActivity::class.java)  // 返回到 FoodActivity
+            startActivity(intent)
+            finish()  // 结束当前页面
+        }
         // Save button click listener
         btnSave.setOnClickListener {
             val foodName = etFoodName.text.toString()

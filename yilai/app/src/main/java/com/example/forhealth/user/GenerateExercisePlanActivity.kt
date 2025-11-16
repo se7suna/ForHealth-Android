@@ -1,6 +1,7 @@
 package com.example.forhealth.user
 
 import android.os.Bundle
+import android.content.Intent
 import android.widget.Button
 import android.widget.EditText
 import android.widget.Spinner
@@ -41,6 +42,13 @@ class GenerateExercisePlanActivity : AppCompatActivity() {
         generateButton = findViewById(R.id.generateButton)
         exercisePlanTextView = findViewById(R.id.exercisePlanTextView)
 
+        val btnBack = findViewById<Button>(R.id.btnBack)
+        btnBack.setOnClickListener {
+            // 返回到 SportActivity
+            val intent = Intent(this, SportActivity::class.java)
+            startActivity(intent)
+            finish()  // 结束当前 Activity
+        }
         // Generate button click listener
         generateButton.setOnClickListener {
             val goal = goalSpinner.selectedItem.toString()
@@ -68,7 +76,7 @@ class GenerateExercisePlanActivity : AppCompatActivity() {
                             exercisePlanTextView.text = plan.choices[0].message.content
                         }
                     } else {
-                        Toast.makeText(this@GenerateExercisePlanActivity, "Failed to generate plan", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(this@GenerateExercisePlanActivity, "生成运动计划失败", Toast.LENGTH_SHORT).show()
                     }
                 }
 

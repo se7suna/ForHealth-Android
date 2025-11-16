@@ -4,10 +4,20 @@
     android:layout_height="match_parent"
     android:orientation="vertical"
     android:padding="16dp">
-    <TextView
+    <Button
+        android:id="@+id/btnBack"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:padding="80dp"/>
+        android:text="返回"
+        android:drawableLeft="@android:drawable/ic_menu_revert"
+        android:contentDescription="返回"
+        android:background="?android:attr/selectableItemBackgroundBorderless"
+        android:layout_gravity="start"
+        android:layout_marginBottom="16dp"
+        android:layout_marginStart="16dp"
+        android:paddingStart="8dp"
+        android:paddingEnd="8dp"/>
+
     <!-- Start Date -->
     <EditText
         android:id="@+id/startDateEditText"

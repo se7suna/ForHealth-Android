@@ -1,6 +1,7 @@
 package com.example.forhealth.user
 
 import android.os.Bundle
+import android.content.Intent
 import android.widget.Button
 import android.widget.EditText
 import android.widget.ListView
@@ -26,6 +27,13 @@ class SearchExerciseActivity : AppCompatActivity() {
         searchButton = findViewById(R.id.searchButton)
         exerciseListView = findViewById(R.id.exerciseListView)
 
+        val btnBack = findViewById<Button>(R.id.btnBack)
+        btnBack.setOnClickListener {
+            // 返回到 SportActivity
+            val intent = Intent(this, SportActivity::class.java)
+            startActivity(intent)
+            finish()  // 结束当前 Activity
+        }
         // Initialize database helper
         dbHelper = ExerciseSearchDatabaseHelper(this)
 

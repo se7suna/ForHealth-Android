@@ -1,6 +1,7 @@
 package com.example.forhealth.user
 import com.example.forhealth.R
 import android.os.Bundle
+import android.content.Intent
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -39,7 +40,13 @@ class RecipeActivity : AppCompatActivity() {
         ingredientAdapter = IngredientAdapter(ingredientList)
         recyclerView.layoutManager = LinearLayoutManager(this)
         recyclerView.adapter = ingredientAdapter
-
+        val btnBackToFood = findViewById<Button>(R.id.btnBack)
+        btnBackToFood.setOnClickListener {
+            // 跳转回 FoodActivity
+            val intent = Intent(this, FoodActivity::class.java)  // 返回到 FoodActivity
+            startActivity(intent)
+            finish()  // 结束当前页面
+        }
         btnAddIngredient.setOnClickListener {
             val ingredientName = etIngredientName.text.toString()
             val ingredientAmount = etIngredientAmount.text.toString()

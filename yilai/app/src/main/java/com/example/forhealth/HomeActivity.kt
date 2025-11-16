@@ -2,19 +2,26 @@ package com.example.forhealth
 
 import android.content.Intent
 import android.os.Bundle
+import android.widget.Button
 import android.view.Menu
 import android.view.MenuItem
 import androidx.appcompat.app.AppCompatActivity
 import com.example.forhealth.user.ProfileActivity
 import com.example.forhealth.auth.LoginActivity
 import com.example.forhealth.utils.PrefsHelper
-
+import com.example.forhealth.user.MainActivity
 class HomeActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_home)
+        val btnGoToMain = findViewById<Button>(R.id.btnGoToMain)
 
+        // 设置按钮点击事件
+        btnGoToMain.setOnClickListener {
+            val intent = Intent(this, MainActivity::class.java)  // 创建跳转到 MainActivity 的 Intent
+            startActivity(intent)  // 启动活动
+        }
         // 设置ActionBar标题
         supportActionBar?.title = "For Health"
     }
