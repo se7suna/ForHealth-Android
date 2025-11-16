@@ -53,6 +53,7 @@ class LoginActivity : AppCompatActivity() {
         CoroutineScope(Dispatchers.IO).launch {
             try {
                 val result = RetrofitClient.apiService.login(mapOf("email" to email, "password" to password))
+
                 result.fold(
                     onSuccess = { tokenResponse ->
                         val token = tokenResponse.access_token
