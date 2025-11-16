@@ -8,6 +8,12 @@ stages:
 variables:
   PYTHON_VERSION: "3.11"
   PIP_CACHE_DIR: "$CI_PROJECT_DIR/.cache/pip"
+  # Docker 配置优化
+  DOCKER_DRIVER: overlay2
+  DOCKER_TLS_CERTDIR: ""
+  # 增加拉取超时时间（秒）
+  GET_SOURCES_ATTEMPTS: 3
+  RESTORE_CACHE_ATTEMPTS: 3
 
 # 缓存配置
 cache:
@@ -21,22 +27,95 @@ test:unit:
   stage: test
   image: python:${PYTHON_VERSION}
   services:
-    - mongo:latest  # MongoDB 服务
+    - name: mongo:latest
+      alias: mongo
+    - name: mailhog/mailhog:latest
+      alias: mailhog
   variables:
     MONGODB_URL: "mongodb://mongo:27017"
     DATABASE_NAME: "test_for_health"
     SECRET_KEY: "test-secret-key-for-ci"
-    SMTP_HOST: "smtp.test.com"
-    SMTP_USER: "test@test.com"
-    SMTP_PASSWORD: "test"
-    SMTP_FROM_EMAIL: "noreply@test.com"
+    # 使用 MailHog 邮件服务器
+    SMTP_HOST: "mailhog"
+    SMTP_PORT: "1025"
+    SMTP_USER: ""
+    SMTP_PASSWORD: ""
+    SMTP_FROM_EMAIL: "noreply@forhealth.com"
+    SMTP_FROM_NAME: "For Health Test"
   before_script:
     - cd backend
     - pip install --upgrade pip
     - pip install -r requirements.txt
+    - pip install pytest pytest-asyncio httpx
+    # 安装 curl 用于健康检查
+    - apt-get update && apt-get install -y curl
   script:
+    - echo "🧪 准备运行单元测试..."
+    - echo "🚀 启动后端服务器..."
+    # 在后台启动服务器
+    - nohup uvicorn app.main:app --host 127.0.0.1 --port 8000 > server.log 2>&1 &
+    - SERVER_PID=$!
+    - echo "📝 服务器进程 PID: $SERVER_PID"
+    - echo "⏳ 等待服务器启动..."
+    # 等待服务器启动（最多等待 30 秒）
+    - |
+      for i in {1..30}; do
+        if curl -s http://127.0.0.1:8000/health > /dev/null 2>&1; then
+          echo "✅ 服务器启动成功！"
+          break
+        fi
+        if [ $i -eq 30 ]; then
+          echo "❌ 服务器启动超时"
+          cat server.log
+          exit 1
+        fi
+        echo "等待中... ($i/30)"
+        sleep 1
+      done
+    - echo "👤 创建测试用户..."
+    # 创建测试用户（如果不存在）
+    - |
+      python3 << 'PYTHON_SCRIPT'
+      import httpx
+      import asyncio
+      
+      async def create_test_user():
+          """创建测试用户"""
+          async with httpx.AsyncClient(base_url="http://127.0.0.1:8000", timeout=30.0) as client:
+              # 尝试注册测试用户
+              try:
+                  response = await client.post(
+                      "/api/auth/register",
+                      json={
+                          "email": "user@example.com",
+                          "username": "testuser",
+                          "password": "string"
+                      }
+                  )
+                  if response.status_code == 201:
+                      print("✅ 测试用户创建成功")
+                  elif response.status_code == 409:
+                      print("ℹ️ 测试用户已存在")
+                  else:
+                      print(f"⚠️ 创建测试用户返回状态码: {response.status_code}")
+              except Exception as e:
+                  print(f"❌ 创建测试用户失败: {e}")
+                  exit(1)
+      
+      asyncio.run(create_test_user())
+      PYTHON_SCRIPT
     - echo "🧪 运行单元测试..."
     - pytest tests/ -v --tb=short --junitxml=test-results.xml
+  after_script:
+    - cd backend
+    - echo "🛑 停止服务器..."
+    # 停止服务器进程
+    - kill $SERVER_PID || true
+    - sleep 2
+    # 如果还在运行，强制停止
+    - kill -9 $SERVER_PID || true
+    - echo "📋 服务器日志："
+    - cat server.log || true
   coverage: '/TOTAL.*\s+(\d+%)$/'
   artifacts:
     when: always
@@ -44,10 +123,95 @@ test:unit:
       - backend/test-results.xml
     reports:
       junit: backend/test-results.xml
+  retry:
+    max: 2
+    when:
+      - runner_system_failure
+      - stuck_or_timeout_failure
+  timeout: 30m
+  tags:
+    - docker
   only:
     changes:
       - backend/**/*
       - .gitlab-ci.yml
+      - docker-compose.yml
+
+# 邮箱服务器功能测试
+test:email-service:
+  stage: test
+  image: python:${PYTHON_VERSION}
+  services:
+    - name: mailhog/mailhog:latest
+      alias: mailhog
+  variables:
+    SMTP_HOST: "mailhog"
+    SMTP_PORT: "1025"
+  before_script:
+    - pip install --upgrade pip
+    - pip install aiosmtplib
+  script:
+    - echo "📧 测试邮箱服务器连接和邮件发送..."
+    - |
+      python3 << 'EOF'
+      import asyncio
+      import aiosmtplib
+      from email.mime.text import MIMEText
+      from email.mime.multipart import MIMEMultipart
+
+      async def test_email_connection():
+          """测试邮箱服务器连接"""
+          try:
+              # 创建邮件
+              message = MIMEMultipart()
+              message["From"] = "noreply@forhealth.com"
+              message["To"] = "test@example.com"
+              message["Subject"] = "CI/CD 邮件服务测试"
+
+              body = """
+              <html>
+                <body>
+                  <h2>邮件服务器测试</h2>
+                  <p>这是一封来自 CI/CD 流水线的测试邮件。</p>
+                  <p>如果您收到这封邮件，说明邮件服务器工作正常！</p>
+                </body>
+              </html>
+              """
+              message.attach(MIMEText(body, "html"))
+
+              # 发送邮件
+              await aiosmtplib.send(
+                  message,
+                  hostname="mailhog",
+                  port=1025,
+              )
+
+              print("✅ 邮件发送成功！")
+              print("📬 收件人: test@example.com")
+              print("📝 主题: CI/CD 邮件服务测试")
+              return True
+          except Exception as e:
+              print(f"❌ 邮件发送失败: {e}")
+              return False
+
+      # 运行测试
+      result = asyncio.run(test_email_connection())
+
+      if result:
+          print("\n🎉 邮箱服务器测试通过！")
+          exit(0)
+      else:
+          print("\n💥 邮箱服务器测试失败！")
+          exit(1)
+      EOF
+    - echo "✅ 邮箱服务器测试完成！"
+  tags:
+    - docker  # 使用带有 docker tag 的 runner
+  only:
+    changes:
+      - backend/**/*
+      - .gitlab-ci.yml
+      - docker-compose.yml
 
 test:integration:
   stage: test
@@ -70,6 +234,8 @@ test:integration:
     - echo "🔗 运行集成测试..."
     - echo "✅ 集成测试通过（待实现）"
   allow_failure: true
+  tags:
+    - docker  # 使用带有 docker tag 的 runner
   only:
     changes:
       - backend/**/*
@@ -92,6 +258,8 @@ build:backend:
     paths:
       - backend/
     expire_in: 1 day
+  tags:
+    - docker  # 使用带有 docker tag 的 runner
   only:
     changes:
       - backend/**/*
@@ -103,10 +271,14 @@ notify:success:
   stage: .post
   script:
     - echo "✅ CI/CD Pipeline 执行成功！"
+  tags:
+    - docker
   when: on_success
 
 notify:failure:
   stage: .post
   script:
     - echo "❌ CI/CD Pipeline 执行失败，请检查日志。"
+  tags:
+    - docker
   when: on_failure
