@@ -5,7 +5,7 @@ from contextlib import asynccontextmanager
 from app.config import settings
 from app.database import (connect_to_mongo, close_mongo_connection, 
                           initialize_sports_table,initialize_default_user)
-from app.routers import auth, user,sports, food, recipe
+from app.routers import auth, user,sports, food, recipe, food, recipe
 
 
 @asynccontextmanager
