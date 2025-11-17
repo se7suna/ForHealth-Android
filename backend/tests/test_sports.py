@@ -526,10 +526,11 @@ async def test_multiple_records_same_sport(auth_client):
 
 @pytest.mark.asyncio
 async def test_complete_workflow(auth_client):
+    sport_type="集成测试运动"
     """集成测试：完整的工作流程"""
     # 1. 创建自定义运动类型
     sport_data = {
-        "sport_type": "集成测试运动6",
+        "sport_type": sport_type,
         "describe": "完整流程测试",
         "METs": 7.5
     }
@@ -538,7 +539,7 @@ async def test_complete_workflow(auth_client):
 
     # 2. 记录运动
     log_data = {
-        "sport_type": "集成测试运动6",
+        "sport_type": sport_type,
         "created_at": datetime.utcnow().isoformat(),
         "duration_time": 40
     }
@@ -546,7 +547,7 @@ async def test_complete_workflow(auth_client):
     assert log_response.status_code == 200
 
     # 3. 查询记录
-    search_params = {"sport_type": "集成测试运动6"}
+    search_params = {"sport_type": sport_type}
     search_response = await auth_client.post("/api/sports/search-sports-records", json=search_params)
     records = search_response.json()
     assert len(records) > 0
@@ -556,7 +557,7 @@ async def test_complete_workflow(auth_client):
     # 4. 更新记录
     update_data = {
         "record_id": record_id,
-        "sport_type": "集成测试运动6",
+        "sport_type": sport_type,
         "duration_time": 50,
         "created_at": datetime.utcnow().isoformat()
     }
@@ -572,5 +573,5 @@ async def test_complete_workflow(auth_client):
     assert delete_record_response.status_code == 200
 
     # 7. 删除运动类型
-    delete_sport_response = await auth_client.get("/api/sports/delete-sport/集成测试运动")
+    delete_sport_response = await auth_client.get(f"/api/sports/delete-sport/{sport_type}")
     assert delete_sport_response.status_code == 200

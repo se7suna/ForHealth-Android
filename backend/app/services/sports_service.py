@@ -1,19 +1,13 @@
 from fastapi import HTTPException,status
 from datetime import datetime
 from app.database import get_database
-from app.models.sports import DefaultSports,default_email
+from app.config import settings
+
 from app.services.user_service import get_user_profile
 from app.models.sports import SportsLogInDB,SportsTypeInDB
 from bson import ObjectId
 
 ###工具计算函数
-# 初始化运动表，填入默认运动类型和卡路里消耗
-async def initialize_sports_table():
-    db = get_database()
-    for sport in DefaultSports:
-        existing = await db["sports"].find_one({"sport_type": sport["sport_type"]})
-        if not existing:
-            await db["sports"].insert_one(sport)
 # 获取用户体重
 async def get_user_weight(email: str) -> float:
     user= await get_user_profile(email)
@@ -40,7 +34,7 @@ async def create_sports(create_request,current_user):
     db = get_database()
     # 检查是否已存在相同运动类型
     existing_sport = await db["sports"].find_one({
-        "$or": [{"email": current_user}, {"email": default_email}],
+        "$or": [{"email": current_user}, {"email": settings.DEFAULT_SPORT_EMAIL}],
         "sport_type": create_request.sport_type}
     )
     if existing_sport:
@@ -121,7 +115,7 @@ async def get_available_sports_types(current_user: str):
     db = get_database()
     # 查询默认运动类型和用户自定义的运动类型
     sports_types = await db["sports"].find(
-        {"$or": [{"email": default_email}, {"email": current_user}]},
+        {"$or": [{"email": settings.DEFAULT_SPORT_EMAIL}, {"email": current_user}]},
         {"sport_type": 1, "describe": 1, "METs": 1, "_id": 0}
     ).to_list(length=1000)
 
@@ -134,7 +128,7 @@ async def log_sports_record(log_request,current_user):
     sport = await db["sports"].find_one(
         {"sport_type": log_request.sport_type}
     )
-    if (not sport) or (sport["email"] != current_user and sport["email"]!=default_email):
+    if (not sport) or (sport["email"] != current_user and sport["email"]!=settings.DEFAULT_SPORT_EMAIL):
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="运动类型未找到")
