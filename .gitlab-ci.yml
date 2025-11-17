@@ -15,12 +15,11 @@ variables:
   GET_SOURCES_ATTEMPTS: 3
   RESTORE_CACHE_ATTEMPTS: 3
 
-# 缓存配置（针对本地环境）
+# 缓存配置
 cache:
   paths:
     - .cache/pip
     - backend/.venv/
-  key: "$CI_COMMIT_REF_SLUG"
 
 # ==================== Test Stage ====================
 
@@ -33,7 +32,7 @@ test:unit:
     - name: mailhog/mailhog:latest
       alias: mailhog
   variables:
-    MONGODB_URL: "mongodb://local:${MONGO_PORT}"
+    MONGODB_URL: "mongodb://mongo:27017"
     DATABASE_NAME: "test_for_health"
     SECRET_KEY: "test-secret-key-for-ci"
     # 使用 MailHog 邮件服务器
@@ -44,23 +43,13 @@ test:unit:
     SMTP_FROM_EMAIL: "noreply@forhealth.com"
     SMTP_FROM_NAME: "For Health Test"
   before_script:
-    # 启动MongoDB容器
-    - echo "📦 启动MongoDB容器..."
-    - docker run -d --name ${MONGO_CONTAINER_NAME} -p ${MONGO_PORT}:27017 ${MONGO_IMAGE}
-    - sleep 5  # 等待容器启动
-    # 准备Python环境
     - cd backend
     - pip install --upgrade pip
     - pip install -r requirements.txt
     - pip install pytest pytest-asyncio httpx
   script:
     - echo "🧪 运行单元测试..."
-    - $PYTHON_PATH -m pytest tests/ -v --tb=short --junitxml=test-results.xml
-  after_script:
-    # 清理MongoDB容器
-    - echo "🧹 清理MongoDB容器..."
-    - docker stop ${MONGO_CONTAINER_NAME} || true
-    - docker rm ${MONGO_CONTAINER_NAME} || true
+    - pytest tests/ -v --tb=short --junitxml=test-results.xml
   coverage: '/TOTAL.*\s+(\d+%)$/'
   artifacts:
     when: always
@@ -160,8 +149,11 @@ test:email-service:
 
 test:integration:
   stage: test
+  image: python:${PYTHON_VERSION}
+  services:
+    - mongo:latest
   variables:
-    MONGODB_URL: "mongodb://localhost:${MONGO_PORT}"
+    MONGODB_URL: "mongodb://mongo:27017"
     DATABASE_NAME: "test_for_health"
     SECRET_KEY: "test-secret-key-for-ci"
     SMTP_HOST: "smtp.test.com"
@@ -169,22 +161,12 @@ test:integration:
     SMTP_PASSWORD: "test"
     SMTP_FROM_EMAIL: "noreply@test.com"
   before_script:
-    # 启动MongoDB容器
-    - echo "📦 启动MongoDB容器..."
-    - docker run -d --name ${MONGO_CONTAINER_NAME} -p ${MONGO_PORT}:27017 ${MONGO_IMAGE}
-    - sleep 5  # 等待容器启动
-    # 准备Python环境
     - cd backend
-    - $PIP_PATH install --upgrade pip
-    - $PIP_PATH install -r requirements.txt
+    - pip install --upgrade pip
+    - pip install -r requirements.txt
   script:
     - echo "🔗 运行集成测试..."
     - echo "✅ 集成测试通过（待实现）"
-  after_script:
-    # 清理MongoDB容器
-    - echo "🧹 清理MongoDB容器..."
-    - docker stop ${MONGO_CONTAINER_NAME} || true
-    - docker rm ${MONGO_CONTAINER_NAME} || true
   allow_failure: true
   tags:
     - docker  # 使用带有 docker tag 的 runner
@@ -197,13 +179,14 @@ test:integration:
 
 build:backend:
   stage: build
+  image: python:${PYTHON_VERSION}
   before_script:
     - cd backend
-    - $PIP_PATH install --upgrade pip
-    - $PIP_PATH install -r requirements.txt
+    - pip install --upgrade pip
+    - pip install -r requirements.txt
   script:
     - echo "🏗️ 构建后端应用..."
-    - $PYTHON_PATH -m py_compile app/**/*.py
+    - python -m py_compile app/**/*.py
     - echo "✅ 构建成功"
   artifacts:
     paths:
@@ -217,6 +200,7 @@ build:backend:
       - .gitlab-ci.yml
 
 # ==================== 通知 ====================
+
 notify:success:
   stage: .post
   script:
