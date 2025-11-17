@@ -51,7 +51,7 @@ async def authenticated_client(auth_token):
 @pytest.mark.asyncio
 @pytest.mark.parametrize("sport_data,expected_status,expected_success", [
     # 正常情况
-    ({"sport_type": "定义跑步", "describe": "户外跑步", "METs": 8.0}, 200, True),
+    ({"sport_type": "自定义跑步2", "describe": "户外跑步", "METs": 8.0}, 200, True),
     # 边界情况：缺少必填字段
     #({"sport_type": "", "describe": "户外跑步", "METs": 8.0}, 422, False),
     # 边界情况：METs为负数

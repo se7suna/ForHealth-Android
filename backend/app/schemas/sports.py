@@ -10,7 +10,7 @@ class LogSportsRequest(BaseModel):
 
 # 更新运动记录的请求
 class UpdateSportsRecordRequest(BaseModel):
-    _id: Optional[str] = None
+    record_id: Optional[str] = None
     sport_type: Optional[str] = None
     created_at: Optional[datetime] = None
     duration_time: Optional[int] = Field(None, gt=0)

@@ -89,12 +89,12 @@ async def log_sports_record(log_request: LogSportsRequest, current_user: str = D
     """
     result = await sports_service.log_sports_record(log_request,current_user)
 
-    if result.inserted_id:
+    if result["record_id"]:
         return SimpleSportsResponse(success=True, message="运动记录已保存")
     else:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="保存运动记录失败"
+            detail="保存运动记录失败"   
         )
     
 # 更新运动记录
@@ -102,7 +102,7 @@ async def log_sports_record(log_request: LogSportsRequest, current_user: str = D
 async def update_sports_record(update_request: UpdateSportsRecordRequest, current_user: str = Depends(get_current_user)):
     """
     更新运动记录
-    - **_id**: 运动记录ID
+    - **record_id**: 运动记录ID
     - **sport_type**: 运动类型
     - **created_at**: 开始运动时间（默认当前时间）
     - **duration_time**: 运动持续时间（分钟，必须大于0）

@@ -4,6 +4,7 @@ from app.database import get_database
 from app.models.sports import DefaultSports,default_email
 from app.services.user_service import get_user_profile
 from app.models.sports import SportsLogInDB,SportsTypeInDB
+from bson import ObjectId
 
 ###工具计算函数
 # 初始化运动表，填入默认运动类型和卡路里消耗
@@ -46,6 +47,12 @@ async def create_sports(create_request,current_user):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="该运动类型已存在"
+        )
+    # 检查是否缺失值
+    if not create_request.sport_type or not create_request.describe or not create_request.METs:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="运动类型、描述和卡路里消耗不能为空"
         )
     SportType=SportsTypeInDB(
         email=current_user,
@@ -131,6 +138,12 @@ async def log_sports_record(log_request,current_user):
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="运动类型未找到")
+    # 检查是否缺失值
+    if not log_request.created_at or not log_request.duration_time:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="创建时间和运动时长不能为空"
+        )
     # 计算消耗卡路里
     user_weight = await get_user_weight(current_user)
     mets = sport["METs"]
@@ -144,15 +157,18 @@ async def log_sports_record(log_request,current_user):
         duration_time=log_request.duration_time,
         calories_burned=calories_burned
     )
-    print(log_request.created_at,"111")
-    return await db["sports_log"].insert_one(SportLog.model_dump())# 转为字典插入
+    # print(log_request.created_at,"111")
+    record_dict=SportLog.model_dump()
+    result = await db["sports_log"].insert_one(record_dict)# 转为字典插入_id
+    record_dict["record_id"] = result.inserted_id
+    return record_dict
 
 # 更新运动记录
 async def update_sports_record(update_request,current_user):
     db = get_database()
     # 查找运动记录
     record = await db["sports_log"].find_one(
-        {"_id": update_request._id, "email": current_user}
+        {"_id": ObjectId(update_request.record_id), "email": current_user}
     )
     if not record:
         raise HTTPException(
@@ -167,26 +183,37 @@ async def update_sports_record(update_request,current_user):
         update_data["created_at"] = update_request.created_at
     if update_request.duration_time is not None:
         update_data["duration_time"] = update_request.duration_time
+        # 重新计算消耗卡路里
+        user_weight = await get_user_weight(current_user)
+        # 查找运动
+        sport = await db["sports"].find_one(
+            {"sport_type": update_request.sport_type}
+        )
+        mets = sport["METs"]
+        calories_burned = await calculate_calories_burned(
+            mets, user_weight, update_request.duration_time
+        )
+        update_data["calories_burned"] = calories_burned
     # 如果没有要更新的字段（字典为空），返回原始记录
     if not update_data:
         return record
     # 执行更新
     result = await db["sports_log"].find_one_and_update(
-        {"_id": update_request._id, "email": current_user},
+        {"_id": ObjectId(update_request.record_id), "email": current_user},
         {"$set": update_data},
         return_document=True  # 返回更新后的文档
     )
     return result
 
 # 删除运动记录
-async def delete_sports_record(sport_type: str, current_user: str):
+async def delete_sports_record(record_id: str, current_user: str):
     """
-    删除自定义运动类型
+    删除运动记录
     """
     db = get_database()
-    # 查找并删除用户自定义的运动类型
+    # 查找并删除用户的运动记录
     result = await db["sports_log"].delete_one({
-        "sport_type": sport_type,
+        "_id": ObjectId(record_id),
         "email": current_user
     })
     
@@ -213,7 +240,9 @@ async def search_sports_record(search_request,current_user):
 
     # 查询记录
     records = await db["sports_log"].find(query,
-    {"sport_type":1,"created_at":1,"duration_time":1,"calories_burned":1,"_id":1}).to_list(length=100)
+    {"sport_type":1,"created_at":1,"duration_time":1,"calories_burned":1,"_id":1}).sort("created_at", -1).to_list(length=100)
+    # 创建时间最新的排在前面
+    # records.sort(key=lambda x: x["created_at"], reverse=False)
 
     # 将 ObjectId 转换为字符串,以便 Pydantic 可以正确序列化
     for record in records:
