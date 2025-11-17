@@ -1,21 +1,35 @@
+import asyncio
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 from app.config import settings
-from app.database import connect_to_mongo, close_mongo_connection
-from app.routers import auth, user
+from app.database import (connect_to_mongo, close_mongo_connection, 
+                          initialize_sports_table,initialize_default_user)
+from app.routers import auth, user,sports
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """应用生命周期管理"""
+    """应用生命周期管理""" 
     # 启动时执行
     print("🚀 启动 FastAPI 应用...")
     await connect_to_mongo()
+
+    asyncio.create_task(run_initialization())# 异步初始化数据
+
     yield
+
     # 关闭时执行
     print("👋 关闭 FastAPI 应用...")
     await close_mongo_connection()
+
+async def run_initialization():
+    """异步后台初始化：不会阻塞应用启动。"""
+    # print("⚙️ 开始初始化后台数据...")
+    await initialize_sports_table()
+    await initialize_default_user()
+
+    print("✅ 数据库初始化完成！")
 
 
 # 创建 FastAPI 应用
@@ -40,6 +54,7 @@ app.add_middleware(
 # 注册路由
 app.include_router(auth.router, prefix="/api")
 app.include_router(user.router, prefix="/api")
+app.include_router(sports.router, prefix="/api")
 
 
 @app.get("/")

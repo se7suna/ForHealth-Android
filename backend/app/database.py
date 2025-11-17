@@ -38,3 +38,24 @@ def get_database():
     if database is None:
         raise Exception("数据库未连接，请先启动 MongoDB 服务")
     return database
+
+# 初始化运动表，填入默认运动类型和卡路里消耗
+from app.config import settings
+async def initialize_sports_table():
+    db = get_database()
+    for sport in settings.DefaultSports:
+        existing = await db["sports"].find_one({"sport_type": sport["sport_type"]})
+        if not existing:
+            await db["sports"].insert_one(sport)
+
+from app.utils.security import get_password_hash
+async def initialize_default_user():
+    db = get_database()
+    existing = await db["users"].find_one({"email": settings.DEFAULT_AUTH_EMAIL})
+    if not existing:
+        await db["users"].insert_one({
+            "email": settings.DEFAULT_AUTH_EMAIL,
+            "password": get_password_hash(settings.DEFAULT_PASSWORD),
+            "name": "Default User"
+        })
+
