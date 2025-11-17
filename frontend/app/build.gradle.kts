@@ -36,6 +36,7 @@ android {
     }
     buildFeatures {
         compose = true
+        viewBinding = true
     }
 }
 
@@ -50,7 +51,18 @@ dependencies {
     implementation(libs.androidx.compose.material3)
     implementation(libs.androidx.appcompat)
     implementation(libs.androidx.compose.animation.core)
-    
+    implementation("com.github.PhilJay:MPAndroidChart:v3.1.0")
+    implementation("androidx.cardview:cardview:1.0.0")
+    implementation("androidx.recyclerview:recyclerview:1.2.1")
+    // Zxing - 条形码扫描
+    implementation("com.journeyapps:zxing-android-embedded:3.3.0")
+    implementation("com.google.zxing:core:3.3.0") // ZXing核心库
+// Room 依赖
+    implementation ("androidx.room:room-runtime:2.3.0")  // Room 库
+    annotationProcessor ("androidx.room:room-compiler:2.3.0")  // 编译时注解处理器
+
+    // Kotlin 协程支持（如果使用协程）
+    implementation ("androidx.room:room-ktx:2.3.0")  // Room 支持协程
     // Retrofit - 网络请求库
     implementation("com.squareup.retrofit2:retrofit:2.9.0")
     implementation("com.squareup.retrofit2:converter-gson:2.9.0")
@@ -65,7 +77,8 @@ dependencies {
     // Coroutines - 协程支持
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.3")
-    
+    implementation(libs.androidx.recyclerview)
+
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)

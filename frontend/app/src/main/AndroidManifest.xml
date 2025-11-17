@@ -72,6 +72,15 @@
             android:exported="false"
             android:theme="@style/AppThemeWithActionBar" />
 
+        <!-- 条形码扫描 -->
+        <activity
+            android:name="com.journeyapps.barcodescanner.CaptureActivity"
+            android:label="Barcode Scanner"
+            android:exported="false"
+            tools:replace="android:theme"
+            android:theme="@style/zxing_CaptureTheme" />
+
+
     </application>
 
 </manifest>

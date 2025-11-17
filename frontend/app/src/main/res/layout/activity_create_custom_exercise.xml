@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:padding="16dp">
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:padding="30dp"/>
+    <!-- 输入运动名称 -->
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="请输入运动名称"
+        android:textSize="18sp"
+        android:padding="15dp"
+        android:textColor="@android:color/black"
+        android:layout_marginBottom="8dp"/>
+
+    <EditText
+        android:id="@+id/exerciseNameEditText"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="例如：室内跳绳"
+        android:inputType="text"
+        android:padding="15dp"
+        android:background="@drawable/edittext_bg"/>
+
+    <!-- 输入METs值 -->
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="请输入METs值（0-20）"
+        android:textSize="18sp"
+        android:textColor="@android:color/black"
+        android:layout_marginTop="16dp"
+        android:padding="15dp"
+        android:layout_marginBottom="8dp"/>
+
+    <EditText
+        android:id="@+id/metsValueEditText"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="例如：8.5"
+        android:inputType="numberDecimal"
+        android:padding="15dp"
+        android:background="@drawable/edittext_bg"/>
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:padding="15dp"/>
+    <!-- 保存按钮 -->
+    <Button
+        android:id="@+id/saveButton"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:padding="15dp"
+        android:text="保存"
+        android:layout_marginTop="16dp"
+        android:textColor="@android:color/white"/>
+
+</LinearLayout>
