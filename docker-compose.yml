@@ -1,0 +1,33 @@
+version: '3.8'
+
+services:
+  # MongoDB 数据库
+  mongodb:
+    image: mongo:latest
+    container_name: for_health_mongodb
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+    networks:
+      - for_health_network
+
+  # MailHog 邮件服务器（用于开发测试）
+  mailhog:
+    image: mailhog/mailhog:latest
+    container_name: for_health_mailhog
+    restart: unless-stopped
+    ports:
+      - "1025:1025"  # SMTP 端口
+      - "8025:8025"  # Web UI 端口
+    networks:
+      - for_health_network
+
+volumes:
+  mongodb_data:
+    driver: local
+
+networks:
+  for_health_network:
+    driver: bridge

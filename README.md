@@ -40,16 +40,39 @@ backend/
 ├── tests/                   # 测试
 ├── requirements.txt         # Python 依赖
 ├── .env.example            # 环境变量示例
+docker-compose.yml          # Docker 编排配置（MongoDB + MailHog）
 ```
 
 ### 环境搭建
 **根目录为/for_health**
+
+#### 1. 启动 Docker 服务（MongoDB + MailHog 邮件服务器）
+
+```bash
+# 启动所有服务
+docker-compose up -d
+
+# 查看服务状态
+docker-compose ps
+
+# 查看日志
+docker-compose logs -f
+```
+
+服务端口：
+- **MongoDB**: `localhost:27017`
+- **MailHog SMTP**: `localhost:1025` (后端邮件发送)
+- **MailHog Web UI**: `http://localhost:8025` (查看邮件)
+
+#### 2. 安装 Python 依赖
 
 ```bash
 # python版本3.11 命令行运行下方命令下载所有依赖
 cd backend
 pip install -r requirements.txt
 ```
+
+#### 3. 配置环境变量
 
 ```bash
 # 复制 `.env.example` 为 `.env`
@@ -62,8 +85,9 @@ copy .env.example .env
 ### 本地调试
 
 ```bash
-# docker运行mongodb数据库
-docker run -d -p 27017:27017 --name mongodb mongo:latest
+# 确保 Docker 服务已启动
+docker-compose up -d
+
 # 启动后端
 cd backend
 python -m app.main
