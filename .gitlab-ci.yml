@@ -48,8 +48,72 @@ test:unit:
     - pip install -r requirements.txt
     - pip install pytest pytest-asyncio httpx
   script:
+    - echo "🧪 准备运行单元测试..."
+    - echo "🚀 启动后端服务器..."
+    # 在后台启动服务器
+    - nohup uvicorn app.main:app --host 127.0.0.1 --port 8000 > server.log 2>&1 &
+    - SERVER_PID=$!
+    - echo "📝 服务器进程 PID: $SERVER_PID"
+    - echo "⏳ 等待服务器启动..."
+    # 等待服务器启动（最多等待 30 秒）
+    - |
+      for i in {1..30}; do
+        if curl -s http://127.0.0.1:8000/health > /dev/null 2>&1; then
+          echo "✅ 服务器启动成功！"
+          break
+        fi
+        if [ $i -eq 30 ]; then
+          echo "❌ 服务器启动超时"
+          cat server.log
+          exit 1
+        fi
+        echo "等待中... ($i/30)"
+        sleep 1
+      done
+    - echo "👤 创建测试用户..."
+    # 创建测试用户（如果不存在）
+    - |
+      python3 << 'PYTHON_SCRIPT'
+      import httpx
+      import asyncio
+      
+      async def create_test_user():
+          """创建测试用户"""
+          async with httpx.AsyncClient(base_url="http://127.0.0.1:8000", timeout=30.0) as client:
+              # 尝试注册测试用户
+              try:
+                  response = await client.post(
+                      "/api/auth/register",
+                      json={
+                          "email": "user@example.com",
+                          "username": "testuser",
+                          "password": "string"
+                      }
+                  )
+                  if response.status_code == 201:
+                      print("✅ 测试用户创建成功")
+                  elif response.status_code == 409:
+                      print("ℹ️ 测试用户已存在")
+                  else:
+                      print(f"⚠️ 创建测试用户返回状态码: {response.status_code}")
+              except Exception as e:
+                  print(f"❌ 创建测试用户失败: {e}")
+                  exit(1)
+      
+      asyncio.run(create_test_user())
+      PYTHON_SCRIPT
     - echo "🧪 运行单元测试..."
     - pytest tests/ -v --tb=short --junitxml=test-results.xml
+  after_script:
+    - cd backend
+    - echo "🛑 停止服务器..."
+    # 停止服务器进程
+    - kill $SERVER_PID || true
+    - sleep 2
+    # 如果还在运行，强制停止
+    - kill -9 $SERVER_PID || true
+    - echo "📋 服务器日志："
+    - cat server.log || true
   coverage: '/TOTAL.*\s+(\d+%)$/'
   artifacts:
     when: always
