@@ -1,0 +1,90 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:padding="16dp">
+
+    <!-- 食物名称 -->
+    <!-- 将TextView居中 -->
+    <Button
+        android:id="@+id/btnBack"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="返回"
+        android:drawableLeft="@android:drawable/ic_menu_revert"
+        android:contentDescription="返回"
+        android:background="?android:attr/selectableItemBackgroundBorderless"
+        android:layout_gravity="start"
+        android:layout_marginBottom="16dp"
+        android:layout_marginStart="16dp"
+        android:paddingStart="8dp"
+        android:paddingEnd="8dp"/>
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:padding="60dp"/>
+    <!-- 食物热量 -->
+    <TextView
+        android:id="@+id/foodNameTextView"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="left"
+        android:text="食物名称"
+        style="@style/ProfileText"
+        android:textColor="@android:color/black"
+        android:padding="10dp"
+        android:textSize="24sp" />
+
+    <TextView
+        android:id="@+id/caloriesTextView"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="热量"
+        android:textSize="24sp"
+        android:textColor="@android:color/black"
+        android:layout_marginTop="16dp"
+        style="@style/ProfileText"
+        android:padding="10dp"
+        android:layout_gravity="left"/>  <!-- 将TextView居中 -->
+
+    <!-- 食物蛋白质 -->
+    <TextView
+        android:id="@+id/proteinTextView"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="蛋白质"
+        android:textSize="24sp"
+        android:textColor="@android:color/black"
+        android:layout_marginTop="16dp"
+        style="@style/ProfileText"
+        android:padding="10dp"
+        android:layout_gravity="left"/>  <!-- 将TextView居中 -->
+
+    <!-- 食物脂肪 -->
+    <TextView
+        android:id="@+id/fatTextView"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="脂肪"
+        android:textSize="24sp"
+        android:textColor="@android:color/black"
+        android:layout_marginTop="16dp"
+        style="@style/ProfileText"
+        android:padding="10dp"
+        android:layout_gravity="left"/>  <!-- 将TextView居中 -->
+
+    <!-- 食物碳水化合物 -->
+    <TextView
+        android:id="@+id/carbsTextView"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="碳水"
+        android:textSize="24sp"
+        android:textColor="@android:color/black"
+        android:layout_marginTop="16dp"
+        style="@style/ProfileText"
+        android:padding="10dp"
+        android:layout_gravity="left"/>  <!-- 将TextView居中 -->
+</LinearLayout>

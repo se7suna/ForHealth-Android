@@ -1,0 +1,95 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.cardview.widget.CardView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    app:cardCornerRadius="16dp"
+    app:cardElevation="8dp"
+    android:orientation="vertical"
+    android:layout_gravity="center">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical"
+        android:padding="16dp"
+        android:gravity="center">
+
+        <!-- 返回按钮 -->
+        <Button
+            android:id="@+id/btnBack"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="返回"
+            android:drawableLeft="@android:drawable/ic_menu_revert"
+            android:contentDescription="返回"
+            android:background="?android:attr/selectableItemBackgroundBorderless"
+            android:layout_gravity="start"
+            android:layout_marginBottom="16dp"
+            android:layout_marginStart="16dp"
+            android:paddingStart="8dp"
+            android:paddingEnd="8dp"/>
+
+        <!-- 主标题 -->
+        <TextView
+            android:id="@+id/mainTitle"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="运动记录"
+            android:textSize="24sp"
+            android:layout_marginBottom="20dp"
+            android:gravity="center"/>
+
+        <!-- 按钮：搜索运动 -->
+        <Button
+            android:id="@+id/btnSearchExercise"
+            android:layout_width="250dp"
+            android:layout_height="wrap_content"
+            android:text="搜索运动"
+            android:textSize="18sp"
+            android:padding="10dp"
+            android:layout_marginBottom="16dp"/>
+
+        <!-- 按钮：记录运动 -->
+        <Button
+            android:id="@+id/btnRecordExercise"
+            android:layout_width="250dp"
+            android:layout_height="wrap_content"
+            android:text="记录运动"
+            android:textSize="18sp"
+            android:padding="10dp"
+            android:layout_marginBottom="16dp"/>
+
+        <!-- 按钮：生成运动计划 -->
+        <Button
+            android:id="@+id/btnGeneratePlan"
+            android:layout_width="250dp"
+            android:layout_height="wrap_content"
+            android:text="生成运动计划"
+            android:textSize="18sp"
+            android:padding="10dp"
+            android:layout_marginBottom="16dp"/>
+
+        <!-- 按钮：查看运动历史 -->
+        <Button
+            android:id="@+id/btnViewHistory"
+            android:layout_width="250dp"
+            android:layout_height="wrap_content"
+            android:text="查看运动历史"
+            android:textSize="18sp"
+            android:padding="10dp"
+            android:layout_marginBottom="16dp"/>
+
+        <!-- 按钮：创建自定义运动 -->
+        <Button
+            android:id="@+id/btnCreateCustomExercise"
+            android:layout_width="250dp"
+            android:layout_height="wrap_content"
+            android:text="创建自定义运动"
+            android:textSize="18sp"
+            android:padding="10dp"
+            android:layout_marginBottom="16dp"/>
+    </LinearLayout>
+
+</androidx.cardview.widget.CardView>
