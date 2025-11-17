@@ -16,15 +16,6 @@
 
 ## 后端说明文档
 
-### 技术栈
-
-- **框架**: FastAPI 0.109.0
-- **数据库**: MongoDB (motor 异步驱动)
-- **认证**: JWT (python-jose)
-- **密码加密**: BCrypt
-- **邮件发送**: aiosmtplib
-- **开发邮件服务器**: MailHog (Docker)
-
 ### 目录结构
 ```
 backend/
@@ -88,25 +79,8 @@ pip install -r requirements.txt
 cd backend
 copy .env.example .env
 ```
-
 可修改 `.env` 文件中的配置
-```
-SECRET_KEY=your-random-secret-key-here
 
-# MongoDB (使用 Docker Compose 启动，保持默认)
-MONGODB_URL=mongodb://localhost:27017
-DATABASE_NAME=for_health
-
-# 邮件配置 (开发环境使用 MailHog)
-SMTP_HOST=localhost
-SMTP_PORT=1025
-SMTP_USER=
-SMTP_PASSWORD=
-SMTP_FROM_EMAIL=noreply@forhealth.com
-```
-**注意**:
-- 开发环境使用 MailHog (Docker)，无需配置真实 SMTP 账号
-- 生产环境需要配置真实 SMTP 服务器 (如 Gmail)
 
 ### 本地调试
 
@@ -124,114 +98,7 @@ FastAPI 自动生成交互式 API 文档：
 - **Swagger UI**: http://localhost:8000/docs
 - **ReDoc**: http://localhost:8000/redoc
 
-#### 查看邮件
-访问 MailHog Web UI: **http://localhost:8025**
-
-在这里可以查看系统发送的所有邮件（注册验证码、密码重置等）
-
-#### 删除 MongoDB 测试数据
-
-```bash
-# 方法1: 使用 docker-compose 重启服务（会清空所有数据）
-docker-compose down -v
-docker-compose up -d
-
-# 方法2: 连接到 MongoDB 删除指定集合
-docker exec -it for_health_mongodb mongosh for_health
-db.users.drop()
-exit
-```
-
-#### 数据库操作
-
-使用 motor 异步驱动操作 MongoDB：
-
-```python
-from app.database import get_database
-
-db = get_database()
-result = await db.collection_name.find_one({"key": "value"})
-```
-
-### 开发指南
-
-#### 业务逻辑
-
-##### BMR 计算（Mifflin-St Jeor 公式）
-
-- **男性**: BMR = 10 × 体重(kg) + 6.25 × 身高(cm) - 5 × 年龄 + 5
-- **女性**: BMR = 10 × 体重(kg) + 6.25 × 身高(cm) - 5 × 年龄 - 161
-
-##### TDEE 计算
-
-TDEE = BMR × PAL系数
-
-| 活动水平 | PAL 系数 |
-|---------|---------|
-| 久坐 (sedentary) | 1.2 |
-| 轻度活动 (lightly_active) | 1.375 |
-| 中度活动 (moderately_active) | 1.55 |
-| 重度活动 (very_active) | 1.725 |
-| 极重度活动 (extremely_active) | 1.9 |
-
-##### 每日卡路里目标
-
-- **减重**: TDEE - 500 卡
-- **增重**: TDEE + 500 卡
-- **保持体重**: TDEE
-
-#### API 端点
-
-##### 认证相关 (`/api/auth`)
-
-| 方法 | 端点 | 说明 | 认证 |
-|------|------|------|------|
-| POST | `/auth/send-verification-code` | 发送注册验证码 | ❌ |
-| POST | `/auth/register` | 用户注册（需验证码） | ❌ |
-| POST | `/auth/login` | 用户登录 | ❌ |
-| POST | `/auth/password-reset/send-code` | 发送密码重置验证码 | ❌ |
-| POST | `/auth/password-reset/verify` | 验证验证码并重置密码 | ❌ |
-
-**注册流程**：
-1. 调用 `/auth/send-verification-code` 发送验证码到邮箱
-2. 查看 MailHog Web UI (http://localhost:8025) 获取验证码
-3. 使用验证码调用 `/auth/register` 完成注册
-
-##### 用户管理 (`/api/user`)
-
-| 方法 | 端点 | 说明 | 认证 |
-|------|------|------|------|
-| POST | `/user/body-data` | 更新身体基本数据 | ✅ |
-| POST | `/user/activity-level` | 更新活动水平 | ✅ |
-| POST | `/user/health-goal` | 设定健康目标 | ✅ |
-| GET | `/user/profile` | 获取用户完整资料 | ✅ |
-| PUT | `/user/profile` | 更新用户资料 | ✅ |
-
-#### 添加新的 API 端点
-
-1. 在 `app/schemas/` 中定义请求/响应模型
-2. 在 `app/services/` 中实现业务逻辑
-3. 在 `app/routers/` 中创建路由端点
-4. 在 `app/main.py` 中注册路由
-
-#### 认证机制
-
-使用 JWT Bearer Token 认证：
-
-1. 调用 `/auth/login` 获取 access token
-2. 在后续请求的 Header 中添加：
-   ```
-   Authorization: Bearer <access_token>
-   ```
-
 ## 前端说明文档
-
-### 技术栈
-- **前端**：Android (Kotlin)  
-- **UI**：LinearLayout + NumberPicker + Button + TextView  
-- **网络层**：Retrofit（模拟网络请求）  
-- **协程**：Kotlin Coroutines (Dispatchers.IO / Main)  
-- **数据存储**：本地内存模拟 token 保存
 
 ### 项目目录结构
 
@@ -283,30 +150,15 @@ frontend/
 ├── settings.gradle.kts                        # 项目模块注册
 ```
 
-### 核心功能
-1. **用户登录**
-   - 模拟登录功能
-   - 登录成功后跳转到身体信息录入界面
-   - 登录失败或网络异常会弹出 `Toast` 提示
-
-2. **身体数据录入**
-   - 包含 **性别、生日（年月日）、身高、体重** 四个步骤
-   - 支持滑动选择，每个步骤有独立 NumberPicker
-   - 支持“确定”按钮提交当前数据并进入下一步
-   - 数据录入完成后跳转到活动水平选择界面
-   - 界面支持滑动动画切换步骤，交互体验平滑
-
-3. **活动水平录入**
-   - 提供五个活动水平选项：久坐、轻度活跃、中度活跃、非常活跃、极其活跃
-   - 每个选项下方显示对应提示文字（如久坐 → 基本不运动）
-   - 用户滑动选择并点击“确定”按钮提交
-
-4. **健康目标录入**
-   - 用户选择目标类型（减重/维持体重/增重）、目标体重（kg）、目标周期（周）
-   - 每个 NumberPicker 上方有提示文字
-   - 用户点击“确定”按钮提交目标
 
 ### 本地调试
 
 安装andriod studio 打开frontend文件夹，将自动配置环境依赖，等待安装完成后运行即可测试
 **注意**：路径中不允许有中文路径，安装过程中会报错
+
+
+
+
+
+
+  
