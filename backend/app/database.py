@@ -44,10 +44,13 @@ from app.config import settings
 async def initialize_sports_table():
     db = get_database()
     for sport in settings.DefaultSports:
-        existing = await db["sports"].find_one({"sport_type": sport["sport_type"]})
+        existing = await db["sports"].find_one({"sport_type": sport["sport_type"],"email": settings.DEFAULT_SPORT_EMAIL})
         if not existing:
+            print(sport["sport_type"])
             await db["sports"].insert_one(sport)
 
+
+# 初始化管理员用户
 from app.utils.security import get_password_hash
 async def initialize_default_user():
     db = get_database()
