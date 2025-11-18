@@ -8,9 +8,10 @@ import pytest_asyncio
 from httpx import AsyncClient
 
 # 测试用户凭证
+from app.config import settings
 TEST_USER = {
-    "email": "user@example.com",
-    "password": "string"
+    "email": settings.USER_EMAIL,
+    "password": settings.USER_PASSWORD
 }
 
 # ================== Fixtures：建立可认证的客户端 ==================

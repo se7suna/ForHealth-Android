@@ -145,6 +145,12 @@ async def log_sports_record(log_request,current_user):
     # 计算消耗卡路里
     user_weight = await get_user_weight(current_user)
     mets = sport["METs"]
+    # 检查缺失值
+    if not user_weight or not mets:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="用户体重、运动类型和运动时长不能为空"
+        )
     calories_burned = await calculate_calories_burned(
         mets, user_weight, log_request.duration_time
     )
@@ -155,9 +161,8 @@ async def log_sports_record(log_request,current_user):
         duration_time=log_request.duration_time,
         calories_burned=calories_burned
     )
-    # print(log_request.created_at,"111")
-    record_dict=SportLog.model_dump()
-    result = await db["sports_log"].insert_one(record_dict)# 转为字典插入_id
+    record_dict=SportLog.model_dump()# 转为字典
+    result = await db["sports_log"].insert_one(record_dict)
     record_dict["record_id"] = result.inserted_id
     return record_dict
 
