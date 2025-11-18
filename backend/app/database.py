@@ -46,19 +46,61 @@ async def initialize_sports_table():
     for sport in settings.DefaultSports:
         existing = await db["sports"].find_one({"sport_type": sport["sport_type"],"email": settings.DEFAULT_SPORT_EMAIL})
         if not existing:
-            print(sport["sport_type"])
             await db["sports"].insert_one(sport)
 
 
-# 初始化管理员用户
+# 初始化用户,在系统启动前，功能耦合感觉有点丑陋
 from app.utils.security import get_password_hash
+from app.models.user import UserInDB
+from datetime import datetime
+from app.models.user import Gender
+from app.services.calculation_service import calculate_age,calculate_bmr
 async def initialize_default_user():
     db = get_database()
+
     existing = await db["users"].find_one({"email": settings.DEFAULT_AUTH_EMAIL})
     if not existing:
-        await db["users"].insert_one({
-            "email": settings.DEFAULT_AUTH_EMAIL,
-            "password": get_password_hash(settings.DEFAULT_PASSWORD),
-            "name": "Default User"
-        })
+        user_data = UserInDB(
+            email=settings.DEFAULT_AUTH_EMAIL, 
+            username="Default User", 
+            hashed_password=get_password_hash(settings.DEFAULT_PASSWORD)
+        ).dict()
+        await db["users"].insert_one(user_data)
+        # 更新身体数据
+        update_data = {
+            "height": 170.0,
+            "weight": 70.0,
+            "birthdate": datetime(2000, 1, 1),
+            "age": calculate_age(datetime(2000, 1, 1)),
+            "gender": Gender.MALE,
+            "bmr": calculate_bmr(70.0,170.0,calculate_age(datetime(2000, 1, 1)),Gender.MALE),
+            "updated_at": datetime.utcnow(),
+        }
+        await db.users.find_one_and_update(
+            {"email": settings.DEFAULT_AUTH_EMAIL},
+            {"$set": update_data})
+
+
+    existing = None
+    existing = await db["users"].find_one({"email": settings.USER_EMAIL})
+    if not existing:
+        user_data = UserInDB(
+            email=settings.USER_EMAIL, 
+            username="test_user", 
+            hashed_password=get_password_hash(settings.USER_PASSWORD)
+        ).dict()
+        await db["users"].insert_one(user_data)
+        # 更新身体数据
+        update_data = {
+            "height": 170.0,
+            "weight": 70.0,
+            "birthdate": datetime(2000, 1, 1),
+            "age": calculate_age(datetime(2000, 1, 1)),
+            "gender": Gender.MALE,
+            "bmr": calculate_bmr(70.0,170.0,calculate_age(datetime(2000, 1, 1)),Gender.MALE),
+            "updated_at": datetime.utcnow(),
+        }
+        await db.users.find_one_and_update(
+            {"email": settings.USER_EMAIL},
+            {"$set": update_data})
 

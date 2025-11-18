@@ -36,9 +36,12 @@ class Settings(BaseSettings):
     ALLOWED_ORIGINS: Union[List[str], str] = "http://localhost:3000,http://localhost:8080"
 
     # 初始化数据库默认内容
-    ## 管理员账户用于登陆
+    ## 管理员账户用于权限写入
     DEFAULT_AUTH_EMAIL: str = "user@example.com"
     DEFAULT_PASSWORD: str = "123456"
+    ## 普通账户用于认证登陆
+    USER_EMAIL: str = "test@user.com"
+    USER_PASSWORD: str = "test1234"
     ## 默认运动类型，用于记录运动
     DEFAULT_SPORT_EMAIL: str = "user@example.com"# 表示公用类型，管理员具有写入权限
     DefaultSports :tuple = (
