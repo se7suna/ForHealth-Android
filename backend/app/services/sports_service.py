@@ -125,10 +125,14 @@ async def get_available_sports_types(current_user: str):
 async def log_sports_record(log_request,current_user):
     db = get_database()
     # 查找运动
-    sport = await db["sports"].find_one(
-        {"sport_type": log_request.sport_type}
-    )
-    if (not sport) or (sport["email"] != current_user and sport["email"]!=settings.DEFAULT_SPORT_EMAIL):
+    sport = await db["sports"].find_one({
+        "sport_type": log_request.sport_type,
+        "$or": [
+            {"email": settings.DEFAULT_SPORT_EMAIL},
+            {"email": current_user}
+        ]
+    })
+    if (not sport) :
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="运动类型未找到")

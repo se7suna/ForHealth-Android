@@ -53,7 +53,7 @@ async def update_sports(update_request: UpdateSportsRequest, current_user: str =
         )
 
 # 删除自定义运动类型
-@router.get("/delete-sport/{sport_type}",response_model=SimpleSportsResponse)
+@router.delete("/delete-sport/{sport_type}",response_model=SimpleSportsResponse)
 async def delete_sports(sport_type: str, current_user: str = Depends(get_current_user)):
     """
     删除自定义运动类型
@@ -118,7 +118,7 @@ async def update_sports_record(update_request: UpdateSportsRecordRequest, curren
         )
 
 # 删除运动记录
-@router.get("/delete-sport-record/{record_id}",response_model=SimpleSportsResponse)
+@router.delete("/delete-sport-record/{record_id}",response_model=SimpleSportsResponse)
 async def delete_sports_record(record_id: str, current_user: str = Depends(get_current_user)):
     """
     删除运动记录
