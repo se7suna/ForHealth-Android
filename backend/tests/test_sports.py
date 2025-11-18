@@ -11,9 +11,10 @@ from app.main import app
 
 # ================== 测试数据准备 ==================
 # 测试用户凭证
+from app.config import settings
 TEST_USER = {
-    "email": "user@example.com",
-    "password": "string"
+    "email": settings.USER_EMAIL,
+    "password": settings.USER_PASSWORD
 }
 # 用于存储测试过程中创建的资源 ID
 test_sport_type = None

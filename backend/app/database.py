@@ -46,19 +46,31 @@ async def initialize_sports_table():
     for sport in settings.DefaultSports:
         existing = await db["sports"].find_one({"sport_type": sport["sport_type"],"email": settings.DEFAULT_SPORT_EMAIL})
         if not existing:
-            print(sport["sport_type"])
             await db["sports"].insert_one(sport)
 
 
-# 初始化管理员用户
+# 初始化用户
 from app.utils.security import get_password_hash
+from app.models.user import UserInDB
 async def initialize_default_user():
     db = get_database()
+
     existing = await db["users"].find_one({"email": settings.DEFAULT_AUTH_EMAIL})
     if not existing:
-        await db["users"].insert_one({
-            "email": settings.DEFAULT_AUTH_EMAIL,
-            "password": get_password_hash(settings.DEFAULT_PASSWORD),
-            "name": "Default User"
-        })
+        user_data = UserInDB(
+            email=settings.DEFAULT_AUTH_EMAIL, 
+            username="Default User", 
+            hashed_password=get_password_hash(settings.DEFAULT_PASSWORD)
+        ).dict()
+        await db["users"].insert_one(user_data)
+
+    existing = None
+    existing = await db["users"].find_one({"email": settings.USER_EMAIL})
+    if not existing:
+        user_data = UserInDB(
+            email=settings.USER_EMAIL, 
+            username="test_user", 
+            hashed_password=get_password_hash(settings.USER_PASSWORD)
+        ).dict()
+        await db["users"].insert_one(user_data)
 
