@@ -6,11 +6,7 @@ sys.path.insert(0, backend_path)
 
 import pytest
 from httpx import AsyncClient
-from datetime import datetime, date
-from bson import ObjectId
-
-from app.main import app
-from app.routers.auth import get_current_user
+from datetime import date
 
 import pytest_asyncio
 
