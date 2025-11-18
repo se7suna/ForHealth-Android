@@ -15,10 +15,10 @@ from app.routers.auth import get_current_user
 import pytest_asyncio
 
 # ========== Fixtures ==========
-
+from app.config import settings
 TEST_USER = {
-    "email": "user@example.com",
-    "password": "string"
+    "email": settings.USER_EMAIL,
+    "password": settings.USER_PASSWORD
 }
 
 @pytest_asyncio.fixture

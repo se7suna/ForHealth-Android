@@ -438,7 +438,7 @@ async def test_delete_nonexistent_sport_type(auth_client):
 @pytest.mark.asyncio
 @pytest.mark.parametrize("invalid_data,expected_status", [
     # 空字符串的运动类型
-    ({"sport_type": "", "describe": "测试", "METs": 5.0}, 400),# !!!错误逻辑待处理
+    ({"sport_type": "", "describe": "测试", "METs": 5.0}, 422),
     # METs为字符串
     ({"sport_type": "测试", "describe": "测试", "METs": "invalid"}, 422),# 参数数据类型错误，pydantic类验证抛出
 ])
