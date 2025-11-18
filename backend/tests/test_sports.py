@@ -67,7 +67,7 @@ async def test_create_sports(auth_client, sport_data, expected_status, expected_
         assert result["success"] == expected_success
     finally:
         if response and result.get("success"):        # 完成测试后删除创建的运动类型
-            response = await auth_client.get(f"/api/sports/delete-sport/{sport_data['sport_type']}")
+            response = await auth_client.delete(f"/api/sports/delete-sport/{sport_data['sport_type']}")
             assert response.status_code == 200
             
 
@@ -391,7 +391,7 @@ async def test_delete_sports_record(auth_client):
         #assert created_at ==  log_data["created_at"] # 确保记录ID存在
 
         # 删除记录
-        response = await auth_client.get(f"/api/sports/delete-sport-record/{record_id}")
+        response = await auth_client.delete(f"/api/sports/delete-sport-record/{record_id}")
         assert response.status_code == 200
         assert response.json()["success"] is True
 
@@ -401,7 +401,7 @@ async def test_delete_nonexistent_record(auth_client):
     """测试删除不存在的运动记录"""
     fake_id = "507f1f77bcf86cd799439011"  # 有效的MongoDB ObjectId格式
 
-    response = await auth_client.get(f"/api/sports/delete-sport-record/{fake_id}")
+    response = await auth_client.delete(f"/api/sports/delete-sport-record/{fake_id}")
     assert response.status_code == 404
 
 
@@ -420,7 +420,7 @@ async def test_delete_sports(auth_client):
     assert create_response.status_code == 200
 
     # 删除刚创建的运动类型
-    response = await auth_client.get(f"/api/sports/delete-sport/{create_data['sport_type']}")
+    response = await auth_client.delete(f"/api/sports/delete-sport/{create_data['sport_type']}")
     assert response.status_code == 200
     assert response.json()["success"] is True
 
@@ -428,7 +428,7 @@ async def test_delete_sports(auth_client):
 @pytest.mark.asyncio
 async def test_delete_nonexistent_sport_type(auth_client):
     """测试删除不存在的运动类型"""
-    response = await auth_client.get("/api/sports/delete-sport/不存在的运动类型_XYZ")
+    response = await auth_client.delete("/api/sports/delete-sport/不存在的运动类型_XYZ")
     assert response.status_code == 404
 
 
@@ -482,7 +482,7 @@ async def test_calories_calculation_accuracy(auth_client):
         assert isinstance(record["calories_burned"], (int, float))
 
     # 清理测试数据
-    await auth_client.get("/api/sports/delete-sport/测试计算")
+    await auth_client.delete("/api/sports/delete-sport/测试计算")
 
 
 # ================== 测试：并发和边界情况 ==================
@@ -569,9 +569,9 @@ async def test_complete_workflow(auth_client):
     assert report_response.status_code == 200
 
     # 6. 删除记录
-    delete_record_response = await auth_client.get(f"/api/sports/delete-sport-record/{record_id}")
+    delete_record_response = await auth_client.delete(f"/api/sports/delete-sport-record/{record_id}")
     assert delete_record_response.status_code == 200
 
     # 7. 删除运动类型
-    delete_sport_response = await auth_client.get(f"/api/sports/delete-sport/{sport_type}")
+    delete_sport_response = await auth_client.delete(f"/api/sports/delete-sport/{sport_type}")
     assert delete_sport_response.status_code == 200
