@@ -15,69 +15,66 @@ import retrofit2.converter.gson.GsonConverterFactory
 import java.util.concurrent.TimeUnit
 
 /**
- * Retrofit网络客户端
- * 负责与后端API通信
+ * RetrofitClient —— 已支持测试账号免后端逻辑
  */
 object RetrofitClient {
-    
+
+    // 测试账户
+    private const val TEST_EMAIL = "test@example.com"
+    private const val TEST_PASSWORD = "123456"
+
+    // Fake API Service（专为测试用户使用）
+    private val fakeApiService = FakeApiService()
+
     // 后端服务器地址
-    // Android模拟器访问本机使用 10.0.2.2
-    // 真机测试需要使用电脑的局域网IP
     private const val BASE_URL = "http://10.0.2.2:8000/"
-    
+
     private var context: Context? = null
-    
-    /**
-     * 初始化RetrofitClient
-     * 必须在Application的onCreate中调用
-     */
+
     fun init(appContext: Context) {
         context = appContext
     }
-    
+
     // 日志拦截器
     private val loggingInterceptor = HttpLoggingInterceptor().apply {
         level = HttpLoggingInterceptor.Level.BODY
     }
-    
-    // OkHttp客户端配置
+
+    // OkHttp
     private val okHttpClient = OkHttpClient.Builder()
         .addInterceptor(loggingInterceptor)
         .connectTimeout(30, TimeUnit.SECONDS)
         .readTimeout(30, TimeUnit.SECONDS)
         .writeTimeout(30, TimeUnit.SECONDS)
         .build()
-    
-    // Gson配置
-    private val gson: Gson = GsonBuilder()
-        .setLenient()
-        .create()
-    
-    // Retrofit实例
+
+    // Gson
+    private val gson: Gson = GsonBuilder().setLenient().create()
+
+    // Retrofit
     private val retrofit = Retrofit.Builder()
         .baseUrl(BASE_URL)
         .client(okHttpClient)
         .addConverterFactory(GsonConverterFactory.create(gson))
         .build()
-    
-    // API接口实例
+
     private val apiInterface: ApiInterface = retrofit.create(ApiInterface::class.java)
-    
+
+
     /**
-     * 从响应中提取错误信息
+     * 从错误响应中提取信息
      */
     private fun getErrorMessage(response: retrofit2.Response<*>): String {
         return try {
             val errorBody = response.errorBody()?.string()
             if (errorBody != null) {
-                // 尝试解析JSON格式的错误信息
                 try {
-                    // 使用TypeToken来正确解析泛型Map
                     val type = object : com.google.gson.reflect.TypeToken<Map<String, Any>>() {}.type
                     val errorJson = gson.fromJson<Map<String, Any>>(errorBody, type)
-                    errorJson["detail"]?.toString() ?: errorJson["message"]?.toString() ?: response.message()
-                } catch (e: Exception) {
-                    // 如果解析失败，直接返回原始错误体
+                    errorJson["detail"]?.toString()
+                        ?: errorJson["message"]?.toString()
+                        ?: response.message()
+                } catch (_: Exception) {
                     errorBody
                 }
             } else {
@@ -87,113 +84,131 @@ object RetrofitClient {
             response.message() ?: "网络错误"
         }
     }
-    
-    /**
-     * ApiService实现
-     * 将Retrofit接口封装为Result类型
-     */
+
+
+    // ===========================
+    //     ApiService 封装层
+    // ===========================
     val apiService: ApiService = object : ApiService {
-        
+
+        /**
+         * 登录
+         * —— 登录前检查用户名 + 密码是否是测试账号
+         * —— 若是测试账号，全部返回 fakeApiService
+         */
         override suspend fun login(params: Map<String, String>): Result<TokenResponse> {
+            val email = params["email"]
+            val password = params["password"]
+
+            // ⭐⭐⭐ 测试账号逻辑（永远不访问后端）
+            if (email == TEST_EMAIL && password == TEST_PASSWORD) {
+                return fakeApiService.login(params)
+            }
+
+            // 正常账号 -> 真正访问后端
             return try {
                 val response = apiInterface.login(params)
                 if (response.isSuccessful && response.body() != null) {
                     Result.success(response.body()!!)
                 } else {
-                    val errorMsg = getErrorMessage(response)
-                    Result.failure(Exception(errorMsg))
+                    Result.failure(Exception(getErrorMessage(response)))
                 }
             } catch (e: Exception) {
-                Result.failure(Exception("网络错误: ${e.message ?: e.javaClass.simpleName}"))
+                Result.failure(Exception("网络错误: ${e.message}"))
             }
         }
-        
+
+        /**
+         * 注册
+         * —— 测试账号注册直接成功，不访问后端
+         */
         override suspend fun register(params: Map<String, String>): Result<TokenResponse> {
+            val email = params["email"]
+            val password = params["password"]
+
+            if (email == TEST_EMAIL && password == TEST_PASSWORD) {
+                return fakeApiService.register(params)
+            }
+
             return try {
                 val response = apiInterface.register(params)
                 if (response.isSuccessful) {
-                    // 注册成功后，调用登录接口获取Token
                     login(params)
                 } else {
-                    val errorMsg = getErrorMessage(response)
-                    Result.failure(Exception(errorMsg))
+                    Result.failure(Exception(getErrorMessage(response)))
                 }
             } catch (e: Exception) {
-                Result.failure(Exception("网络错误: ${e.message ?: e.javaClass.simpleName}"))
+                Result.failure(Exception("网络错误: ${e.message}"))
             }
         }
-        
+
+        /**
+         * 获取用户资料
+         * —— 如果 token 是 FAKE_TEST_TOKEN，则直接使用 fakeApiService，不访问后端
+         */
         override suspend fun getProfile(): Result<User> {
+            val ctx = context ?: return Result.failure(Exception("未初始化"))
+            val token = PrefsHelper.getToken(ctx)
+
+            // ⭐⭐⭐ token 判断 —— 若为测试 token，直接返回本地假用户资料
+            if (token == "FAKE_TEST_TOKEN") {
+                return fakeApiService.getProfile()
+            }
+
+            if (token.isEmpty()) {
+                return Result.failure(Exception("未登录"))
+            }
+
             return try {
-                val ctx = context ?: return Result.failure(Exception("未初始化"))
-                val token = PrefsHelper.getToken(ctx)
-                if (token.isEmpty()) {
-                    return Result.failure(Exception("未登录，请先登录"))
-                }
-                
                 val response = apiInterface.getProfile("Bearer $token")
                 if (response.isSuccessful && response.body() != null) {
                     Result.success(response.body()!!)
                 } else {
-                    when (response.code()) {
-                        401 -> Result.failure(Exception("登录已过期，请重新登录"))
-                        else -> {
-                            val errorMsg = getErrorMessage(response)
-                            Result.failure(Exception(errorMsg))
-                        }
-                    }
+                    Result.failure(Exception(getErrorMessage(response)))
                 }
             } catch (e: Exception) {
-                Result.failure(Exception("网络错误: ${e.message ?: e.javaClass.simpleName}"))
+                Result.failure(Exception("网络错误: ${e.message}"))
             }
         }
-        
+
+        /**
+         * 更新资料
+         * —— 若 token 是 FAKE_TEST_TOKEN，全部返回本地成功
+         */
         override suspend fun updateProfile(params: Map<String, Any>): Result<User> {
+            val ctx = context ?: return Result.failure(Exception("未初始化"))
+            val token = PrefsHelper.getToken(ctx)
+
+            // ⭐⭐⭐ 测试账号：不访问后端
+            if (token == "FAKE_TEST_TOKEN") {
+                return fakeApiService.updateProfile(params)
+            }
+
+            if (token.isEmpty()) {
+                return Result.failure(Exception("未登录"))
+            }
+
             return try {
-                val ctx = context ?: return Result.failure(Exception("未初始化"))
-                val token = PrefsHelper.getToken(ctx)
-                if (token.isEmpty()) {
-                    return Result.failure(Exception("未登录，请先登录"))
-                }
-                
-                // 将Map转换为JSON字符串，然后创建RequestBody
                 val json = gson.toJson(params)
-                android.util.Log.d("RetrofitClient", "更新用户资料 - 请求数据: $json")
                 val requestBody = json.toRequestBody("application/json".toMediaType())
-                
+
                 val response = apiInterface.updateProfile("Bearer $token", requestBody)
                 if (response.isSuccessful && response.body() != null) {
-                    android.util.Log.d("RetrofitClient", "更新成功")
                     Result.success(response.body()!!)
                 } else {
-                    val errorMsg = getErrorMessage(response)
-                    android.util.Log.e("RetrofitClient", "更新失败 - HTTP ${response.code()}: $errorMsg")
-                    when (response.code()) {
-                        401 -> Result.failure(Exception("登录已过期，请重新登录"))
-                        400 -> {
-                            Result.failure(Exception("数据格式错误: $errorMsg"))
-                        }
-                        500 -> {
-                            Result.failure(Exception("服务器错误: $errorMsg"))
-                        }
-                        else -> {
-                            Result.failure(Exception(errorMsg))
-                        }
-                    }
+                    Result.failure(Exception(getErrorMessage(response)))
                 }
             } catch (e: Exception) {
-                android.util.Log.e("RetrofitClient", "更新异常", e)
-                Result.failure(Exception("网络错误: ${e.message ?: e.javaClass.simpleName}"))
+                Result.failure(Exception("网络错误: ${e.message}"))
             }
         }
     }
-    
+
+
     /**
-     * 保存Token到SharedPreferences
+     * 保存 token
      */
     fun saveToken(newToken: String) {
-        context?.let { ctx ->
-            PrefsHelper.saveToken(ctx, newToken)
-        }
+        context?.let { PrefsHelper.saveToken(it, newToken) }
     }
 }
