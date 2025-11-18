@@ -56,5 +56,5 @@ async def test_create_sports(auth_client,sport_data, expected_status, expected_s
         assert result["success"] == expected_success
     finally:
         if response and result.get("success"):        # 完成测试后删除创建的运动类型
-            response = await auth_client.get(f"/api/sports/delete-sport/{sport_data['sport_type']}")
+            response = await auth_client.delete(f"/api/sports/delete-sport/{sport_data['sport_type']}")
             assert response.status_code == 200
