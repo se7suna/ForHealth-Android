@@ -47,8 +47,6 @@ test:unit:
     - pip install --upgrade pip
     - pip install -r requirements.txt
     - pip install pytest pytest-asyncio httpx
-    # 安装 curl 用于健康检查
-    - apt-get update && apt-get install -y curl
   script:
     - echo "🧪 准备运行单元测试..."
     - echo "🚀 启动后端服务器..."
