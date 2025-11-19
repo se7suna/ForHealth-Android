@@ -53,6 +53,15 @@ dependencies {
 
     // ConstraintLayout - 格式控制和设备适配
     implementation("androidx.constraintlayout:constraintlayout:2.1.4")
+    
+    // Material Components - Material Design组件
+    implementation("com.google.android.material:material:1.11.0")
+    
+    // CardView - 卡片视图
+    implementation("androidx.cardview:cardview:1.0.0")
+    
+    // RecyclerView - 列表视图
+    implementation("androidx.recyclerview:recyclerview:1.3.2")
 
     // Retrofit - 网络请求库
     implementation("com.squareup.retrofit2:retrofit:2.9.0")
