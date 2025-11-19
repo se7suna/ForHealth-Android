@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:padding="16dp">
+
+    <TextView
+        android:id="@+id/tvDialogFoodName"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="米饭"
+        android:textSize="18sp"
+        android:textColor="#333333"
+        android:textStyle="bold"
+        android:gravity="center"
+        android:layout_marginBottom="16dp"/>
+
+    <TextView
+        android:id="@+id/tvServingInfo"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="每份 100克 = 116千卡"
+        android:textSize="14sp"
+        android:textColor="#666666"
+        android:gravity="center"
+        android:layout_marginBottom="16dp"/>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="份量："
+            android:textSize="16sp"
+            android:textColor="#333333"/>
+
+        <EditText
+            android:id="@+id/etServingAmount"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="1.0"
+            android:textSize="16sp"
+            android:textColor="#333333"
+            android:inputType="numberDecimal"
+            android:gravity="center"
+            android:hint="1.0"
+            android:maxLines="1"/>
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="份"
+            android:textSize="16sp"
+            android:textColor="#333333"/>
+    </LinearLayout>
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="提示：输入份量数量，例如 1.5 表示 1.5 份"
+        android:textSize="12sp"
+        android:textColor="#999999"
+        android:gravity="center"
+        android:layout_marginTop="8dp"/>
+
+</LinearLayout>
+

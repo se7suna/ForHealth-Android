@@ -27,7 +27,7 @@ object RetrofitClient {
     private val fakeApiService = FakeApiService()
 
     // 后端服务器地址
-    private const val BASE_URL = "http://10.0.2.2:8000/"
+    private const val BASE_URL = "http://124.70.161.90:8000"
 
     private var context: Context? = null
 
@@ -60,6 +60,10 @@ object RetrofitClient {
 
     private val apiInterface: ApiInterface = retrofit.create(ApiInterface::class.java)
 
+    /**
+     * 直接访问 API 接口（用于新的食物功能）
+     */
+    val api: ApiInterface = apiInterface
 
     /**
      * 从错误响应中提取信息
