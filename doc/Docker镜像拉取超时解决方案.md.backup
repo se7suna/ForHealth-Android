@@ -1,0 +1,283 @@
+# Docker 镜像拉取超时问题解决方案
+
+## 问题描述
+
+在运行 GitLab CI/CD 时出现错误：
+```
+ERROR: Job failed: failed to pull image "mongo:latest" with specified policies [always]:
+Error response from daemon: net/http: TLS handshake timeout
+```
+
+## 原因分析
+
+1. **网络问题**：访问 Docker Hub 网络不稳定
+2. **超时设置**：默认拉取超时时间过短
+3. **镜像策略**：每次都尝试从远程拉取最新镜像
+
+## 解决方案
+
+### 方案一：配置 Docker 镜像加速器（推荐）
+
+#### 1. 打开 Docker Desktop 设置
+
+1. 右键点击系统托盘的 Docker 图标
+2. 选择 **Settings** (设置)
+3. 进入 **Docker Engine** 页面
+
+#### 2. 添加镜像加速器配置
+
+在 JSON 配置中添加以下内容：
+
+```json
+{
+  "registry-mirrors": [
+    "https://docker.m.daocloud.io",
+    "https://docker.nju.edu.cn",
+    "https://dockerhub.timeweb.cloud",
+    "https://noohub.ru"
+  ],
+  "max-concurrent-downloads": 10,
+  "max-concurrent-uploads": 5
+}
+```
+
+**国内常用镜像加速器**：
+- DaoCloud: `https://docker.m.daocloud.io`
+- 南京大学: `https://docker.nju.edu.cn`
+- 上海交大: `https://docker.mirrors.sjtug.sjtu.edu.cn`
+- 网易: `https://hub-mirror.c.163.com`
+
+#### 3. 应用配置
+
+点击 **Apply & Restart** 重启 Docker Desktop
+
+### 方案二：修改 GitLab Runner 配置
+
+编辑 `D:\dev\config.toml`：
+
+```toml
+[[runners]]
+  [runners.docker]
+    # 使用 if-not-present 策略，优先使用本地镜像
+    pull_policy = ["if-not-present"]
+
+    # 增加服务启动超时时间（秒）
+    wait_for_services_timeout = 300
+
+    # 增加镜像拉取超时时间（秒）
+    pull_timeout = 600
+```
+
+**拉取策略说明**：
+- `always`: 总是尝试拉取最新镜像（默认，可能导致超时）
+- `if-not-present`: 本地有则使用本地，没有才拉取
+- `never`: 只使用本地镜像，不拉取
+
+### 方案三：预先拉取所需镜像
+
+在本地手动拉取 CI/CD 所需的所有镜像：
+
+```powershell
+# 拉取 Python 镜像
+docker pull python:3.11
+
+# 拉取 MongoDB 镜像
+docker pull mongo:latest
+
+# 拉取 MailHog 镜像
+docker pull mailhog/mailhog:latest
+```
+
+这样 Runner 执行时会直接使用本地镜像，避免网络问题。
+
+### 方案四：使用国内镜像源（临时方案）
+
+修改 `.gitlab-ci.yml`，使用国内镜像：
+
+```yaml
+test:unit:
+  stage: test
+  image: registry.cn-hangzhou.aliyuncs.com/library/python:3.11  # 使用阿里云镜像
+  services:
+    - registry.cn-hangzhou.aliyuncs.com/library/mongo:latest
+    - mailhog/mailhog:latest  # MailHog 保持原样
+```
+
+## 完整操作步骤
+
+### 步骤 1: 配置 Docker Desktop 加速器
+
+1. 打开 Docker Desktop → Settings → Docker Engine
+2. 添加镜像加速器配置
+3. 点击 Apply & Restart
+
+### 步骤 2: 修改 Runner 配置
+
+编辑 `D:\dev\config.toml`：
+
+```toml
+[[runners]]
+  [runners.docker]
+    image = "python:3.11"
+    pull_policy = ["if-not-present"]
+    wait_for_services_timeout = 300
+```
+
+### 步骤 3: 预先拉取镜像
+
+```powershell
+docker pull python:3.11
+docker pull mongo:latest
+docker pull mailhog/mailhog:latest
+```
+
+### 步骤 4: 重启 GitLab Runner
+
+```powershell
+cd D:\dev
+
+# 如果是前台运行，按 Ctrl+C 停止后重新运行
+.\gitlab-runner.exe run
+
+# 如果是服务运行
+.\gitlab-runner.exe restart
+```
+
+### 步骤 5: 重新触发流水线
+
+1. 访问 GitLab Merge Request 页面
+2. 点击 **Retry** 重新运行失败的任务
+
+## 验证配置
+
+### 检查 Docker 镜像加速器
+
+```powershell
+# 查看 Docker 配置
+docker info
+
+# 输出中应该包含：
+# Registry Mirrors:
+#   https://docker.m.daocloud.io/
+```
+
+### 检查本地镜像
+
+```powershell
+# 列出已拉取的镜像
+docker images
+
+# 应该看到：
+# python        3.11
+# mongo         latest
+# mailhog/mailhog  latest
+```
+
+### 测试镜像拉取
+
+```powershell
+# 测试拉取速度
+docker pull hello-world
+
+# 成功则说明配置生效
+```
+
+## 常见问题
+
+### Q1: 配置加速器后仍然超时
+
+**解决**：
+1. 尝试更换其他镜像加速器
+2. 检查网络连接
+3. 增加超时时间配置
+
+### Q2: Runner 配置修改后不生效
+
+**解决**：
+```powershell
+# 重启 Runner
+cd D:\dev
+.\gitlab-runner.exe restart
+```
+
+### Q3: 镜像拉取速度仍然很慢
+
+**解决**：
+- 使用有线网络而非 Wi-Fi
+- 关闭 VPN 或代理
+- 尝试在网络空闲时段拉取镜像
+
+## 推荐配置（综合方案）
+
+### Docker Desktop 配置
+
+```json
+{
+  "registry-mirrors": [
+    "https://docker.m.daocloud.io",
+    "https://docker.nju.edu.cn"
+  ],
+  "max-concurrent-downloads": 10,
+  "dns": ["8.8.8.8", "114.114.114.114"]
+}
+```
+
+### Runner 配置 (config.toml)
+
+```toml
+concurrent = 1
+
+[[runners]]
+  name = "my-local-runner"
+  url = "https://gitlab.com/"
+  executor = "docker"
+
+  [runners.docker]
+    image = "python:3.11"
+    pull_policy = ["if-not-present"]
+    wait_for_services_timeout = 300
+    privileged = true
+    volumes = ["/var/run/docker.sock:/var/run/docker.sock", "/cache"]
+```
+
+### .gitlab-ci.yml 优化
+
+```yaml
+# 使用变量控制镜像源
+variables:
+  DOCKER_DRIVER: overlay2
+  DOCKER_TLS_CERTDIR: ""
+
+test:unit:
+  stage: test
+  image: python:3.11
+  services:
+    - mongo:latest
+    - mailhog/mailhog:latest
+  tags:
+    - docker
+  before_script:
+    - echo "使用本地镜像，避免重复拉取"
+```
+
+## 总结
+
+**最有效的组合方案**：
+1. ✅ 配置 Docker 镜像加速器
+2. ✅ 设置 pull_policy = ["if-not-present"]
+3. ✅ 预先拉取所需镜像
+4. ✅ 增加超时时间配置
+
+这样可以大幅提高 CI/CD 执行速度，避免网络超时问题。
+
+---
+
+**快速修复命令**：
+```powershell
+# 1. 预拉取镜像
+docker pull python:3.11 && docker pull mongo:latest && docker pull mailhog/mailhog:latest
+
+# 2. 重启 Runner
+cd D:\dev
+.\gitlab-runner.exe restart
+```
