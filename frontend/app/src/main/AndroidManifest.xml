@@ -72,6 +72,20 @@
             android:exported="false"
             android:theme="@style/AppThemeWithActionBar" />
 
+        <!-- 食物选择 -->
+        <activity
+            android:name=".food.FoodSelectionActivity"
+            android:exported="false"
+            android:theme="@style/AppThemeWithActionBar"
+            android:windowSoftInputMode="adjustResize" />
+
+        <!-- 运动选择 -->
+        <activity
+            android:name=".sports.SportsSelectionActivity"
+            android:exported="false"
+            android:theme="@style/AppThemeWithActionBar"
+            android:windowSoftInputMode="adjustResize" />
+
     </application>
 
 </manifest>
