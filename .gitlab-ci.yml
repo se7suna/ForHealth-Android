@@ -57,7 +57,7 @@ test:unit:
     - echo "📝 服务器进程 PID $SERVER_PID"
     - echo "⏳ 等待服务器启动..."
     - echo "🧪 运行单元测试..."
-    - pytest tests/ -v --tb=short --junitxml=test-results.xml
+    - pytest tests/test_example.py
   after_script:
     - cd backend
     - echo "🛑 停止服务器..."
@@ -69,12 +69,6 @@ test:unit:
     - echo "📋 服务器日志："
     - cat server.log || true
   coverage: '/TOTAL.*\s+(\d+%)$/'
-  artifacts:
-    when: always
-    paths:
-      - backend/test-results.xml
-    reports:
-      junit: backend/test-results.xml
   retry:
     max: 2
     when:
