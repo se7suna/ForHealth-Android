@@ -45,9 +45,10 @@ test:integration:
     - SERVER_PID=$!
     - echo "📝 服务器进程 PID $SERVER_PID"
     - echo "⏳ 等待服务器启动..."
+    - sleep 30
     - curl -v http://127.0.0.1:8000/health
     - echo "🧪 运行单元测试..."
-    - pytest tests/test_example.py
+    - pytest tests/test_sports.py
   allow_failure: true
   tags:
     - runner_352  # 使用带有 docker tag 的 runner
