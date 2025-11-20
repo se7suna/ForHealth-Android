@@ -31,7 +31,7 @@ backend-test:
   script:
     - cd backend
     - |
-      $process = Start-Process -FilePath "python" -ArgumentList @("-m","uvicorn","app.main:app","--host","127.0.0.1","--port","8000") -PassThru
+      $process = Start-Process -FilePath "python" -ArgumentList @("-m","uvicorn","app.main:app","--host","127.0.0.1","--port","8002") -PassThru
       $env:SERVER_PID = $process.Id
     - pytest
   after_script:
