@@ -5,7 +5,7 @@ from app.models.food import NutritionData, FullNutritionData
 
 
 # ========== 拍照识别食物 ==========
-class RecognizedFoodItem(BaseModel):
+class RecognizedFoodItemResponse(BaseModel):
     """识别到的食物项（可编辑）"""
     food_name: str = Field(..., min_length=1, max_length=100, description="食物名称")
     serving_size: float = Field(..., gt=0, description="份量（克）")
@@ -64,7 +64,7 @@ class FoodImageRecognitionResponse(BaseModel):
     """食物图片识别响应"""
     success: bool = Field(..., description="是否识别成功")
     message: str = Field(..., description="响应消息")
-    recognized_foods: List[RecognizedFoodItem] = Field(..., description="识别到的食物列表")
+    recognized_foods: List[RecognizedFoodItemResponse] = Field(..., description="识别到的食物列表")
     total_calories: float = Field(..., ge=0, description="总热量（所有识别食物的总和）")
     total_nutrition: Optional[NutritionData] = Field(None, description="总营养数据（所有识别食物的总和）")
     image_url: Optional[str] = Field(None, description="上传的图片URL（如果保存）")
@@ -129,7 +129,7 @@ class FoodImageRecognitionResponse(BaseModel):
 
 class FoodRecognitionConfirmRequest(BaseModel):
     """确认识别结果并添加到饮食日志的请求"""
-    recognized_foods: List[RecognizedFoodItem] = Field(..., min_length=1, description="确认后的食物列表（用户可编辑）")
+    recognized_foods: List[RecognizedFoodItemResponse] = Field(..., min_length=1, description="确认后的食物列表（用户可编辑）")
     recorded_at: datetime = Field(..., description="摄入时间")
     meal_type: Optional[str] = Field(None, description="餐次类型")
     notes: Optional[str] = Field(None, max_length=500, description="备注")
@@ -194,7 +194,7 @@ class FoodRecognitionConfirmResponse(BaseModel):
 
 
 # ========== 生成个性化饮食计划 ==========
-class FoodPreference(BaseModel):
+class FoodPreferenceRequest(BaseModel):
     """食物偏好"""
     liked_foods: Optional[List[str]] = Field(None, description="喜欢的食物列表")
     disliked_foods: Optional[List[str]] = Field(None, description="不吃的食物列表")
@@ -222,7 +222,7 @@ class MealPlanRequest(BaseModel):
     plan_days: Optional[int] = Field(None, ge=1, le=30, description="计划天数（当plan_duration为day时必填，最多30天）")
     include_budget: bool = Field(default=False, description="是否考虑预算")
     budget_per_day: Optional[float] = Field(None, gt=0, description="每日预算（元，可选）")
-    food_preference: Optional[FoodPreference] = Field(None, description="食物偏好")
+    food_preference: Optional[FoodPreferenceRequest] = Field(None, description="食物偏好")
     target_calories: Optional[float] = Field(None, gt=0, description="目标每日热量（千卡，可选，不填则使用用户资料中的目标）")
     meals_per_day: int = Field(default=3, ge=2, le=6, description="每日餐次数量（2-6餐）")
 
@@ -263,7 +263,7 @@ class MealPlanRequest(BaseModel):
     )
 
 
-class MealItem(BaseModel):
+class MealItemResponse(BaseModel):
     """单餐食物项"""
     food_name: str = Field(..., description="食物名称")
     serving_size: float = Field(..., gt=0, description="建议份量（克）")
@@ -293,10 +293,10 @@ class MealItem(BaseModel):
         }
 
 
-class DailyMealPlan(BaseModel):
+class DailyMealPlanResponse(BaseModel):
     """每日饮食计划"""
     date: str = Field(..., description="日期（YYYY-MM-DD）")
-    meals: Dict[str, List[MealItem]] = Field(..., description="餐次字典，key为餐次名称（如：早餐、午餐、晚餐），value为食物列表")
+    meals: Dict[str, List[MealItemResponse]] = Field(..., description="餐次字典，key为餐次名称（如：早餐、午餐、晚餐），value为食物列表")
     daily_nutrition: NutritionData = Field(..., description="每日总营养数据")
     daily_calories: float = Field(..., ge=0, description="每日总热量（千卡）")
     daily_cost: Optional[float] = Field(None, ge=0, description="每日预估成本（元）")
@@ -372,7 +372,7 @@ class MealPlanResponse(BaseModel):
     plan_duration: str = Field(..., description="计划时间：day（天）或 week（周）")
     plan_days: int = Field(..., ge=1, description="计划天数")
     target_calories: float = Field(..., gt=0, description="目标每日热量（千卡）")
-    daily_plans: List[DailyMealPlan] = Field(..., description="每日饮食计划列表")
+    daily_plans: List[DailyMealPlanResponse] = Field(..., description="每日饮食计划列表")
     total_cost: Optional[float] = Field(None, ge=0, description="总预估成本（元）")
     average_daily_cost: Optional[float] = Field(None, ge=0, description="平均每日成本（元）")
     nutrition_summary: Dict[str, Any] = Field(..., description="营养摘要（平均每日营养数据、宏量营养素比例等）")
@@ -550,7 +550,7 @@ class ReminderSettingsResponse(BaseModel):
         }
 
 
-class NotificationMessage(BaseModel):
+class NotificationMessageResponse(BaseModel):
     """通知消息"""
     id: str = Field(..., description="消息ID")
     type: str = Field(..., description="消息类型：meal_reminder（餐次提醒）、record_reminder（记录提醒）、goal_achievement（目标达成）、motivational（鼓励消息）、feedback（反馈消息）")
@@ -580,7 +580,7 @@ class NotificationListResponse(BaseModel):
     """通知列表响应"""
     total: int = Field(..., ge=0, description="总消息数")
     unread_count: int = Field(..., ge=0, description="未读消息数")
-    notifications: List[NotificationMessage] = Field(..., description="通知消息列表")
+    notifications: List[NotificationMessageResponse] = Field(..., description="通知消息列表")
 
     class Config:
         json_schema_extra = {
@@ -602,7 +602,7 @@ class NotificationListResponse(BaseModel):
         }
 
 
-class FeedbackData(BaseModel):
+class FeedbackDataResponse(BaseModel):
     """反馈数据"""
     date: date = Field(..., description="日期")
     daily_calories: float = Field(..., ge=0, description="当日摄入热量")
@@ -643,8 +643,8 @@ class FeedbackData(BaseModel):
 class DailyFeedbackResponse(BaseModel):
     """每日反馈响应"""
     success: bool = Field(..., description="是否获取成功")
-    feedback: FeedbackData = Field(..., description="反馈数据")
-    notification: Optional[NotificationMessage] = Field(None, description="相关通知消息（如果有）")
+    feedback: FeedbackDataResponse = Field(..., description="反馈数据")
+    notification: Optional[NotificationMessageResponse] = Field(None, description="相关通知消息（如果有）")
 
     class Config:
         json_schema_extra = {
