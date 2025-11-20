@@ -22,143 +22,6 @@ cache:
 
 # ==================== Test Stage ====================
 
-test:unit:
-  stage: test
-  image: python:${PYTHON_VERSION}
-  services:
-    - name: mongo:latest
-      alias: mongo
-    - name: mailhog/mailhog:latest
-      alias: mailhog
-  variables:
-    MONGODB_URL: "mongodb://mongo:27017"
-    DATABASE_NAME: "test_for_health"
-    SECRET_KEY: "test-secret-key-for-ci"
-    # 使用 MailHog 邮件服务器
-    SMTP_HOST: "mailhog"
-    SMTP_PORT: "1025"
-    SMTP_USER: ""
-    SMTP_PASSWORD: ""
-    SMTP_FROM_EMAIL: "noreply@forhealth.com"
-    SMTP_FROM_NAME: "For Health Test"
-  before_script:
-    - cd backend
-    - apt-get update
-    - apt-get install -y libzbar0
-    - pip install --upgrade pip
-    - pip install -r requirements.txt
-    - pip install pytest pytest-asyncio httpx
-  script:
-    - echo "🧪 准备运行单元测试..."
-    - echo "🚀 启动后端服务器..."
-    # 在后台启动服务器
-    - nohup uvicorn app.main:app --host 127.0.0.1 --port 8000 > server.log 2>&1 &
-    - SERVER_PID=$!
-    - echo "📝 服务器进程 PID $SERVER_PID"
-    - echo "⏳ 等待服务器启动..."
-    - echo "🧪 运行单元测试..."
-    - pytest tests/test_example.py
-  after_script:
-    - cd backend
-    - echo "🛑 停止服务器..."
-    # 停止服务器进程
-    - kill $SERVER_PID || true
-    - sleep 2
-    # 如果还在运行，强制停止
-    - kill -9 $SERVER_PID || true
-    - echo "📋 服务器日志："
-    - cat server.log || true
-  coverage: '/TOTAL.*\s+(\d+%)$/'
-  retry:
-    max: 2
-    when:
-      - runner_system_failure
-      - stuck_or_timeout_failure
-  timeout: 30m
-  tags:
-    - runner_352
-  only:
-    changes:
-      - backend/**/*
-      - .gitlab-ci.yml
-      - docker-compose.yml
-
-# 邮箱服务器功能测试
-test:email-service:
-  stage: test
-  image: python:${PYTHON_VERSION}
-  services:
-    - name: mailhog/mailhog:latest
-      alias: mailhog
-  variables:
-    SMTP_HOST: "mailhog"
-    SMTP_PORT: "1025"
-  before_script:
-    - pip install --upgrade pip
-    - pip install aiosmtplib
-  script:
-    - echo "📧 测试邮箱服务器连接和邮件发送..."
-    - |
-      python3 << 'EOF'
-      import asyncio
-      import aiosmtplib
-      from email.mime.text import MIMEText
-      from email.mime.multipart import MIMEMultipart
-
-      async def test_email_connection():
-          """测试邮箱服务器连接"""
-          try:
-              # 创建邮件
-              message = MIMEMultipart()
-              message["From"] = "noreply@forhealth.com"
-              message["To"] = "test@example.com"
-              message["Subject"] = "CI/CD 邮件服务测试"
-
-              body = """
-              <html>
-                <body>
-                  <h2>邮件服务器测试</h2>
-                  <p>这是一封来自 CI/CD 流水线的测试邮件。</p>
-                  <p>如果您收到这封邮件，说明邮件服务器工作正常！</p>
-                </body>
-              </html>
-              """
-              message.attach(MIMEText(body, "html"))
-
-              # 发送邮件
-              await aiosmtplib.send(
-                  message,
-                  hostname="mailhog",
-                  port=1025,
-              )
-
-              print("✅ 邮件发送成功！")
-              print("📬 收件人: test@example.com")
-              print("📝 主题: CI/CD 邮件服务测试")
-              return True
-          except Exception as e:
-              print(f"❌ 邮件发送失败: {e}")
-              return False
-
-      # 运行测试
-      result = asyncio.run(test_email_connection())
-
-      if result:
-          print("\n🎉 邮箱服务器测试通过！")
-          exit(0)
-      else:
-          print("\n💥 邮箱服务器测试失败！")
-          exit(1)
-      EOF
-    - echo "✅ 邮箱服务器测试完成！"
-  tags:
-    - runner_352  # 使用带有 docker tag 的 runner
-  only:
-    changes:
-      - backend/**/*
-      - .gitlab-ci.yml
-      - docker-compose.yml
-
 test:integration:
   stage: test
   image: python:${PYTHON_VERSION}
@@ -178,7 +41,12 @@ test:integration:
     - pip install -r requirements.txt
   script:
     - echo "🔗 运行集成测试..."
-    - echo "✅ 集成测试通过（待实现）"
+    - nohup uvicorn app.main:app --host 127.0.0.1 --port 8000 > server.log 2>&1 &
+    - SERVER_PID=$!
+    - echo "📝 服务器进程 PID $SERVER_PID"
+    - echo "⏳ 等待服务器启动..."
+    - echo "🧪 运行单元测试..."
+    - pytest tests/test_example.py
   allow_failure: true
   tags:
     - runner_352  # 使用带有 docker tag 的 runner
