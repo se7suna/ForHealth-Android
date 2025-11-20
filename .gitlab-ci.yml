@@ -29,31 +29,6 @@ backend-test:
   stage: test
   script:
     - cd backend
-    - |
-      $process = Start-Process -FilePath "python" -ArgumentList @("-m","uvicorn","app.main:app","--host","0.0.0.0","--port","8000") -PassThru
-      $env:APP_PID = $process.Id
-      Write-Host "Started uvicorn with PID $($env:APP_PID)"
-    - |
-      $deadline = (Get-Date).AddSeconds(60)
-      $uri = "http://127.0.0.1:8000/health"
-      while ((Get-Date) -lt $deadline) {
-          try {
-              $response = Invoke-WebRequest -Uri $uri -UseBasicParsing -TimeoutSec 5
-              if ($response.StatusCode -eq 200) {
-                  Write-Host "Server is ready."
-                  break
-              }
-          } catch {
-              Start-Sleep -Seconds 2
-          }
-      }
-      if ((Get-Date) -ge $deadline) {
-          throw "Server failed to start in time."
-      }
+    - python -m app.main
     - pytest tests/test_example.py -vv
   after_script:
-    - |
-      if ($env:APP_PID) {
-          Write-Host "Stopping uvicorn process $($env:APP_PID)"
-          try { Stop-Process -Id $env:APP_PID -Force } catch { Write-Host "Failed to stop process: $_" }
-      }
