@@ -32,8 +32,6 @@ backend-test:
     - |
       $process = Start-Process -FilePath "python" -ArgumentList @("-m","uvicorn","app.main:app","--host","127.0.0.1","--port","8000") -PassThru
       $env:SERVER_PID = $process.Id
-      Write-Host "Started uvicorn with PID $($env:SERVER_PID)"
-      Start-Sleep -Seconds 5
     - pytest tests/test_example.py -vv
   after_script:
     - |
