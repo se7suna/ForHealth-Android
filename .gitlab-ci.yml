@@ -30,8 +30,9 @@ backend-test:
   stage: test
   script:
     - cd backend
+    - python -c "from pymongo import MongoClient; import os; uri=os.environ.get('MONGODB_URL','mongodb://mongo:27017/for_health'); client=MongoClient(uri, serverSelectionTimeoutMS=5000); client.admin.command('ping'); print('MongoDB connection OK:', uri)"
     - |
-      $process = Start-Process -FilePath "python" -ArgumentList @("-m","uvicorn","app.main:app","--host","127.0.0.1","--port","8002") -PassThru
+      $process = Start-Process -FilePath "python" -ArgumentList @("-m","uvicorn","app.main:app","--host","127.0.0.1","--port","8000") -PassThru
       $env:SERVER_PID = $process.Id
     - pytest
   after_script:
