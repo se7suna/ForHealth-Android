@@ -37,8 +37,8 @@ test:integration:
     SMTP_FROM_EMAIL: "noreply@test.com"
   before_script:
     - cd backend
-    - apk update
-    - apk add zbar
+    - apt-get update
+    - apt-get install -y libzbar0
     - pip install --upgrade pip
     - pip install -r requirements.txt
   script:
