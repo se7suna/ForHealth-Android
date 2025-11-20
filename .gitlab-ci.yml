@@ -37,10 +37,10 @@ test:integration:
     SMTP_FROM_EMAIL: "noreply@test.com"
   before_script:
     - cd backend
-    - sed -i 's|http://deb.debian.org/debian|http://mirrors.aliyun.com/debian|g' /etc/apt/sources.list
-    - sed -i 's|http://security.debian.org/debian-security|http://mirrors.aliyun.com/debian-security|g' /etc/apt/sources.list
-    - apt-get update
-    - apt-get install -y libzbar0
+    - apt-get -o Acquire::http::Proxy::deb.debian.org=http://mirrors.aliyun.com/debian \
+      -o Acquire::http::Proxy::security.debian.org=http://mirrors.aliyun.com/debian-security \
+      update
+    - pt-get -o Acquire::http::Proxy::deb.debian.org=http://mirrors.aliyun.com/debian install -y libzbar0
     - pip install --upgrade pip
     - pip install -r requirements.txt
   script:
