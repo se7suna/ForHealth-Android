@@ -29,6 +29,11 @@ backend-test:
   stage: test
   script:
     - cd backend
-    - python -m app.main
+    - nohup uvicorn app.main:app --host 127.0.0.1 --port 8000 > server.log 2>&1 &
+    - SERVER_PID=$!
     - pytest tests/test_example.py -vv
   after_script:
+  - kill $SERVER_PID || true
+  - sleep 2
+  # 如果还在运行，强制停止
+  - kill -9 $SERVER_PID || true
