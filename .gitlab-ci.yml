@@ -33,7 +33,9 @@ backend-test:
     - SERVER_PID=$!
     - pytest tests/test_example.py -vv
   after_script:
-  - kill $SERVER_PID || true
-  - sleep 2
-  # 如果还在运行，强制停止
-  - kill -9 $SERVER_PID || true
+after_script:
+  - |
+      if ($env:SERVER_PID) {
+          try { Stop-Process -Id $env:SERVER_PID -Force }
+          catch { Write-Host "Failed to stop process: $_" }
+      }
