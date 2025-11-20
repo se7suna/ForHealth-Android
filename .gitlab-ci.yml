@@ -43,6 +43,7 @@ test:unit:
     SMTP_FROM_NAME: "For Health Test"
   before_script:
     - cd backend
+    - apt-get update
     - apt-get install -y libzbar0
     - pip install --upgrade pip
     - pip install -r requirements.txt
