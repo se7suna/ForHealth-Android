@@ -38,7 +38,7 @@ test:integration:
   before_script:
     - cd backend
     - apt-get update -o Acquire::http::Proxy::deb.debian.org=http://mirrors.aliyun.com/debian -o Acquire::http::Proxy::security.debian.org=http://mirrors.aliyun.com/debian-security
-    - apt-get install -o Acquire::http::Proxy::deb.debian.org=http://mirrors.aliyun.com/debian  -y libzbar0
+    - apt-get install -y libzbar0 || apt-get install -y libzbar0 --fix-missing
     - pip install --upgrade pip
     - pip install -r requirements.txt
   script:
