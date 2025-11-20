@@ -128,7 +128,7 @@ test:unit:
       - stuck_or_timeout_failure
   timeout: 30m
   tags:
-    - docker
+    - runner_352
   only:
     changes:
       - backend/**/*
@@ -204,7 +204,7 @@ test:email-service:
       EOF
     - echo "✅ 邮箱服务器测试完成！"
   tags:
-    - docker  # 使用带有 docker tag 的 runner
+    - runner_352  # 使用带有 docker tag 的 runner
   only:
     changes:
       - backend/**/*
@@ -233,7 +233,7 @@ test:integration:
     - echo "✅ 集成测试通过（待实现）"
   allow_failure: true
   tags:
-    - docker  # 使用带有 docker tag 的 runner
+    - runner_352  # 使用带有 docker tag 的 runner
   only:
     changes:
       - backend/**/*
@@ -257,7 +257,7 @@ build:backend:
       - backend/
     expire_in: 1 day
   tags:
-    - docker  # 使用带有 docker tag 的 runner
+    - runner_352  # 使用带有 docker tag 的 runner
   only:
     changes:
       - backend/**/*
@@ -270,7 +270,7 @@ notify:success:
   script:
     - echo "✅ CI/CD Pipeline 执行成功！"
   tags:
-    - docker
+    - runner_352
   when: on_success
 
 notify:failure:
@@ -278,5 +278,5 @@ notify:failure:
   script:
     - echo "❌ CI/CD Pipeline 执行失败，请检查日志。"
   tags:
-    - docker
+    - runner_352
   when: on_failure
