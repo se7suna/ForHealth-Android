@@ -25,7 +25,7 @@ before_script:
 
 backend-test:
   tags:
-    runner_352
+    - runner_352
   stage: test
   script:
     - cd backend
