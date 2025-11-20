@@ -37,6 +37,8 @@ test:integration:
     SMTP_FROM_EMAIL: "noreply@test.com"
   before_script:
     - cd backend
+    - apk update
+    - apk add zbar
     - pip install --upgrade pip
     - pip install -r requirements.txt
   script:
