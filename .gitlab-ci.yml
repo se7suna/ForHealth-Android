@@ -29,13 +29,15 @@ backend-test:
   stage: test
   script:
     - cd backend
-    - nohup uvicorn app.main:app --host 127.0.0.1 --port 8000 > server.log 2>&1 &
-    - SERVER_PID=$!
+    - |
+      $process = Start-Process -FilePath "python" -ArgumentList @("-m","uvicorn","app.main:app","--host","127.0.0.1","--port","8000") -RedirectStandardOutput "server.log" -RedirectStandardError "server.log" -PassThru
+      $env:SERVER_PID = $process.Id
+      Write-Host "Started uvicorn with PID $($env:SERVER_PID)"
+      Start-Sleep -Seconds 5
     - pytest tests/test_example.py -vv
   after_script:
-after_script:
-  - |
-      if ($env:SERVER_PID) {
-          try { Stop-Process -Id $env:SERVER_PID -Force }
-          catch { Write-Host "Failed to stop process: $_" }
-      }
+    - |
+        if ($env:SERVER_PID) {
+            try { Stop-Process -Id $env:SERVER_PID -Force }
+            catch { Write-Host "Failed to stop process: $_" }
+        }
