@@ -32,7 +32,7 @@ backend-test:
     - |
       $process = Start-Process -FilePath "python" -ArgumentList @("-m","uvicorn","app.main:app","--host","127.0.0.1","--port","8000") -PassThru
       $env:SERVER_PID = $process.Id
-    - pytest tests/test_example.py -vv
+    - pytest
   after_script:
     - |
         if ($env:SERVER_PID) {
