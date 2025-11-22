@@ -72,8 +72,7 @@
             android:exported="false"
             android:theme="@style/AppThemeWithActionBar" />
 
-<<<<<<< Updated upstream
-=======
+
         <!-- 条形码扫描 -->
         <activity
             android:name="com.journeyapps.barcodescanner.CaptureActivity"
@@ -82,7 +81,6 @@
             tools:replace="android:theme"
             android:theme="@style/zxing_CaptureTheme" />
 
->>>>>>> Stashed changes
         <!-- 食物选择 -->
         <activity
             android:name=".food.FoodSelectionActivity"
