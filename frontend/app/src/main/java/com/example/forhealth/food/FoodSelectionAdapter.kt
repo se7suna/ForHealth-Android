@@ -3,6 +3,7 @@ package com.example.forhealth.food
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import com.bumptech.glide.Glide
 import android.widget.Button
 import android.widget.ImageView
 import android.widget.TextView
@@ -48,7 +49,9 @@ class FoodSelectionAdapter(
             btnAdd.setOnClickListener {
                 onAddClick(food)
             }
-
+            Glide.with(itemView.context)
+                .load(food.imageUrl) // 加载图片 URL
+                .into(ivFoodImage) // 将图片加载到 ImageView 中
             // 可以在这里加载图片（使用Glide或其他库）
             // Glide.with(itemView.context).load(food.imageUrl).into(ivFoodImage)
         }

@@ -2,6 +2,7 @@ plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
+    kotlin("kapt")
 }
 
 android {
@@ -51,6 +52,14 @@ dependencies {
     implementation(libs.androidx.appcompat)
     implementation(libs.androidx.compose.animation.core)
 
+<<<<<<< Updated upstream
+=======
+    implementation("com.github.bumptech.glide:glide:4.15.1")
+    kapt("com.github.bumptech.glide:compiler:4.12.0")
+    // Kotlin 协程支持（如果使用协程）
+    implementation ("androidx.room:room-ktx:2.3.0")  // Room 支持协程
+
+>>>>>>> Stashed changes
     // ConstraintLayout - 格式控制和设备适配
     implementation("androidx.constraintlayout:constraintlayout:2.1.4")
     

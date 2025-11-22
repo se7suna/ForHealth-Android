@@ -14,6 +14,15 @@
         android:orientation="horizontal"
         android:padding="12dp">
 
+        <!-- 图片区域 -->
+        <ImageView
+        android:layout_width="60dp"
+        android:layout_height="60dp"
+        android:layout_marginEnd="12dp"
+        android:src="@android:drawable/ic_menu_search"
+        android:scaleType="centerCrop" />
+
+        <!-- 文本区域 -->
         <LinearLayout
             android:layout_width="0dp"
             android:layout_height="wrap_content"
@@ -75,4 +84,5 @@
     </LinearLayout>
 
 </androidx.cardview.widget.CardView>
+
 
