@@ -2,12 +2,14 @@ package com.example.forhealth.food
 
 import android.view.LayoutInflater
 import android.view.View
+import com.bumptech.glide.Glide
 import android.view.ViewGroup
 import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
 import com.example.forhealth.R
 import com.example.forhealth.model.DailyRecordItem
 import com.example.forhealth.model.FoodRecord
+import android.widget.ImageView
 
 class DailyRecordsAdapter(
     private val onFoodLongClick: (FoodRecord) -> Unit,
@@ -66,9 +68,10 @@ class DailyRecordsAdapter(
         private val tvNutrition: TextView = itemView.findViewById(R.id.tvNutrition)
 
         fun bind(record: FoodRecord) {
+            // 设置食物名称
             tvFoodName.text = record.foodName
             tvMealType.text = record.mealType ?: "其他"
-            
+
             // 显示份量信息
             val servingAmount = if (record.servingAmount % 1.0 == 0.0) {
                 record.servingAmount.toInt().toString()
@@ -82,16 +85,20 @@ class DailyRecordsAdapter(
             }
             val servingUnit = record.servingUnit ?: "克"
             tvServingInfo.text = "${servingAmount}份 · ${servingSize}${servingUnit}"
-            
+
             // 显示卡路里
             tvCalories.text = "+${record.nutritionData.calories.toInt()}"
-            
+
             // 显示营养素信息
             val protein = record.nutritionData.protein.toInt()
             val fat = record.nutritionData.fat.toInt()
             val carbs = record.nutritionData.carbohydrates.toInt()
             tvNutrition.text = "蛋白${protein}g 脂肪${fat}g 碳水${carbs}g"
 
+            //Glide.with(itemView.context)
+              //  .load(food.imageUrl) // 加载图片 URL
+              //  .into(ivFoodImage) // 将图片加载到 ImageView 中
+            //若要加载图片，后端在每日记录中添加图片的接口
             itemView.setOnLongClickListener {
                 onFoodLongClick(record)
                 true

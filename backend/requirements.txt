@@ -1,33 +1,33 @@
-# FastAPI 核心依赖
+
 fastapi==0.109.0
 uvicorn[standard]==0.27.0
 pydantic==2.5.3
 pydantic-settings==2.1.0
 
-# 数据库
-motor==3.3.2  # MongoDB 异步驱动
+
+motor==3.3.2  
 pymongo==4.6.1
 
-# 认证和安全
+
 python-jose[cryptography]==3.3.0
 passlib[bcrypt]==1.7.4
 python-multipart==0.0.6
 bcrypt==4.1.2
 
-# 邮件发送
+
 aiosmtplib==3.0.1
 email-validator==2.1.0
 
-# 工具
+
 python-dotenv==1.0.0
 
-# 条形码识别
+
 pyzbar>=0.1.9
 opencv-python-headless>=4.8.0 
 Pillow>=10.0.0
 numpy>=1.24.0
 
-# 测试
+
 pytest==7.4.4
 pytest-asyncio==0.23.3
 httpx==0.26.0
