@@ -42,7 +42,7 @@ async def update_sports(update_request: UpdateSportsRequest, current_user: str =
     - **sport_type**: 运动类型
     - **METs**: 运动强度（必须大于0）
     """
-    result = sports_service.update_sports(update_request,current_user)
+    result = await sports_service.update_sports(update_request,current_user)
 
     if result:
         return SimpleSportsResponse(success=True, message="自定义运动类型已更新")
