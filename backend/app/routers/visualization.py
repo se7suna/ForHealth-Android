@@ -115,7 +115,7 @@ async def get_daily_calorie_summary(
     if not user_doc:
         raise HTTPException(status_code=404, detail="用户不存在")
 
-    daily_goal = user_doc.get("daily_calorie_goal", 2000.0)  # 默认2000
+    daily_goal = user_doc.get("daily_calorie_goal") or 2000.0  # 默认2000，处理None情况
 
     # 计算日期范围（当天0点到23:59:59）
     start_datetime = datetime.combine(target_date, datetime.min.time())
@@ -251,7 +251,7 @@ async def get_nutrition_analysis(
 
     # 获取用户信息计算推荐量
     user_doc = await db.users.find_one({"email": current_user})
-    weight = user_doc.get("weight", 70)  # 默认70kg
+    weight = user_doc.get("weight") or 70  # 默认70kg，处理None情况
 
     # 推荐量（简化版）
     # 蛋白质: 0.8-1.5g/kg体重
