@@ -121,18 +121,25 @@ async def test_get_available_sports_types(auth_client):
 # ================== 测试：更新自定义运动类型 ==================
 
 @pytest.mark.asyncio
-@pytest.mark.skip(reason="测试数据隔离问题待修复：parametrize 共享运动类型名称导致冲突")
-@pytest.mark.parametrize("update_data,expected_success", [
-    # 正常更新
-    ({"sport_type": "自定义跑步", "describe": "更新后的描述", "METs": 9.0}, True),
-    # 边界条件 - 更新为最小METs
-    ({"sport_type": "自定义跑步", "describe": "低强度", "METs": 0.5}, True),
+@pytest.mark.parametrize("sport_type,update_data,expected_success", [
+    # 正常更新 - 使用唯一名称
+    (
+        "自定义跑步_test1",
+        {"sport_type": "自定义跑步_test1", "describe": "更新后的描述", "METs": 9.0},
+        True
+    ),
+    # 边界条件 - 更新为最小METs - 使用唯一名称
+    (
+        "自定义跑步_test2",
+        {"sport_type": "自定义跑步_test2", "describe": "低强度", "METs": 0.5},
+        True
+    ),
 ])
-async def test_update_sports(auth_client, update_data, expected_success):
+async def test_update_sports(auth_client, sport_type, update_data, expected_success):
     """测试更新自定义运动类型 - 正常情况"""
-    # 先创建运动类型
+    # 先创建运动类型（使用参数化的唯一 sport_type）
     create_data = {
-        "sport_type": "自定义跑步",
+        "sport_type": sport_type,
         "describe": "初始描述",
         "METs": 8.0
     }
@@ -147,8 +154,8 @@ async def test_update_sports(auth_client, update_data, expected_success):
         result = response.json()
         assert result["success"] == expected_success
 
-    # 清理 - 删除创建的运动类型
-    await auth_client.delete(f"/api/sports/delete-sport/{update_data['sport_type']}")
+    # 清理 - 删除创建的运动类型（使用参数化的 sport_type）
+    await auth_client.delete(f"/api/sports/delete-sport/{sport_type}")
 
 
 @pytest.mark.asyncio
