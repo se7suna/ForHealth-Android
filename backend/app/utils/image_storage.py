@@ -23,13 +23,14 @@ MAX_FILE_SIZE = 10 * 1024 * 1024
 
 def get_image_storage_path() -> Path:
     """
-    获取图片存储路径
+    获取食物图片存储路径
     
     Returns:
-        图片存储目录的Path对象
+        食物图片存储目录的Path对象（uploads/food_images）
     """
-    # 从配置中获取存储路径，默认为 backend/uploads/food_images
-    storage_path = Path("uploads/food_images")
+    # 从配置中获取基础存储路径，然后拼接 food_images 子文件夹
+    base_path = Path(settings.IMAGE_STORAGE_PATH)
+    storage_path = base_path / "food_images"
     storage_path.mkdir(parents=True, exist_ok=True)
     return storage_path
 

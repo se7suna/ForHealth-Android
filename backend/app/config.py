@@ -36,7 +36,7 @@ class Settings(BaseSettings):
     ALLOWED_ORIGINS: Union[List[str], str] = "http://localhost:3000,http://localhost:8080"
 
     # 图片存储配置
-    IMAGE_STORAGE_PATH: str = "uploads/food_images"  # 图片存储路径（相对于项目根目录）
+    IMAGE_STORAGE_PATH: str = "uploads"  # 图片存储基础路径（相对于项目根目录），包含 food_images 和 sports_images 等子文件夹
     IMAGE_BASE_URL: str = "/static"  # 图片访问基础URL（相对路径）
     
     def get_full_image_base_url(self) -> str:
