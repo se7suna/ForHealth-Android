@@ -778,7 +778,6 @@ async def delete_food(food_id: str, user_email: str) -> bool:
         # 删除关联的图片文件
         image_url = food.get("image_url")
         if image_url:
-            from app.utils.image_storage import delete_food_image
             delete_food_image(image_url)
         
         # 删除食物记录

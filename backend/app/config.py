@@ -42,7 +42,9 @@ class Settings(BaseSettings):
     def get_full_image_base_url(self) -> str:
         """获取完整的图片访问基础URL（包含协议和主机）"""
         protocol = "https" if self.PORT == 443 else "http"
-        return f"{protocol}://{self.HOST}:{self.PORT}/static"
+        # 去掉 IMAGE_BASE_URL 开头的斜杠（如果有）
+        base_url_path = self.IMAGE_BASE_URL.lstrip("/")
+        return f"{protocol}://{self.HOST}:{self.PORT}/{base_url_path}"
 
     # 初始化数据库默认内容
     ## 管理员账户用于权限写入

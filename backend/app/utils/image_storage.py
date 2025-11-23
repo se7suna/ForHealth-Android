@@ -146,7 +146,7 @@ def get_image_url(relative_path: str) -> str:
         relative_path: 图片相对路径（如：food_images/xxx.jpg）
         
     Returns:
-        完整的图片访问URL（如：http://localhost:8000/static/food_images/xxx.jpg）
+        完整的图片访问URL（从配置中读取，格式：{protocol}://{host}:{port}/{IMAGE_BASE_URL}/{relative_path}）
     """
     base_url = settings.get_full_image_base_url()
     return f"{base_url}/{relative_path}"
@@ -166,22 +166,41 @@ def delete_food_image(image_url: Optional[str]) -> bool:
         return False
     
     try:
+        # 从配置中获取静态文件基础路径（去掉开头的斜杠）
+        static_base_path = settings.IMAGE_BASE_URL.lstrip("/")
+        
         # 从URL中提取相对路径
         if image_url.startswith("http://") or image_url.startswith("https://"):
             # 如果是完整URL，提取路径部分
             from urllib.parse import urlparse
             parsed = urlparse(image_url)
-            relative_path = parsed.path.lstrip("/")
-        elif image_url.startswith("/static/"):
+            path = parsed.path.lstrip("/")
+            # 去掉静态文件基础路径前缀（如果存在）
+            if path.startswith(f"{static_base_path}/"):
+                relative_path = path.replace(f"{static_base_path}/", "", 1)
+            elif path == static_base_path:
+                relative_path = ""
+            else:
+                relative_path = path
+        elif image_url.startswith(f"/{static_base_path}/"):
             # 如果是静态文件URL
-            relative_path = image_url.replace("/static/", "")
+            relative_path = image_url.replace(f"/{static_base_path}/", "")
+        elif image_url == f"/{static_base_path}" or image_url == f"/{static_base_path}/":
+            relative_path = ""
         else:
-            # 假设已经是相对路径
+            # 假设已经是相对路径（如：food_images/xxx.jpg）
             relative_path = image_url
         
         # 构建完整文件路径
-        storage_path = get_image_storage_path().parent  # 回到uploads目录
-        file_path = storage_path / relative_path
+        # 如果 relative_path 已经包含 food_images/，直接使用
+        # 否则需要添加 food_images/ 前缀
+        if relative_path.startswith("food_images/"):
+            storage_path = get_image_storage_path().parent  # 回到uploads目录
+            file_path = storage_path / relative_path
+        else:
+            # 如果只是文件名，需要添加 food_images/ 前缀
+            storage_path = get_image_storage_path()
+            file_path = storage_path / relative_path
         
         # 删除文件
         if file_path.exists() and file_path.is_file():
@@ -189,6 +208,10 @@ def delete_food_image(image_url: Optional[str]) -> bool:
             return True
         
         return False
-    except Exception:
+    except Exception as e:
+        # 打印错误信息以便调试
+        import traceback
+        print(f"删除图片失败: {image_url}, 错误: {str(e)}")
+        print(traceback.format_exc())
         return False
 
