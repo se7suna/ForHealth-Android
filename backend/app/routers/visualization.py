@@ -9,7 +9,7 @@ from datetime import date, datetime, timedelta
 from pydantic import BaseModel
 from bson import ObjectId
 
-from app.utils.auth import get_current_user
+from app.routers.auth import get_current_user
 from app.models.user import User
 from app.models.food import FoodRecord
 from app.models.sports import SportsRecord
