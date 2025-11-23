@@ -146,7 +146,16 @@ Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 | 42 | `/api/sports/get-all-sports-records` | GET | 获取全部运动记录 | ✅ |
 | 43 | `/api/sports/sports-report` | GET | 获取运动报告 | ✅ |
 
-**总计：43个API端点**
+### 可视化报告 API (4个)
+
+| 序号 | 端点 | 方法 | 说明 | 认证 |
+|------|------|------|------|------|
+| 44 | `/api/visualization/daily-calorie-summary` | GET | 获取每日卡路里摘要 | ✅ |
+| 45 | `/api/visualization/nutrition-analysis` | GET | 获取营养素与食物来源分析 | ✅ |
+| 46 | `/api/visualization/time-series-trend` | GET | 获取时间序列趋势分析 | ✅ |
+| 47 | `/api/visualization/export-report` | GET | 导出健康数据报告 | ✅ |
+
+**总计：47个API端点**
 
 ---
 
@@ -2080,6 +2089,254 @@ Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
   "sport_details": {}
 }
 ```
+
+---
+
+## 可视化报告 API
+
+### 44. 获取每日卡路里摘要
+
+**端点**: `GET /api/visualization/daily-calorie-summary`
+**认证**: ✅ 需要 JWT Token
+**说明**: 获取指定日期的卡路里摄入、消耗和预算摘要
+
+**对应 Issue**: #22 - 可视化报告：每日卡路里摘要
+
+#### 请求参数
+
+| 参数 | 类型 | 必填 | 默认值 | 说明 |
+|------|------|------|--------|------|
+| target_date | date | ❌ | 今天 | 目标日期(YYYY-MM-DD) |
+
+#### 响应示例
+
+**成功 (200)**:
+```json
+{
+  "date": "2025-11-23",
+  "total_intake": 1850.5,
+  "total_burned": 350.0,
+  "daily_goal": 2000.0,
+  "net_calories": 1500.5,
+  "goal_percentage": 92.53,
+  "is_over_budget": false
+}
+```
+
+**字段说明**:
+- `total_intake`: 当日总摄入卡路里
+- `total_burned`: 当日运动总消耗卡路里
+- `daily_goal`: 每日卡路里目标
+- `net_calories`: 净卡路里(摄入 - 消耗)
+- `goal_percentage`: 摄入占目标的百分比
+- `is_over_budget`: 是否超出预算
+
+---
+
+### 45. 获取营养素与食物来源分析
+
+**端点**: `GET /api/visualization/nutrition-analysis`
+**认证**: ✅ 需要 JWT Token
+**说明**: 获取指定日期范围内的营养素比例和食物类别分布分析
+
+**对应 Issue**: #25 - 可视化报告：营养素与食物来源分析
+
+#### 请求参数
+
+| 参数 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| start_date | date | ✅ | 开始日期(YYYY-MM-DD) |
+| end_date | date | ✅ | 结束日期(YYYY-MM-DD) |
+
+#### 响应示例
+
+**成功 (200)**:
+```json
+{
+  "date_range": {
+    "start_date": "2025-11-01",
+    "end_date": "2025-11-23"
+  },
+  "macronutrient_ratio": {
+    "protein": 25.5,
+    "carbohydrates": 50.2,
+    "fat": 24.3
+  },
+  "nutrition_vs_recommended": [
+    {
+      "nutrient_name": "蛋白质",
+      "actual": 1850.0,
+      "recommended": 1932.0,
+      "percentage": 95.76
+    },
+    {
+      "nutrient_name": "碳水化合物",
+      "actual": 6200.0,
+      "recommended": 6440.0,
+      "percentage": 96.27
+    },
+    {
+      "nutrient_name": "脂肪",
+      "actual": 1610.0,
+      "recommended": 1610.0,
+      "percentage": 100.0
+    }
+  ],
+  "food_category_distribution": [
+    {
+      "category": "主食",
+      "count": 45,
+      "total_calories": 5500.0,
+      "percentage": 35.5
+    },
+    {
+      "category": "蔬菜",
+      "count": 38,
+      "total_calories": 1200.0,
+      "percentage": 7.7
+    }
+  ]
+}
+```
+
+**字段说明**:
+- `macronutrient_ratio`: 宏量营养素比例(蛋白质、碳水、脂肪)，单位：百分比
+- `nutrition_vs_recommended`: 各营养素实际摄入量vs推荐量
+- `food_category_distribution`: 不同食物类别的摄入分布
+
+---
+
+### 46. 获取时间序列趋势分析
+
+**端点**: `GET /api/visualization/time-series-trend`
+**认证**: ✅ 需要 JWT Token
+**说明**: 获取指定日期范围内的卡路里和体重趋势数据
+
+**对应 Issue**: #26 - 可视化报告：时间序列趋势分析
+
+#### 请求参数
+
+| 参数 | 类型 | 必填 | 默认值 | 说明 |
+|------|------|------|--------|------|
+| start_date | date | ✅ | - | 开始日期(YYYY-MM-DD) |
+| end_date | date | ✅ | - | 结束日期(YYYY-MM-DD) |
+| view_type | string | ❌ | day | 视图类型: day/week/month |
+
+#### 响应示例
+
+**成功 (200)**:
+```json
+{
+  "view_type": "day",
+  "date_range": {
+    "start_date": "2025-11-01",
+    "end_date": "2025-11-23"
+  },
+  "intake_trend": [
+    {"date": "2025-11-01", "value": 1850.5},
+    {"date": "2025-11-02", "value": 2100.0},
+    {"date": "2025-11-03", "value": 1920.3}
+  ],
+  "burned_trend": [
+    {"date": "2025-11-01", "value": 350.0},
+    {"date": "2025-11-02", "value": 420.0},
+    {"date": "2025-11-03", "value": 280.5}
+  ],
+  "weight_trend": [
+    {"date": "2025-11-23", "value": 70.0}
+  ]
+}
+```
+
+**字段说明**:
+- `view_type`: 数据聚合方式(day-每日/week-每周/month-每月)
+- `intake_trend`: 卡路里摄入趋势数据
+- `burned_trend`: 卡路里消耗趋势数据
+- `weight_trend`: 体重变化趋势数据
+
+---
+
+### 47. 导出健康数据报告
+
+**端点**: `GET /api/visualization/export-report`
+**认证**: ✅ 需要 JWT Token
+**说明**: 导出指定日期范围内的完整健康数据报告
+
+**对应 Issue**: #23 - 可视化报告：报告导出
+
+#### 请求参数
+
+| 参数 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| start_date | date | ✅ | 开始日期(YYYY-MM-DD) |
+| end_date | date | ✅ | 结束日期(YYYY-MM-DD) |
+
+#### 响应示例
+
+**成功 (200)**:
+```json
+{
+  "user_info": {
+    "username": "张三",
+    "email": "user@example.com",
+    "age": 27,
+    "gender": "male",
+    "height": 175.0,
+    "weight": 70.0,
+    "health_goal_type": "lose_weight",
+    "daily_calorie_goal": 2105.16
+  },
+  "date_range": {
+    "start_date": "2025-11-01",
+    "end_date": "2025-11-23"
+  },
+  "summary": {
+    "days_count": 23,
+    "total_food_records": 156,
+    "total_sports_records": 18,
+    "total_intake_calories": 42560.5,
+    "total_burned_calories": 6340.0,
+    "average_daily_intake": 1850.89,
+    "average_daily_burned": 275.65
+  },
+  "daily_calorie_summary": {
+    "date": "2025-11-23",
+    "total_intake": 1850.5,
+    "total_burned": 350.0,
+    "daily_goal": 2105.16,
+    "net_calories": 1500.5,
+    "goal_percentage": 87.9,
+    "is_over_budget": false
+  },
+  "nutrition_analysis": {
+    "date_range": {...},
+    "macronutrient_ratio": {...},
+    "nutrition_vs_recommended": [...],
+    "food_category_distribution": [...]
+  },
+  "time_series_trend": {
+    "view_type": "day",
+    "date_range": {...},
+    "intake_trend": [...],
+    "burned_trend": [...],
+    "weight_trend": [...]
+  },
+  "generated_at": "2025-11-23T15:30:00"
+}
+```
+
+**字段说明**:
+- `user_info`: 用户基本信息
+- `summary`: 总体统计摘要
+- `daily_calorie_summary`: 最新日期的每日卡路里摘要
+- `nutrition_analysis`: 营养素分析数据
+- `time_series_trend`: 时间序列趋势数据
+- `generated_at`: 报告生成时间
+
+**使用说明**:
+- 前端可以使用返回的数据生成PDF报告或长图
+- 建议使用图表库(如 ECharts、Chart.js)可视化趋势数据
+- 可以添加用户头像、个性化标题等元素
 
 ---
 
