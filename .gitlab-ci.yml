@@ -46,8 +46,34 @@ test:unit:
   before_script:
     - cd backend
     # 安装系统依赖 (libzbar 用于条形码识别)
-    - apt-get update
-    - apt-get install -y libzbar0
+    # 添加重试机制处理网络问题
+    - |
+      for i in {1..3}; do
+        echo "🔄 尝试更新包列表 ($i/3)..."
+        if apt-get update; then
+          echo "✅ 包列表更新成功"
+          break
+        fi
+        if [ $i -eq 3 ]; then
+          echo "❌ 包列表更新失败，已重试3次"
+          exit 1
+        fi
+        sleep 5
+      done
+    - |
+      for i in {1..3}; do
+        echo "🔄 尝试安装 libzbar0 ($i/3)..."
+        if apt-get install -y --fix-missing libzbar0; then
+          echo "✅ libzbar0 安装成功"
+          break
+        fi
+        if [ $i -eq 3 ]; then
+          echo "❌ libzbar0 安装失败，已重试3次"
+          exit 1
+        fi
+        echo "⏳ 等待5秒后重试..."
+        sleep 5
+      done
     - ldconfig  # 更新动态链接库缓存
     - pip install --upgrade pip
     - pip install -r requirements.txt
@@ -251,8 +277,34 @@ build:backend:
   before_script:
     - cd backend
     # 安装系统依赖 (libzbar 用于条形码识别)
-    - apt-get update
-    - apt-get install -y libzbar0
+    # 添加重试机制处理网络问题
+    - |
+      for i in {1..3}; do
+        echo "🔄 尝试更新包列表 ($i/3)..."
+        if apt-get update; then
+          echo "✅ 包列表更新成功"
+          break
+        fi
+        if [ $i -eq 3 ]; then
+          echo "❌ 包列表更新失败，已重试3次"
+          exit 1
+        fi
+        sleep 5
+      done
+    - |
+      for i in {1..3}; do
+        echo "🔄 尝试安装 libzbar0 ($i/3)..."
+        if apt-get install -y --fix-missing libzbar0; then
+          echo "✅ libzbar0 安装成功"
+          break
+        fi
+        if [ $i -eq 3 ]; then
+          echo "❌ libzbar0 安装失败，已重试3次"
+          exit 1
+        fi
+        echo "⏳ 等待5秒后重试..."
+        sleep 5
+      done
     - ldconfig  # 更新动态链接库缓存
     - pip install --upgrade pip
     - pip install -r requirements.txt
