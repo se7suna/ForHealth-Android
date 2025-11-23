@@ -95,7 +95,7 @@ def convert_food_data_to_form(food_data):
 
 @pytest.mark.asyncio
 async def test_create_food_success(auth_client, sample_food_data):
-    """测试创建食物 - 成功"""
+    """测试创建食物 - 成功（包含图片上传）"""
     expected_success = {
         "status_code": 201,
         "name": "测试苹果",
@@ -103,13 +103,27 @@ async def test_create_food_success(auth_client, sample_food_data):
     }
     
     form_data = convert_food_data_to_form(sample_food_data)
-    response = await auth_client.post("/api/food/", data=form_data)
+    
+    # 读取测试图片文件
+    from pathlib import Path
+    test_image_path = Path(__file__).parent / "test_picture" / "image2.jpg"
+    
+    # 创建食物并上传图片
+    with open(test_image_path, "rb") as image_file:
+        files = {
+            "image": ("image2.jpg", image_file, "image/jpeg")
+        }
+        response = await auth_client.post("/api/food/", data=form_data, files=files)
         
     assert response.status_code == expected_success["status_code"]
     if response.status_code == 201:
         data = response.json()
         assert data["name"] == expected_success["name"]
         assert data["category"] == expected_success["category"]
+        
+        # 验证图片上传成功
+        assert "image_url" in data
+        assert data["image_url"] is not None
         
         # 测试后清理：删除创建的测试数据
         food_id = data.get("id")

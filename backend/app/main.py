@@ -5,8 +5,9 @@ from fastapi.staticfiles import StaticFiles
 from pathlib import Path
 from contextlib import asynccontextmanager
 from app.config import settings
-from app.database import (connect_to_mongo, close_mongo_connection, 
-                          initialize_sports_table,initialize_default_user)
+from app.database import (connect_to_mongo, close_mongo_connection)
+from app.data_init.init_dataset import (initialize_sports_table, initialize_default_user,
+                          initialize_foods_table)
 from app.routers import auth, user,sports, food, recipe, food, recipe
 
 
@@ -30,6 +31,7 @@ async def run_initialization():
     # print("⚙️ 开始初始化后台数据...")
     await initialize_sports_table()
     await initialize_default_user()
+    await initialize_foods_table()
 
     print("✅ 数据库初始化完成！")
 
