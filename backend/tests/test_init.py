@@ -7,6 +7,7 @@ sys.path.insert(0, backend_path)
 import pytest
 import pytest_asyncio
 from httpx import AsyncClient
+from app.config import settings
 
 # 测试用户凭证
 from app.config import settings
@@ -44,21 +45,22 @@ async def auth_client():
 @pytest.mark.asyncio
 @pytest.mark.parametrize("sport_data,expected_status,expected_success", [
     # 正常情况
-    ({"sport_type": "自定义跑步", "describe": "户外跑步", "METs": 8.0}, 200, True),
+    ({"sport_type": settings.DefaultSports[0]["sport_type"], "describe": settings.DefaultSports[0]["describe"], "METs": settings.DefaultSports[0]["METs"]}, 200, True),
     # 边界情况：缺少必填字段
     #({"sport_type": "", "describe": "户外跑步", "METs": 8.0}, 422, False),
     # 边界情况：METs为负数
     #({"sport_type": "自定义游泳", "describe": "室内游泳", "METs": -5.0}, 422, False),
 ])
 async def test_create_sports(auth_client,sport_data, expected_status, expected_success):
-    """测试创建自定义运动类型 - 正常情况和边界条件"""
-    response = None
-    try:
-        response = await auth_client.post("/api/sports/create-sport", json=sport_data)
-        result = response.json()
-        assert response.status_code == expected_status
-        assert result["success"] == expected_success
-    finally:
-        if response and result.get("success"):        # 完成测试后删除创建的运动类型
-            response = await auth_client.delete(f"/api/sports/delete-sport/{sport_data['sport_type']}")
-            assert response.status_code == 200
+    """测试初始化运动类型是否成功"""
+    response = await auth_client.get("/api/sports/get-available-sports-types")
+    result = response.json()
+    exist = None
+    for sport in result:
+        if(sport).get("sport_type")==sport_data.sport_type:
+            exist = 1
+            assert sport.describe == sport_data.describe,"描述不一致"
+            assert sport.METs == sport_data.METs,"METs不一致"
+    assert exist == 1,"运动类型不存在"
+    assert response.status_code == expected_status
+    assert result["success"] == expected_success
