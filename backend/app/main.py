@@ -5,10 +5,9 @@ from fastapi.staticfiles import StaticFiles
 from pathlib import Path
 from contextlib import asynccontextmanager
 from app.config import settings
-from app.database import (connect_to_mongo, close_mongo_connection)
-from app.data_init.init_dataset import (initialize_sports_table, initialize_default_user,
-                          initialize_foods_table)
-from app.routers import auth, user,sports, food, recipe, food, recipe
+from app.database import (connect_to_mongo, close_mongo_connection, 
+                          initialize_sports_table,initialize_default_user)
+from app.routers import auth, user, sports, food, recipe, visualization
 
 
 @asynccontextmanager
@@ -61,6 +60,7 @@ app.include_router(user.router, prefix="/api")
 app.include_router(sports.router, prefix="/api")
 app.include_router(food.router, prefix="/api")
 app.include_router(recipe.router, prefix="/api")
+app.include_router(visualization.router)
 
 # 配置静态文件服务（用于访问上传的图片）
 uploads_path = Path(settings.IMAGE_STORAGE_PATH)
