@@ -10,9 +10,6 @@ from pydantic import BaseModel
 from bson import ObjectId
 
 from app.routers.auth import get_current_user
-from app.models.user import User
-from app.models.food import FoodRecord
-from app.models.sports import SportsRecord
 from app.database import db
 
 router = APIRouter(prefix="/api/visualization", tags=["可视化报告"])
@@ -93,7 +90,7 @@ class HealthReportExportResponse(BaseModel):
 @router.get("/daily-calorie-summary", response_model=DailyCalorieSummary)
 async def get_daily_calorie_summary(
     target_date: date = Query(default=None, description="目标日期(YYYY-MM-DD),默认为今天"),
-    current_user: User = Depends(get_current_user)
+    current_user: str = Depends(get_current_user)
 ):
     """
     获取每日卡路里摘要
@@ -112,7 +109,7 @@ async def get_daily_calorie_summary(
     date_str = target_date.isoformat()
 
     # 获取用户的每日卡路里目标
-    user_doc = await db.users.find_one({"email": current_user.email})
+    user_doc = await db.users.find_one({"email": current_user})
     if not user_doc:
         raise HTTPException(status_code=404, detail="用户不存在")
 
@@ -126,7 +123,7 @@ async def get_daily_calorie_summary(
     food_pipeline = [
         {
             "$match": {
-                "user_email": current_user.email,
+                "user_email": current_user,
                 "recorded_at": {"$gte": start_datetime, "$lte": end_datetime}
             }
         },
@@ -145,7 +142,7 @@ async def get_daily_calorie_summary(
     sports_pipeline = [
         {
             "$match": {
-                "email": current_user.email,
+                "email": current_user,
                 "created_at": {"$gte": start_datetime, "$lte": end_datetime}
             }
         },
@@ -180,7 +177,7 @@ async def get_daily_calorie_summary(
 async def get_nutrition_analysis(
     start_date: date = Query(..., description="开始日期(YYYY-MM-DD)"),
     end_date: date = Query(..., description="结束日期(YYYY-MM-DD)"),
-    current_user: User = Depends(get_current_user)
+    current_user: str = Depends(get_current_user)
 ):
     """
     获取营养素与食物来源分析
@@ -203,7 +200,7 @@ async def get_nutrition_analysis(
     macro_pipeline = [
         {
             "$match": {
-                "user_email": current_user.email,
+                "user_email": current_user,
                 "recorded_at": {"$gte": start_datetime, "$lte": end_datetime}
             }
         },
@@ -249,7 +246,7 @@ async def get_nutrition_analysis(
         protein_ratio = carbs_ratio = fat_ratio = 0
 
     # 获取用户信息计算推荐量
-    user_doc = await db.users.find_one({"email": current_user.email})
+    user_doc = await db.users.find_one({"email": current_user})
     weight = user_doc.get("weight", 70)  # 默认70kg
 
     # 推荐量（简化版）
@@ -287,7 +284,7 @@ async def get_nutrition_analysis(
     category_pipeline = [
         {
             "$match": {
-                "user_email": current_user.email,
+                "user_email": current_user,
                 "recorded_at": {"$gte": start_datetime, "$lte": end_datetime}
             }
         },
@@ -349,7 +346,7 @@ async def get_time_series_trend(
     start_date: date = Query(..., description="开始日期(YYYY-MM-DD)"),
     end_date: date = Query(..., description="结束日期(YYYY-MM-DD)"),
     view_type: str = Query("day", description="视图类型: day, week, month"),
-    current_user: User = Depends(get_current_user)
+    current_user: str = Depends(get_current_user)
 ):
     """
     获取时间序列趋势分析
@@ -388,7 +385,7 @@ async def get_time_series_trend(
     intake_pipeline = [
         {
             "$match": {
-                "user_email": current_user.email,
+                "user_email": current_user,
                 "recorded_at": {"$gte": start_datetime, "$lte": end_datetime}
             }
         },
@@ -418,7 +415,7 @@ async def get_time_series_trend(
     burned_pipeline = [
         {
             "$match": {
-                "email": current_user.email,
+                "email": current_user,
                 "created_at": {"$gte": start_datetime, "$lte": end_datetime}
             }
         },
@@ -446,7 +443,7 @@ async def get_time_series_trend(
 
     # 体重趋势（从用户更新记录或专门的体重记录表）
     # 注意：当前数据库中可能没有历史体重记录，这里返回当前体重作为示例
-    user_doc = await db.users.find_one({"email": current_user.email})
+    user_doc = await db.users.find_one({"email": current_user})
     current_weight = user_doc.get("weight", 0)
 
     # TODO: 如果有历史体重记录表，从那里获取
@@ -468,7 +465,7 @@ async def get_time_series_trend(
 async def export_health_report(
     start_date: date = Query(..., description="开始日期(YYYY-MM-DD)"),
     end_date: date = Query(..., description="结束日期(YYYY-MM-DD)"),
-    current_user: User = Depends(get_current_user)
+    current_user: str = Depends(get_current_user)
 ):
     """
     导出健康数据报告
@@ -488,7 +485,7 @@ async def export_health_report(
         raise HTTPException(status_code=400, detail="开始日期不能晚于结束日期")
 
     # 获取用户信息
-    user_doc = await db.users.find_one({"email": current_user.email})
+    user_doc = await db.users.find_one({"email": current_user})
     if not user_doc:
         raise HTTPException(status_code=404, detail="用户不存在")
 
@@ -530,12 +527,12 @@ async def export_health_report(
 
     # 统计总记录数
     total_food_records = await db.food_records.count_documents({
-        "user_email": current_user.email,
+        "user_email": current_user,
         "recorded_at": {"$gte": start_datetime, "$lte": end_datetime}
     })
 
     total_sports_records = await db.sports_records.count_documents({
-        "email": current_user.email,
+        "email": current_user,
         "created_at": {"$gte": start_datetime, "$lte": end_datetime}
     })
 
