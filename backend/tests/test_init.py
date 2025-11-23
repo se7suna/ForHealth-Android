@@ -8,6 +8,7 @@ import pytest
 import pytest_asyncio
 import json
 from httpx import AsyncClient
+from app.config import settings
 
 # 测试用户凭证
 from app.config import settings
