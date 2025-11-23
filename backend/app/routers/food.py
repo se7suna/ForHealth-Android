@@ -1,8 +1,9 @@
-from fastapi import APIRouter, HTTPException, status, Depends, Query, UploadFile, File
+from fastapi import APIRouter, HTTPException, status, Depends, Query, UploadFile, File, Form
 from typing import Optional, Union
 from datetime import date
 import os
 import tempfile
+import json
 from app.schemas.food import (
     FoodCreateRequest,
     FoodUpdateRequest,
@@ -29,6 +30,7 @@ from app.services import food_service
 from app.services import external_api_service
 from app.routers.auth import get_current_user
 from app.utils.barcode_scanner import decode_barcode_from_image
+from app.utils.image_storage import save_food_image, get_image_url, delete_food_image
 
 router = APIRouter(prefix="/food", tags=["食物管理"])
 
@@ -36,43 +38,87 @@ router = APIRouter(prefix="/food", tags=["食物管理"])
 # ========== 食物管理 ==========
 @router.post("/", response_model=FoodResponse, status_code=status.HTTP_201_CREATED)
 async def create_food(
-    food_data: FoodCreateRequest,
+    # 基本信息
+    name: str = Form(..., description="食物名称"),
+    category: Optional[str] = Form(None, description="食物分类"),
+    serving_size: float = Form(..., gt=0, description="标准份量（克）"),
+    serving_unit: str = Form("克", description="份量单位"),
+    brand: Optional[str] = Form(None, description="品牌"),
+    barcode: Optional[str] = Form(None, description="条形码"),
+    # 基础营养数据（必填）
+    calories: float = Form(..., ge=0, description="卡路里（千卡）"),
+    protein: float = Form(..., ge=0, description="蛋白质（克）"),
+    carbohydrates: float = Form(..., ge=0, description="碳水化合物（克）"),
+    fat: float = Form(..., ge=0, description="脂肪（克）"),
+    # 基础营养数据（可选）
+    fiber: Optional[float] = Form(None, ge=0, description="膳食纤维（克）"),
+    sugar: Optional[float] = Form(None, ge=0, description="糖分（克）"),
+    sodium: Optional[float] = Form(None, ge=0, description="钠（毫克）"),
+    # 图片文件
+    image: UploadFile = File(None, description="食物图片文件（可选，支持 jpg/jpeg/png/webp/gif，最大10MB）"),
     current_user: str = Depends(get_current_user)
 ):
     """
-    创建食物信息
+    创建食物信息（支持图片文件上传）
     
-    - **name**: 食物名称（必填）
-    - **category**: 食物分类（可选，如：水果、蔬菜、肉类等）
-    - **serving_size**: 标准份量（必填，单位：克）
+    注意：此接口使用 multipart/form-data 格式
+    
+    **基本信息**（必填）：
+    - **name**: 食物名称
+    - **serving_size**: 标准份量（单位：克）
+    
+    **基本信息**（可选）：
+    - **category**: 食物分类（如：水果、蔬菜、肉类等）
     - **serving_unit**: 份量单位（默认：克）
-    - **nutrition_per_serving**: 每份基础营养数据（必填）
-      - calories: 卡路里（千卡）
-      - protein: 蛋白质（克）
-      - carbohydrates: 碳水化合物（克）
-      - fat: 脂肪（克）
-      - fiber: 膳食纤维（克，可选）
-      - sugar: 糖分（克，可选）
-      - sodium: 钠（毫克，可选）
-    - **full_nutrition**: 完整营养信息（可选，与测试脚本格式一致）
-      - calory: 热量信息数组（包含总热量、总热量Kj、蛋白质热量、脂肪热量、碳水化合物热量等）
-      - base_ingredients: 三大营养素数组（包含碳水化合物、蛋白质、脂肪及其子项）
-      - vitamin: 维生素数组（15种维生素）
-      - mineral: 矿物质数组（14种矿物质）
-      - amino_acid: 氨基酸数组（20种氨基酸）
-      - other_ingredients: 其它成分数组（嘌呤、酒精度等）
-    - **brand**: 品牌（可选）
-    - **barcode**: 条形码（可选）
-    - **image_url**: 食物图片URL（可选）
+    - **brand**: 品牌
+    - **barcode**: 条形码
+    
+    **基础营养数据**（必填）：
+    - **calories**: 卡路里（千卡）
+    - **protein**: 蛋白质（克）
+    - **carbohydrates**: 碳水化合物（克）
+    - **fat**: 脂肪（克）
+    
+    **基础营养数据**（可选）：
+    - **fiber**: 膳食纤维（克）
+    - **sugar**: 糖分（克）
+    - **sodium**: 钠（毫克）
+    
+    **图片**（可选）：
+    - **image**: 食物图片文件（支持 jpg/jpeg/png/webp/gif，最大10MB）
     
     用户创建的食物仅创建者自己可见，其他用户无法搜索或查看
     """
     try:
-        food = await food_service.create_food(food_data, current_user)
+        # 调用 service 层处理创建食物（包括图片上传）
+        food = await food_service.create_food_with_image(
+            name=name,
+            category=category,
+            serving_size=serving_size,
+            serving_unit=serving_unit,
+            calories=calories,
+            protein=protein,
+            carbohydrates=carbohydrates,
+            fat=fat,
+            fiber=fiber,
+            sugar=sugar,
+            sodium=sodium,
+            brand=brand,
+            barcode=barcode,
+            image=image,
+            creator_email=current_user
+        )
     except ValueError as e:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail=str(e)
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"创建食物失败：{str(e)}"
         )
     
     return FoodResponse(
@@ -265,48 +311,122 @@ async def update_food(
     - **serving_unit**: 份量单位
     - **nutrition_per_serving**: 每份基础营养数据
     - **full_nutrition**: 完整营养信息（与测试脚本格式一致）
-      - calory: 热量信息数组
-      - base_ingredients: 三大营养素数组
-      - vitamin: 维生素数组
-      - mineral: 矿物质数组
-      - amino_acid: 氨基酸数组
-      - other_ingredients: 其它成分数组
     - **brand**: 品牌
     - **barcode**: 条形码
-    - **image_url**: 食物图片URL
+    - **image_url**: 食物图片URL（注意：更新图片请使用 PUT /api/food/{food_id}/image 端点）
     
     只能更新自己创建的食物
     """
     try:
-        food = await food_service.update_food(food_id, food_data, current_user)
+        updated_food = await food_service.update_food(food_id, food_data, current_user)
     except ValueError as e:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail=str(e)
         )
     
-    if not food:
+    if not updated_food:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="食物不存在或无权更新"
         )
     
     return FoodResponse(
-        id=food["_id"],
-        name=food["name"],
-        category=food.get("category"),
-        serving_size=food["serving_size"],
-        serving_unit=food["serving_unit"],
-        nutrition_per_serving=food["nutrition_per_serving"],
-        full_nutrition=food.get("full_nutrition"),
-        brand=food.get("brand"),
-        barcode=food.get("barcode"),
-        image_url=food.get("image_url"),
-        created_by=food.get("created_by"),
-        created_at=food["created_at"],
-        source=food.get("source"),
-        boohee_id=food.get("boohee_id"),
-        boohee_code=food.get("boohee_code"),
+        id=updated_food["_id"],
+        name=updated_food["name"],
+        category=updated_food.get("category"),
+        serving_size=updated_food["serving_size"],
+        serving_unit=updated_food["serving_unit"],
+        nutrition_per_serving=updated_food["nutrition_per_serving"],
+        full_nutrition=updated_food.get("full_nutrition"),
+        brand=updated_food.get("brand"),
+        barcode=updated_food.get("barcode"),
+        image_url=updated_food.get("image_url"),
+        created_by=updated_food.get("created_by"),
+        created_at=updated_food["created_at"],
+        source=updated_food.get("source"),
+        boohee_id=updated_food.get("boohee_id"),
+        boohee_code=updated_food.get("boohee_code"),
+    )
+
+
+@router.put("/{food_id}/image", response_model=FoodResponse)
+async def update_food_image(
+    food_id: str,
+    image: UploadFile = File(..., description="食物图片文件（支持 jpg/jpeg/png/webp/gif，最大10MB）"),
+    current_user: str = Depends(get_current_user)
+):
+    """
+    更新食物图片
+    
+    - **food_id**: 食物ID
+    - **image**: 食物图片文件（必填，支持 jpg/jpeg/png/webp/gif，最大10MB）
+    
+    只能更新自己创建的食物的图片
+    """
+    try:
+        # 检查食物是否存在且有权限
+        food = await food_service.get_food_by_id(food_id)
+        if not food:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="食物不存在"
+            )
+        
+        if food.get("created_by") != "all" and food.get("created_by") != current_user:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="无权更新此食物的图片"
+            )
+        
+        # 获取旧图片URL（用于删除）
+        old_image_url = food.get("image_url")
+        
+        # 保存新图片
+        relative_path = await save_food_image(image, food_id)
+        new_image_url = get_image_url(relative_path)
+        
+        # 更新图片URL
+        success = await food_service.update_food_image_url(food_id, new_image_url, current_user)
+        if not success:
+            # 如果更新失败，删除已保存的图片
+            delete_food_image(new_image_url)
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="更新图片URL失败"
+            )
+        
+        # 删除旧图片
+        if old_image_url:
+            delete_food_image(old_image_url)
+        
+        # 重新获取更新后的食物信息
+        updated_food = await food_service.get_food_by_id(food_id)
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"更新图片失败：{str(e)}"
+        )
+    
+    return FoodResponse(
+        id=updated_food["_id"],
+        name=updated_food["name"],
+        category=updated_food.get("category"),
+        serving_size=updated_food["serving_size"],
+        serving_unit=updated_food["serving_unit"],
+        nutrition_per_serving=updated_food["nutrition_per_serving"],
+        full_nutrition=updated_food.get("full_nutrition"),
+        brand=updated_food.get("brand"),
+        barcode=updated_food.get("barcode"),
+        image_url=updated_food.get("image_url"),
+        created_by=updated_food.get("created_by"),
+        created_at=updated_food["created_at"],
+        source=updated_food.get("source"),
+        boohee_id=updated_food.get("boohee_id"),
+        boohee_code=updated_food.get("boohee_code"),
     )
 
 
@@ -320,7 +440,7 @@ async def delete_food(
     
     - **food_id**: 食物ID
     
-    只能删除自己创建的食物
+    只能删除自己创建的食物（同时会删除关联的图片文件）
     """
     success = await food_service.delete_food(food_id, current_user)
     
