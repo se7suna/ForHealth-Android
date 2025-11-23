@@ -3,30 +3,45 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:layout_marginVertical="4dp"
-    app:cardCornerRadius="8dp"
-    app:cardElevation="1dp"
+    android:layout_marginVertical="8dp"
+    app:cardCornerRadius="12dp"
+    app:cardElevation="4dp"
     android:backgroundTint="@android:color/white">
 
-    <LinearLayout
+    <!-- 使用 ConstraintLayout 代替 LinearLayout -->
+    <androidx.constraintlayout.widget.ConstraintLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:padding="16dp"
-        android:gravity="center_vertical">
+        android:padding="16dp">
 
+        <ImageView
+            android:id="@+id/ivSportImage"
+            android:layout_width="60dp"
+            android:layout_height="60dp"
+            android:layout_marginEnd="16dp"
+            android:layout_marginBottom="8dp"
+            android:src="@android:drawable/ic_menu_camera"
+            android:scaleType="centerCrop"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent" />
+        <!-- 运动类型和描述区域 -->
         <LinearLayout
             android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:orientation="vertical">
+            android:orientation="vertical"
+            android:layout_marginEnd="16dp"
+            android:layout_marginBottom="8dp"
+            app:layout_constraintStart_toEndOf="@id/ivSportImage"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintEnd_toStartOf="@id/btnSelect"
+            android:gravity="center_vertical">
 
             <TextView
                 android:id="@+id/tvSportType"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="跑步"
-                android:textSize="18sp"
+                android:textSize="20sp"
                 android:textColor="#333333"
                 android:textStyle="bold"/>
 
@@ -34,21 +49,28 @@
                 android:id="@+id/tvSportDesc"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="METs: 7.0"
+                android:text="METs: 7.0\n"
                 android:textSize="14sp"
                 android:textColor="#666666"
-                android:layout_marginTop="4dp"/>
+                android:layout_marginTop="4dp"
+                android:lineSpacingExtra="4dp"/>
         </LinearLayout>
 
+        <!-- 选择按钮 -->
         <Button
             android:id="@+id/btnSelect"
             android:layout_width="wrap_content"
-            android:layout_height="36dp"
+            android:layout_height="48dp"
             android:text="选择"
             android:textSize="14sp"
+            android:textColor="@android:color/white"
             android:backgroundTint="@color/primary_green"
-            android:paddingHorizontal="20dp"/>
-    </LinearLayout>
+            android:layout_marginTop="8dp"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toTopOf="parent"/>
+
+    </androidx.constraintlayout.widget.ConstraintLayout>
 
 </androidx.cardview.widget.CardView>
+
 

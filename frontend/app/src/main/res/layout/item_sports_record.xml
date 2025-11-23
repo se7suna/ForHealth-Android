@@ -15,15 +15,16 @@
         android:padding="12dp"
         android:gravity="center_vertical">
 
-        <!-- 运动图标 -->
-        <TextView
-            android:layout_width="40dp"
-            android:layout_height="40dp"
-            android:text="🏃"
-            android:textSize="24sp"
-            android:gravity="center"
-            android:background="@drawable/circle_background"
-            android:backgroundTint="#E3F2FD"/>
+        <!-- 运动图片 -->
+        <ImageView
+            android:id="@+id/ivSportImage"
+            android:layout_width="60dp"
+            android:layout_height="60dp"
+            android:layout_marginEnd="12dp"
+            android:src="@drawable/ic_default_sport"
+        android:scaleType="centerCrop"
+        android:background="@drawable/circle_background"
+        android:backgroundTint="#E3F2FD"/>
 
         <!-- 运动信息 -->
         <LinearLayout

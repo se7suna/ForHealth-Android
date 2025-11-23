@@ -10,7 +10,6 @@ import com.example.forhealth.R
 import com.example.forhealth.model.DailyRecordItem
 import com.example.forhealth.model.FoodRecord
 import android.widget.ImageView
-
 class DailyRecordsAdapter(
     private val onFoodLongClick: (FoodRecord) -> Unit,
     private val onSportsLongClick: (String) -> Unit
@@ -61,6 +60,7 @@ class DailyRecordsAdapter(
     override fun getItemCount(): Int = items.size
 
     inner class FoodViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
+        private val ivFoodImage: ImageView = itemView.findViewById(R.id.ivFoodImage)
         private val tvFoodName: TextView = itemView.findViewById(R.id.tvFoodName)
         private val tvMealType: TextView = itemView.findViewById(R.id.tvMealType)
         private val tvServingInfo: TextView = itemView.findViewById(R.id.tvServingInfo)
@@ -95,10 +95,11 @@ class DailyRecordsAdapter(
             val carbs = record.nutritionData.carbohydrates.toInt()
             tvNutrition.text = "蛋白${protein}g 脂肪${fat}g 碳水${carbs}g"
 
+            // 使用 Glide 加载食物图片
             //Glide.with(itemView.context)
-              //  .load(food.imageUrl) // 加载图片 URL
-              //  .into(ivFoodImage) // 将图片加载到 ImageView 中
-            //若要加载图片，后端在每日记录中添加图片的接口
+             //   .load(record.simplifiedFood.imageUrl) // 使用 simplifiedFood.imageUrl 加载图片
+             //   .into(ivFoodImage) // 将图片加载到 ImageView 中
+
             itemView.setOnLongClickListener {
                 onFoodLongClick(record)
                 true
@@ -106,15 +107,27 @@ class DailyRecordsAdapter(
         }
     }
 
+
     inner class SportsViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
+        private val ivSportImage: ImageView = itemView.findViewById(R.id.ivSportImage) // 添加 ImageView 用于显示图片
         private val tvSportName: TextView = itemView.findViewById(R.id.tvSportName)
         private val tvSportDuration: TextView = itemView.findViewById(R.id.tvSportDuration)
         private val tvCaloriesBurned: TextView = itemView.findViewById(R.id.tvCaloriesBurned)
 
         fun bind(record: com.example.forhealth.model.SearchSportRecordsResponse) {
+            // 设置运动名称
             tvSportName.text = record.sportType ?: "运动"
+
+            // 设置运动时长
             tvSportDuration.text = "${record.durationTime ?: 0}分钟"
+
+            // 设置消耗的卡路里
             tvCaloriesBurned.text = "-${record.caloriesBurned?.toInt() ?: 0}"
+
+            // 使用 Glide 加载图片
+            //Glide.with(itemView.context)
+            //    .load(record.imageUrl) // 假设后端返回了 imageUrl 字段
+            //    .into(ivSportImage) // 将图片加载到 ImageView 中
 
             itemView.setOnLongClickListener {
                 record.recordId?.let { onSportsLongClick(it) }
@@ -122,5 +135,6 @@ class DailyRecordsAdapter(
             }
         }
     }
+
 }
 

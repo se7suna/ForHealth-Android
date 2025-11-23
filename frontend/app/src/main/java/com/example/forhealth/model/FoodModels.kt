@@ -114,7 +114,8 @@ data class FoodRecord(
     @SerializedName("meal_type") val mealType: String?,
     val notes: String?,
     @SerializedName("food_id") val foodId: String?,
-    @SerializedName("created_at") val createdAt: String
+    @SerializedName("created_at") val createdAt: String,
+    val simplifiedFood: SimplifiedFoodSearchItem
 )
 
 /**

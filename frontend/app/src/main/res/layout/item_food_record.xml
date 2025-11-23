@@ -16,6 +16,7 @@
 
         <!-- 图片区域 -->
         <ImageView
+        android:id="@+id/ivFoodImage"
         android:layout_width="60dp"
         android:layout_height="60dp"
         android:layout_marginEnd="12dp"
