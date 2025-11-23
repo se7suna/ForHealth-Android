@@ -35,6 +35,17 @@ class Settings(BaseSettings):
     # CORS 配置
     ALLOWED_ORIGINS: Union[List[str], str] = "http://localhost:3000,http://localhost:8080"
 
+    # 图片存储配置
+    IMAGE_STORAGE_PATH: str = "uploads"  # 图片存储基础路径（相对于项目根目录），包含 food_images 和 sports_images 等子文件夹
+    IMAGE_BASE_URL: str = "/static"  # 图片访问基础URL（相对路径）
+    
+    def get_full_image_base_url(self) -> str:
+        """获取完整的图片访问基础URL（包含协议和主机）"""
+        protocol = "https" if self.PORT == 443 else "http"
+        # 去掉 IMAGE_BASE_URL 开头的斜杠（如果有）
+        base_url_path = self.IMAGE_BASE_URL.lstrip("/")
+        return f"{protocol}://{self.HOST}:{self.PORT}/{base_url_path}"
+
     # 初始化数据库默认内容
     ## 管理员账户用于权限写入
     DEFAULT_AUTH_EMAIL: str = "user@example.com"
