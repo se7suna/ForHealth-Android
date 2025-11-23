@@ -6,6 +6,7 @@ sys.path.insert(0, backend_path)
 
 import pytest
 import pytest_asyncio
+import json
 from httpx import AsyncClient
 
 # 测试用户凭证
@@ -39,26 +40,70 @@ async def auth_client():
             yield client
 
 # ================== 测试：初始化食物表成功 ==================
+# 加载食物数据集
+def load_food_data():
+    """加载食物数据集"""
+    dataset_path = Path(__file__).parent.parent / "app" / "data_init" / "initial_foods_dataset.json"
+    with open(dataset_path, 'r', encoding='utf-8') as f:
+        dataset = json.load(f)
+    return dataset.get('foods', [])
+
+foods_data = load_food_data()
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("food_data,expected_status", [
+    # 测试第一个食物：米饭
+    ({"name": foods_data[0]["name"], "category": foods_data[0]["category"], "serving_size": foods_data[0]["serving_size"]}, 200),
+    # 测试第二个食物：馒头
+    ({"name": foods_data[1]["name"], "category": foods_data[1]["category"], "serving_size": foods_data[1]["serving_size"]}, 200),
+])
+async def test_initialize_foods_table_success(auth_client, food_data, expected_status):
+    """测试初始化食物表是否成功"""
+    response = await auth_client.get(f"/api/food/search-id?keyword={food_data.get('name')}&limit=20")
+    assert response.status_code == expected_status, f"搜索食物失败: {response.status_code}"
+    result = response.json()
+    assert "foods" in result, "响应应该包含foods字段"
+    assert isinstance(result["foods"], list), "foods应该是列表"
+    
+    # 查找食物
+    exist = False
+    for food in result["foods"]:
+        if food.get("name") == food_data.get("name"):
+            exist = True
+            # 判断字段是否存在
+            assert "name" in food, "食物应该有name字段"
+            assert "source" in food, "食物应该有source字段"
+            # 验证字段值
+            assert food.get("source") == "local", "食物应该来自本地数据库"
+            break
+    
+    assert exist, f"食物 '{food_data.get('name')}' 不存在"
 
 # ================== 测试：初始化运动类型成功 ==================
 @pytest.mark.asyncio
 @pytest.mark.parametrize("sport_data,expected_status,expected_success", [
     # 正常情况
-    ({"sport_type": "自定义跑步", "describe": "户外跑步", "METs": 8.0}, 200, True),
-    # 边界情况：缺少必填字段
-    #({"sport_type": "", "describe": "户外跑步", "METs": 8.0}, 422, False),
-    # 边界情况：METs为负数
-    #({"sport_type": "自定义游泳", "describe": "室内游泳", "METs": -5.0}, 422, False),
+    ({"sport_type": settings.DefaultSports[0]["sport_type"], "describe": settings.DefaultSports[0]["describe"], "METs": settings.DefaultSports[0]["METs"]}, 200, True),
 ])
-async def test_create_sports(auth_client,sport_data, expected_status, expected_success):
-    """测试创建自定义运动类型 - 正常情况和边界条件"""
-    response = None
-    try:
-        response = await auth_client.post("/api/sports/create-sport", json=sport_data)
-        result = response.json()
-        assert response.status_code == expected_status
-        assert result["success"] == expected_success
-    finally:
-        if response and result.get("success"):        # 完成测试后删除创建的运动类型
-            response = await auth_client.delete(f"/api/sports/delete-sport/{sport_data['sport_type']}")
-            assert response.status_code == 200
+async def test_create_sports(auth_client, sport_data, expected_status, expected_success):
+    """测试初始化运动类型是否成功"""
+    response = await auth_client.get("/api/sports/get-available-sports-types")
+    assert response.status_code == expected_status, f"获取运动类型列表失败: {response.status_code}"
+    result = response.json()
+    assert isinstance(result, list), "响应应该是列表"
+    
+    # 查找运动类型
+    exist = False
+    for sport in result:
+        if sport.get("sport_type") == sport_data.get("sport_type"):
+            exist = True
+            # 判断字段是否存在
+            assert "sport_type" in sport, "运动类型应该有sport_type字段"
+            assert "METs" in sport, "运动类型应该有METs字段"
+            assert "describe" in sport, "运动类型应该有describe字段"
+            # 验证字段值
+            assert sport.get("describe") == sport_data.get("describe"), "描述不一致"
+            assert sport.get("METs") == sport_data.get("METs"), "METs不一致"
+            break
+    
+    assert exist, f"运动类型 '{sport_data.get('sport_type')}' 不存在"
