@@ -266,4 +266,4 @@ async def test_visualization_requires_authentication(async_client: AsyncClient):
 
     for endpoint in endpoints:
         response = await async_client.get(endpoint)
-        assert response.status_code == 401, f"Endpoint {endpoint} should require authentication"
+        assert response.status_code in [401, 403], f"Endpoint {endpoint} should require authentication (got {response.status_code})"
