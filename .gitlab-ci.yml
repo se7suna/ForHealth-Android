@@ -79,31 +79,30 @@ test:unit:
       python3 << 'PYTHON_SCRIPT'
       import httpx
       import asyncio
-      
-      async def create_test_user():
-          """创建测试用户"""
+
+      async def create_test_users():
+          """创建多个测试用户"""
           async with httpx.AsyncClient(base_url="http://127.0.0.1:8000", timeout=30.0) as client:
-              # 尝试注册测试用户
-              try:
-                  response = await client.post(
-                      "/api/auth/register",
-                      json={
-                          "email": "user@example.com",
-                          "username": "testuser",
-                          "password": "string"
-                      }
-                  )
-                  if response.status_code == 201:
-                      print("✅ 测试用户创建成功")
-                  elif response.status_code == 409:
-                      print("ℹ️ 测试用户已存在")
-                  else:
-                      print(f"⚠️ 创建测试用户返回状态码: {response.status_code}")
-              except Exception as e:
-                  print(f"❌ 创建测试用户失败: {e}")
-                  exit(1)
-      
-      asyncio.run(create_test_user())
+              # 测试用户列表
+              users = [
+                  {"email": "user@example.com", "username": "testuser", "password": "string"},
+                  {"email": "test@user.com", "username": "testuser2", "password": "test1234"}
+              ]
+
+              for user in users:
+                  try:
+                      response = await client.post("/api/auth/register", json=user)
+                      if response.status_code == 201:
+                          print(f"✅ 测试用户 {user['email']} 创建成功")
+                      elif response.status_code == 409:
+                          print(f"ℹ️ 测试用户 {user['email']} 已存在")
+                      else:
+                          print(f"⚠️ 创建用户 {user['email']} 返回状态码: {response.status_code}")
+                  except Exception as e:
+                      print(f"❌ 创建用户 {user['email']} 失败: {e}")
+                      exit(1)
+
+      asyncio.run(create_test_users())
       PYTHON_SCRIPT
     - echo "🧪 运行单元测试..."
     - pytest tests/ -v --tb=short --junitxml=test-results.xml
