@@ -10,7 +10,7 @@ from pydantic import BaseModel
 from bson import ObjectId
 
 from app.routers.auth import get_current_user
-from app.database import db
+from app.database import get_database
 
 router = APIRouter(prefix="/api/visualization", tags=["可视化报告"])
 
@@ -103,6 +103,8 @@ async def get_daily_calorie_summary(
     - 每日卡路里目标（来自用户配置）
     - 净卡路里和目标完成百分比
     """
+    db = get_database()
+
     if target_date is None:
         target_date = date.today()
 
@@ -189,6 +191,8 @@ async def get_nutrition_analysis(
     - 各营养素摄入量vs推荐量
     - 食物类别分布
     """
+    db = get_database()
+
     if start_date > end_date:
         raise HTTPException(status_code=400, detail="开始日期不能晚于结束日期")
 
@@ -363,6 +367,8 @@ async def get_time_series_trend(
     - week: 每周聚合数据
     - month: 每月聚合数据
     """
+    db = get_database()
+
     if start_date > end_date:
         raise HTTPException(status_code=400, detail="开始日期不能晚于结束日期")
 
@@ -481,6 +487,8 @@ async def export_health_report(
 
     前端可以使用这些数据生成 PDF 或长图报告
     """
+    db = get_database()
+
     if start_date > end_date:
         raise HTTPException(status_code=400, detail="开始日期不能晚于结束日期")
 
