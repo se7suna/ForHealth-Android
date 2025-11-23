@@ -329,7 +329,21 @@ deploy:production:
   stage: deploy
   image: alpine:latest
   before_script:
-    - apk add --no-cache openssh-client
+    # 添加重试机制安装 openssh-client
+    - |
+      for i in 1 2 3 4 5; do
+        echo "🔄 尝试安装 openssh-client ($i/5)..."
+        if apk add --no-cache openssh-client; then
+          echo "✅ openssh-client 安装成功"
+          break
+        fi
+        if [ $i -eq 5 ]; then
+          echo "❌ openssh-client 安装失败，已重试5次"
+          exit 1
+        fi
+        echo "⏳ 等待 5 秒后重试..."
+        sleep 5
+      done
     - eval $(ssh-agent -s)
     # 验证必需的环境变量
     - |
