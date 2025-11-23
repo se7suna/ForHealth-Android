@@ -1,5 +1,6 @@
 from typing import Optional, List, Dict, Any
 from datetime import datetime, date
+from fastapi import UploadFile, HTTPException, status
 from app.database import get_database
 from app.models.food import (
     FoodInDB,
@@ -15,10 +16,122 @@ from app.schemas.food import (
     FoodRecordUpdateRequest,
 )
 from app.services import external_api_service
+from app.utils.image_storage import save_food_image, get_image_url, delete_food_image
 from bson import ObjectId
 
 
 # ========== 食物管理 ==========
+async def create_food_with_image(
+    name: str,
+    category: Optional[str],
+    serving_size: float,
+    serving_unit: str,
+    calories: float,
+    protein: float,
+    carbohydrates: float,
+    fat: float,
+    fiber: Optional[float],
+    sugar: Optional[float],
+    sodium: Optional[float],
+    brand: Optional[str],
+    barcode: Optional[str],
+    image: Optional[UploadFile],
+    creator_email: str
+) -> dict:
+    """
+    创建食物（包含图片上传处理）
+    
+    Args:
+        name: 食物名称
+        category: 食物分类
+        serving_size: 标准份量
+        serving_unit: 份量单位
+        calories: 卡路里
+        protein: 蛋白质
+        carbohydrates: 碳水化合物
+        fat: 脂肪
+        fiber: 膳食纤维
+        sugar: 糖分
+        sodium: 钠
+        brand: 品牌
+        barcode: 条形码
+        image: 图片文件（可选）
+        creator_email: 创建者邮箱
+    
+    Returns:
+        创建的食物信息
+    
+    Raises:
+        ValueError: 如果食物名称已存在
+        HTTPException: 如果图片处理失败
+    """
+    # 构建基础营养数据对象
+    nutrition_data = NutritionData(
+        calories=calories,
+        protein=protein,
+        carbohydrates=carbohydrates,
+        fat=fat,
+        fiber=fiber,
+        sugar=sugar,
+        sodium=sodium,
+    )
+    
+    # 构建FoodCreateRequest对象
+    food_data = FoodCreateRequest(
+        name=name,
+        category=category,
+        serving_size=serving_size,
+        serving_unit=serving_unit,
+        nutrition_per_serving=nutrition_data,
+        full_nutrition=None,
+        brand=brand,
+        barcode=barcode,
+    )
+    
+    # 先创建食物（获取food_id）
+    food = await create_food(food_data, creator_email)
+    food_id = food["_id"]
+    
+    # 如果有图片，保存图片并更新食物记录
+    if image and image.filename:
+        image_url = None
+        try:
+            # 保存图片文件
+            relative_path = await save_food_image(image, food_id)
+            # 生成图片URL
+            image_url = get_image_url(relative_path)
+            
+            # 更新食物记录，添加图片URL
+            await update_food_image_url(food_id, image_url, creator_email)
+            food["image_url"] = image_url
+        except HTTPException:
+            # 如果图片保存失败，删除已创建的食物记录
+            await delete_food(food_id, creator_email)
+            raise
+        except ValueError as e:
+            # 如果更新图片URL失败，删除已创建的食物记录和图片文件
+            await delete_food(food_id, creator_email)
+            # 删除已保存的图片（如果存在）
+            if image_url:
+                delete_food_image(image_url)
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"更新图片URL失败：{str(e)}"
+            )
+        except Exception as e:
+            # 如果图片保存失败，删除已创建的食物记录和图片文件
+            await delete_food(food_id, creator_email)
+            # 删除已保存的图片（如果存在）
+            if image_url:
+                delete_food_image(image_url)
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"保存图片失败：{str(e)}"
+            )
+    
+    return food
+
+
 async def create_food(food_data: FoodCreateRequest, creator_email: Optional[str] = None) -> dict:
     """
     创建食物

@@ -90,10 +90,12 @@ async def create_food(
     用户创建的食物仅创建者自己可见，其他用户无法搜索或查看
     """
     try:
-        # 构建基础营养数据对象
-        from app.models.food import NutritionData
-        
-        nutrition_data = NutritionData(
+        # 调用 service 层处理创建食物（包括图片上传）
+        food = await food_service.create_food_with_image(
+            name=name,
+            category=category,
+            serving_size=serving_size,
+            serving_unit=serving_unit,
             calories=calories,
             protein=protein,
             carbohydrates=carbohydrates,
@@ -101,59 +103,11 @@ async def create_food(
             fiber=fiber,
             sugar=sugar,
             sodium=sodium,
-        )
-        
-        # 构建FoodCreateRequest对象（不包含完整营养信息）
-        food_data = FoodCreateRequest(
-            name=name,
-            category=category,
-            serving_size=serving_size,
-            serving_unit=serving_unit,
-            nutrition_per_serving=nutrition_data,
-            full_nutrition=None,  # 不设置完整营养信息
             brand=brand,
             barcode=barcode,
+            image=image,
+            creator_email=current_user
         )
-        
-        # 先创建食物（获取food_id）
-        food = await food_service.create_food(food_data, current_user)
-        food_id = food["_id"]
-        
-        # 如果有图片，保存图片并更新食物记录
-        image_url = None
-        if image and image.filename:
-            try:
-                # 保存图片文件
-                relative_path = await save_food_image(image, food_id)
-                # 生成图片URL
-                image_url = get_image_url(relative_path)
-                
-                # 更新食物记录，添加图片URL
-                await food_service.update_food_image_url(food_id, image_url, current_user)
-                food["image_url"] = image_url
-            except HTTPException:
-                # 如果图片保存失败，删除已创建的食物记录
-                await food_service.delete_food(food_id, current_user)
-                raise
-            except ValueError as e:
-                # 如果更新图片URL失败，删除已创建的食物记录和图片文件
-                await food_service.delete_food(food_id, current_user)
-                if image_url:
-                    delete_food_image(image_url)
-                raise HTTPException(
-                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                    detail=f"更新图片URL失败：{str(e)}"
-                )
-            except Exception as e:
-                # 如果图片保存失败，删除已创建的食物记录和图片文件
-                await food_service.delete_food(food_id, current_user)
-                if image_url:
-                    delete_food_image(image_url)
-                raise HTTPException(
-                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                    detail=f"保存图片失败：{str(e)}"
-                )
-        
     except ValueError as e:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,

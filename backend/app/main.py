@@ -61,8 +61,8 @@ app.include_router(food.router, prefix="/api")
 app.include_router(recipe.router, prefix="/api")
 
 # 配置静态文件服务（用于访问上传的图片）
-uploads_path = Path("uploads")
-uploads_path.mkdir(exist_ok=True)
+uploads_path = Path(settings.IMAGE_STORAGE_PATH)
+uploads_path.mkdir(parents=True, exist_ok=True)
 app.mount("/static", StaticFiles(directory=str(uploads_path)), name="static")
 
 
