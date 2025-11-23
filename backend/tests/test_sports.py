@@ -129,12 +129,25 @@ async def test_get_available_sports_types(auth_client):
 ])
 async def test_update_sports(auth_client, update_data, expected_success):
     """测试更新自定义运动类型 - 正常情况"""
+    # 先创建运动类型
+    create_data = {
+        "sport_type": "自定义跑步",
+        "describe": "初始描述",
+        "METs": 8.0
+    }
+    create_response = await auth_client.post("/api/sports/create-sport", json=create_data)
+    assert create_response.status_code == 200
+
+    # 再更新
     response = await auth_client.post("/api/sports/update-sport", json=update_data)
 
     if expected_success:
         assert response.status_code == 200
         result = response.json()
         assert result["success"] == expected_success
+
+    # 清理 - 删除创建的运动类型
+    await auth_client.delete(f"/api/sports/delete-sport/{update_data['sport_type']}")
 
 
 @pytest.mark.asyncio
