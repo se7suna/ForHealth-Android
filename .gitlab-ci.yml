@@ -46,7 +46,9 @@ test:unit:
   before_script:
     - cd backend
     # 安装系统依赖 (libzbar 用于条形码识别)
-    - apt-get update && apt-get install -y libzbar0
+    - apt-get update
+    - apt-get install -y libzbar0
+    - ldconfig  # 更新动态链接库缓存
     - pip install --upgrade pip
     - pip install -r requirements.txt
     - pip install pytest pytest-asyncio httpx
@@ -249,7 +251,9 @@ build:backend:
   before_script:
     - cd backend
     # 安装系统依赖 (libzbar 用于条形码识别)
-    - apt-get update && apt-get install -y libzbar0
+    - apt-get update
+    - apt-get install -y libzbar0
+    - ldconfig  # 更新动态链接库缓存
     - pip install --upgrade pip
     - pip install -r requirements.txt
   script:
