@@ -49,7 +49,7 @@ async def create_food(food_data: FoodCreateRequest, creator_email: Optional[str]
         full_nutrition=food_data.full_nutrition,
         brand=food_data.brand,
         barcode=food_data.barcode,
-        image_url=food_data.image_url,
+        image_url=None,  # 图片通过文件上传单独处理，不在创建时设置
         source="local",
         created_by=creator_email,
     )
@@ -595,9 +595,54 @@ async def update_food(
     return result
 
 
+async def update_food_image_url(food_id: str, image_url: str, user_email: str) -> bool:
+    """
+    更新食物的图片URL
+    
+    Args:
+        food_id: 食物ID
+        image_url: 图片URL
+        user_email: 用户邮箱
+    
+    Returns:
+        是否更新成功
+    
+    Raises:
+        ValueError: 如果食物不存在或无权更新
+    """
+    db = get_database()
+    try:
+        # 先检查食物是否存在且有权限
+        food = await db.foods.find_one({"_id": ObjectId(food_id)})
+        if not food:
+            raise ValueError(f"食物不存在 (ID: {food_id})")
+        
+        if food.get("created_by") != user_email:
+            raise ValueError(f"无权更新此食物的图片 (创建者: {food.get('created_by')}, 当前用户: {user_email})")
+        
+        # 执行更新
+        result = await db.foods.update_one(
+            {"_id": ObjectId(food_id), "created_by": user_email},
+            {"$set": {"image_url": image_url, "updated_at": datetime.utcnow()}}
+        )
+        
+        if result.modified_count == 0:
+            raise ValueError("更新失败：未找到匹配的记录")
+        
+        return True
+    except ValueError:
+        # 重新抛出业务异常
+        raise
+    except Exception as e:
+        # 其他异常转换为ValueError
+        raise ValueError(f"更新图片URL时发生错误：{str(e)}")
+
+
 async def delete_food(food_id: str, user_email: str) -> bool:
     """
     删除食物（仅创建者可删除）
+    
+    注意：同时会删除关联的图片文件
     
     Args:
         food_id: 食物ID
@@ -608,6 +653,22 @@ async def delete_food(food_id: str, user_email: str) -> bool:
     """
     db = get_database()
     try:
+        # 先获取食物信息，以便删除关联的图片
+        food = await db.foods.find_one({
+            "_id": ObjectId(food_id),
+            "created_by": user_email
+        })
+        
+        if not food:
+            return False
+        
+        # 删除关联的图片文件
+        image_url = food.get("image_url")
+        if image_url:
+            from app.utils.image_storage import delete_food_image
+            delete_food_image(image_url)
+        
+        # 删除食物记录
         result = await db.foods.delete_one({
             "_id": ObjectId(food_id),
             "created_by": user_email
