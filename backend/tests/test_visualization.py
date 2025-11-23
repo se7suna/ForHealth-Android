@@ -2,9 +2,44 @@
 可视化报告 API 测试
 测试 Issue #22, #23, #25, #26 的功能
 """
+# 将 backend 目录添加到 Python 路径
+import sys
+from pathlib import Path
+backend_path = str(Path(__file__).parent.parent.absolute())
+sys.path.insert(0, backend_path)
+
 import pytest
 from httpx import AsyncClient
 from datetime import date, timedelta
+import pytest_asyncio
+
+# ========== Fixtures ==========
+from app.config import settings
+TEST_USER = {
+    "email": settings.USER_EMAIL,
+    "password": settings.USER_PASSWORD
+}
+
+@pytest_asyncio.fixture
+async def async_client():
+    """创建异步 HTTP 客户端"""
+    async with AsyncClient(base_url="http://127.0.0.1:8000", timeout=30.0, http2=False) as client:
+        yield client
+
+@pytest_asyncio.fixture
+async def auth_headers(async_client: AsyncClient):
+    """获取认证 headers"""
+    # 登录获取 token
+    response = await async_client.post(
+        "/api/auth/login",
+        json={
+            "email": TEST_USER["email"],
+            "password": TEST_USER["password"]
+        }
+    )
+    assert response.status_code == 200, f"登录失败: 状态码={response.status_code}, 响应={response.text}"
+    token = response.json()["access_token"]
+    return {"Authorization": f"Bearer {token}"}
 
 
 @pytest.mark.asyncio
