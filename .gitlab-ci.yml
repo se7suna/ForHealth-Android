@@ -45,6 +45,8 @@ test:unit:
     SMTP_FROM_NAME: "For Health Test"
   before_script:
     - cd backend
+    # 安装系统依赖 (libzbar 用于条形码识别)
+    - apt-get update && apt-get install -y libzbar0
     - pip install --upgrade pip
     - pip install -r requirements.txt
     - pip install pytest pytest-asyncio httpx
@@ -247,6 +249,8 @@ build:backend:
   image: python:${PYTHON_VERSION}
   before_script:
     - cd backend
+    # 安装系统依赖 (libzbar 用于条形码识别)
+    - apt-get update && apt-get install -y libzbar0
     - pip install --upgrade pip
     - pip install -r requirements.txt
   script:
