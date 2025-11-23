@@ -4,6 +4,7 @@
 stages:
   - test        # 测试
   - build       # 构建
+  - deploy      # 部署
 
 variables:
   PYTHON_VERSION: "3.11"
@@ -44,6 +45,8 @@ test:unit:
     SMTP_FROM_NAME: "For Health Test"
   before_script:
     - cd backend
+    # 安装系统依赖 (libzbar 用于条形码识别)
+    - apt-get update && apt-get install -y libzbar0
     - pip install --upgrade pip
     - pip install -r requirements.txt
     - pip install pytest pytest-asyncio httpx
@@ -53,7 +56,7 @@ test:unit:
     # 在后台启动服务器
     - nohup uvicorn app.main:app --host 127.0.0.1 --port 8000 > server.log 2>&1 &
     - SERVER_PID=$!
-    - echo "📝 服务器进程 PID: $SERVER_PID"
+    - echo "📝 服务器进程 PID:, $SERVER_PID"
     - echo "⏳ 等待服务器启动..."
     # 等待服务器启动（最多等待 30 秒）
     - |
@@ -246,6 +249,8 @@ build:backend:
   image: python:${PYTHON_VERSION}
   before_script:
     - cd backend
+    # 安装系统依赖 (libzbar 用于条形码识别)
+    - apt-get update && apt-get install -y libzbar0
     - pip install --upgrade pip
     - pip install -r requirements.txt
   script:
@@ -262,6 +267,59 @@ build:backend:
     changes:
       - backend/**/*
       - .gitlab-ci.yml
+
+# ==================== Deploy Stage ====================
+
+deploy:production:
+  stage: deploy
+  image: alpine:latest
+  before_script:
+    - apk add --no-cache openssh-client
+    - eval $(ssh-agent -s)
+    - echo "$SSH_PRIVATE_KEY" | tr -d '\r' | ssh-add -
+    - mkdir -p ~/.ssh
+    - chmod 700 ~/.ssh
+    - ssh-keyscan -H $DEPLOY_SERVER_IP >> ~/.ssh/known_hosts
+    - chmod 644 ~/.ssh/known_hosts
+  script:
+    - echo "🚀 开始部署到生产环境..."
+    - |
+      ssh $DEPLOY_USER@$DEPLOY_SERVER_IP << 'ENDSSH'
+        set -e
+        cd /opt/for_health
+
+        echo "📥 拉取最新代码..."
+        git pull origin main
+
+        echo "🔄 重启服务..."
+        docker compose -f docker-compose.prod.yml down
+        docker compose -f docker-compose.prod.yml up -d --build
+
+        echo "⏳ 等待服务启动..."
+        sleep 10
+
+        echo "🏥 健康检查..."
+        if curl -f http://localhost:8000/health; then
+          echo "✅ 部署成功！服务运行正常。"
+        else
+          echo "❌ 部署失败！服务健康检查未通过。"
+          docker compose -f docker-compose.prod.yml logs --tail=50 backend
+          exit 1
+        fi
+
+        echo "🧹 清理旧镜像..."
+        docker image prune -f
+
+        echo "🎉 部署完成！"
+      ENDSSH
+  only:
+    - main
+  when: manual  # 手动触发部署，确保安全
+  tags:
+    - docker
+  environment:
+    name: production
+    url: http://124.70.161.90:8000
 
 # ==================== 通知 ====================
 
