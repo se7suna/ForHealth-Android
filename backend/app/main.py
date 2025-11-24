@@ -6,7 +6,7 @@ from pathlib import Path
 from contextlib import asynccontextmanager
 from app.config import settings
 from app.database import (connect_to_mongo, close_mongo_connection)
-from app.data_init.init_dataset import (initialize_foods_table,
+from app.db_init.init_dataset import (initialize_foods_table,
                           initialize_sports_table,initialize_default_user)
 from app.routers import auth, user, sports, food, recipe, visualization
 
@@ -29,9 +29,12 @@ async def lifespan(app: FastAPI):
 async def run_initialization():
     """异步后台初始化：不会阻塞应用启动。"""
     # print("⚙️ 开始初始化后台数据...")
-    await initialize_sports_table()
+    print("⚙️ 开始初始化默认用户...")
     await initialize_default_user()
+    print("⚙️ 开始初始化食物表...")
     await initialize_foods_table()
+    print("⚙️ 开始初始化运动表...")
+    await initialize_sports_table()
 
     print("✅ 数据库初始化完成！")
 

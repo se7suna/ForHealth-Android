@@ -44,7 +44,7 @@ async def auth_client():
 # 加载食物数据集
 def load_food_data():
     """加载食物数据集"""
-    dataset_path = Path(__file__).parent.parent / "app" / "data_init" / "initial_foods_dataset.json"
+    dataset_path = Path(__file__).parent.parent / "app" / "db_init" / "initial_foods_dataset.json"
     with open(dataset_path, 'r', encoding='utf-8') as f:
         dataset = json.load(f)
     return dataset.get('foods', [])
@@ -81,12 +81,22 @@ async def test_initialize_foods_table_success(auth_client, food_data, expected_s
     assert exist, f"食物 '{food_data.get('name')}' 不存在"
 
 # ================== 测试：初始化运动类型成功 ==================
+# 加载食物数据集
+def load_sport_data():
+    """加载运动数据集"""
+    dataset_path = Path(__file__).parent.parent / "app" / "db_init" / "initial_sports_dataset.json"
+    with open(dataset_path, 'r', encoding='utf-8') as f:
+        dataset = json.load(f)
+    return dataset
+
+sports_data = load_sport_data()
+
 @pytest.mark.asyncio
 @pytest.mark.parametrize("sport_data,expected_status,expected_success", [
     # 正常情况
-    ({"sport_type": settings.DefaultSports[0]["sport_type"], "describe": settings.DefaultSports[0]["describe"], "METs": settings.DefaultSports[0]["METs"]}, 200, True),
+    ({"sport_name": sports_data[0]["sport_name"], "describe": sports_data[0]["describe"], "METs": sports_data[0]["METs"]}, 200, True),
 ])
-async def test_create_sports(auth_client, sport_data, expected_status, expected_success):
+async def test_initialize_sports_talbe_success(auth_client, sport_data, expected_status, expected_success):
     """测试初始化运动类型是否成功"""
     response = await auth_client.get("/api/sports/get-available-sports-types")
     assert response.status_code == expected_status, f"获取运动类型列表失败: {response.status_code}"
@@ -96,10 +106,10 @@ async def test_create_sports(auth_client, sport_data, expected_status, expected_
     # 查找运动类型
     exist = False
     for sport in result:
-        if sport.get("sport_type") == sport_data.get("sport_type"):
+        if sport.get("sport_name") == sport_data.get("sport_name"):
             exist = True
             # 判断字段是否存在
-            assert "sport_type" in sport, "运动类型应该有sport_type字段"
+            assert "sport_name" in sport, "运动类型应该有sport_name字段"
             assert "METs" in sport, "运动类型应该有METs字段"
             assert "describe" in sport, "运动类型应该有describe字段"
             # 验证字段值
@@ -107,4 +117,4 @@ async def test_create_sports(auth_client, sport_data, expected_status, expected_
             assert sport.get("METs") == sport_data.get("METs"), "METs不一致"
             break
     
-    assert exist, f"运动类型 '{sport_data.get('sport_type')}' 不存在"
+    assert exist, f"运动类型 '{sport_data.get('sport_name')}' 不存在"

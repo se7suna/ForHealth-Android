@@ -4,46 +4,44 @@ from datetime import datetime,date
 
 # 记录运动及消耗卡路里的请求
 class LogSportsRequest(BaseModel):
-    sport_type: Optional[str] = None
+    sport_name: Optional[str] = None
     created_at: datetime = Field(default_factory=datetime.utcnow)
     duration_time: Optional[int] = Field(None, gt=0)
 
 # 更新运动记录的请求
 class UpdateSportsRecordRequest(BaseModel):
     record_id: Optional[str] = None
-    sport_type: Optional[str] = None
+    sport_name: Optional[str] = None
     created_at: Optional[datetime] = None
     duration_time: Optional[int] = Field(None, gt=0)
 
 # 创建运动类型的请求
 class CreateSportsRequest(BaseModel):
-    sport_type: Optional[str] = None
+    sport_name: Optional[str] = None
     describe: Optional[str] = None
     METs: Optional[float] = Field(None, gt=0)
+    # 在router中接受image_file
 
 # 更新自定义运动类型的请求
 class UpdateSportsRequest(BaseModel):
-    sport_type: Optional[str] = None
+    sport_name: Optional[str] = None
     describe: Optional[str] = None
     METs: Optional[float] = Field(None, gt=0)
+    # 在router中接受image_file
 
-# 搜索运动类型的请求
+# 搜索运动类型的请求 这个搜索的意义是？
 class SearchSportsRequest(BaseModel):
-    sport_type: Optional[str] = None
+    sport_name: Optional[str] = None
 
 class SearchSportsResponse(BaseModel):
-    sport_type: Optional[str] = None
+    sport_name: Optional[str] = None
     describe: Optional[str] = None
     METs: Optional[float] = None
-
-class SearchSportsResponse(BaseModel):
-    sport_type: Optional[str] = None
-    describe: Optional[str] = None
-    METs: Optional[float] = None
+    image_url: Optional[str] = None
 
 # 搜索运动记录的请求
 class SearchSportRecordsRequest(BaseModel):
-    sport_type: Optional[str] = None
+    sport_name: Optional[str] = None
     start_date: Optional[date] = None
     end_date: Optional[date] = None
 
@@ -56,6 +54,7 @@ class SearchSportRecordsRequest(BaseModel):
 
 class SearchSportRecordsResponse(BaseModel):
     sport_type: Optional[str] = None
+    sport_name: Optional[str] = None
     created_at: Optional[datetime] = None
     duration_time: Optional[int] = None
     calories_burned: Optional[float] = None
