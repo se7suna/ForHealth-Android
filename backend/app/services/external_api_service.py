@@ -10,18 +10,57 @@ import json
 from typing import Optional, Dict, Any
 from datetime import datetime, timedelta
 import httpx
+import threading
 from app.config_external_api import (
     BOOHEE_API_URL,
     BOOHEE_APP_ID,
     BOOHEE_APP_KEY,
+    BOOHEE_ACCOUNTS,
+    BOOHEE_CURRENT_ACCOUNT_INDEX,
     BOOHEE_TOKEN_CACHE_TIME,
     EXTERNAL_API_TIMEOUT,
     EXTERNAL_API_ENABLED
 )
 
 
-# Token缓存
-_token_cache: Optional[Dict[str, Any]] = None
+# Token缓存（每个账号独立缓存）
+_token_cache: Dict[int, Dict[str, Any]] = {}
+
+# 当前账号索引（线程安全）
+_current_account_index_lock = threading.Lock()
+_current_account_index = BOOHEE_CURRENT_ACCOUNT_INDEX
+
+
+def _get_current_account() -> Dict[str, str]:
+    """获取当前使用的账号配置"""
+    global _current_account_index
+    with _current_account_index_lock:
+        if not BOOHEE_ACCOUNTS:
+            # 如果没有配置账号，返回默认值
+            return {"app_id": BOOHEE_APP_ID, "app_key": BOOHEE_APP_KEY}
+        return BOOHEE_ACCOUNTS[_current_account_index]
+
+
+def _switch_to_next_account():
+    """切换到下一个账号（如果到了最后一个，循环回第一个）"""
+    global _current_account_index
+    with _current_account_index_lock:
+        if not BOOHEE_ACCOUNTS:
+            return
+        _current_account_index = (_current_account_index + 1) % len(BOOHEE_ACCOUNTS)
+        # 清除当前账号的token缓存
+        if _current_account_index in _token_cache:
+            del _token_cache[_current_account_index]
+
+
+def _clear_token_cache(account_index: Optional[int] = None):
+    """清除token缓存"""
+    global _token_cache
+    if account_index is not None:
+        if account_index in _token_cache:
+            del _token_cache[account_index]
+    else:
+        _token_cache.clear()
 
 
 def _generate_signature(params: Dict[str, Any], app_key: str) -> str:
@@ -69,33 +108,53 @@ def _generate_signature(params: Dict[str, Any], app_key: str) -> str:
     return sign
 
 
-async def _get_access_token() -> Optional[str]:
+async def _get_access_token(account_index: Optional[int] = None) -> Optional[str]:
     """
     获取薄荷API的Access Token
     
     Token会被缓存，避免频繁请求
+    
+    Args:
+        account_index: 账号索引，如果为None则使用当前账号
     
     Returns:
         Access Token字符串，获取失败返回None
     """
     global _token_cache
     
+    # 确定使用的账号索引
+    if account_index is None:
+        with _current_account_index_lock:
+            account_index = _current_account_index
+    
     # 检查缓存
-    if _token_cache and _token_cache.get('expires_at') > datetime.now():
-        return _token_cache.get('token')
+    if account_index in _token_cache:
+        cache = _token_cache[account_index]
+        if cache.get('expires_at') > datetime.now():
+            return cache.get('token')
     
     if not EXTERNAL_API_ENABLED:
         return None
     
+    # 获取账号配置
+    if account_index is not None and account_index < len(BOOHEE_ACCOUNTS):
+        account = BOOHEE_ACCOUNTS[account_index]
+        app_id = account["app_id"]
+        app_key = account["app_key"]
+    else:
+        account = _get_current_account()
+        app_id = account["app_id"]
+        app_key = account["app_key"]
+    
     endpoint = '/api/v2/access_tokens'
     params = {
-        'app_id': BOOHEE_APP_ID,
+        'app_id': app_id,
         'timestamp': int(time.time())
     }
     
     try:
         # 生成签名
-        params['sign'] = _generate_signature(params, BOOHEE_APP_KEY)
+        params['sign'] = _generate_signature(params, app_key)
         
         url = f"{BOOHEE_API_URL}{endpoint}"
         
@@ -117,7 +176,7 @@ async def _get_access_token() -> Optional[str]:
                 token = result.get('access_token')
                 if token:
                     # 缓存Token（默认1个月，约2592000秒）
-                    _token_cache = {
+                    _token_cache[account_index] = {
                         'token': token,
                         'expires_at': datetime.now() + timedelta(seconds=2592000 - 60)
                     }
@@ -142,7 +201,7 @@ async def _get_access_token() -> Optional[str]:
     return None
 
 
-async def _call_boohee_api(endpoint: str, params: Dict[str, Any], method: str = 'GET') -> Optional[Dict[str, Any]]:
+async def _call_boohee_api(endpoint: str, params: Dict[str, Any], method: str = 'GET', account_index: Optional[int] = None) -> Optional[Dict[str, Any]]:
     """
     调用薄荷API
     
@@ -150,6 +209,7 @@ async def _call_boohee_api(endpoint: str, params: Dict[str, Any], method: str = 
         endpoint: API端点路径
         params: 请求参数字典
         method: 请求方法，GET或POST，默认GET
+        account_index: 账号索引，如果为None则使用当前账号
     
     Returns:
         API响应数据，失败返回None
@@ -157,22 +217,37 @@ async def _call_boohee_api(endpoint: str, params: Dict[str, Any], method: str = 
     if not EXTERNAL_API_ENABLED:
         return None
     
+    # 确定使用的账号索引
+    if account_index is None:
+        with _current_account_index_lock:
+            account_index = _current_account_index
+    
+    # 获取账号配置
+    if account_index is not None and account_index < len(BOOHEE_ACCOUNTS):
+        account = BOOHEE_ACCOUNTS[account_index]
+        app_id = account["app_id"]
+        app_key = account["app_key"]
+    else:
+        account = _get_current_account()
+        app_id = account["app_id"]
+        app_key = account["app_key"]
+    
     try:
         # 获取Access Token
-        token = await _get_access_token()
+        token = await _get_access_token(account_index)
         if not token:
             return None
         
         # 添加公共参数
         timestamp = int(time.time())
         request_params = {
-            'app_id': BOOHEE_APP_ID,
+            'app_id': app_id,
             'timestamp': timestamp,
             **params
         }
         
         # 生成签名（AccessToken不参与签名计算）
-        request_params['sign'] = _generate_signature(request_params, BOOHEE_APP_KEY)
+        request_params['sign'] = _generate_signature(request_params, app_key)
         
         url = f"{BOOHEE_API_URL}{endpoint}"
         
@@ -628,12 +703,55 @@ async def query_food_by_barcode(barcode: str) -> Optional[Dict[str, Any]]:
         return None
 
 
+def _is_account_limit_reached(api_result: Dict[str, Any], converted_foods: list) -> bool:
+    """
+    检测账号是否达到限制
+    
+    判断标准：
+    1. 返回空结果（total_pages=0且foods为空）
+    2. 或者所有转换后的结果都是"source": "local"而没有"source": "boohee"
+    
+    Args:
+        api_result: API返回的原始结果
+        converted_foods: 转换后的食物列表
+    
+    Returns:
+        如果达到限制返回True，否则返回False
+    """
+    # 检查是否为空结果
+    total_pages = api_result.get('total_pages', 0)
+    api_foods = api_result.get('foods', [])
+    
+    if total_pages == 0 and len(api_foods) == 0:
+        return True
+    
+    # 检查转换后的结果是否都是local而没有boohee
+    if len(converted_foods) > 0:
+        has_boohee = False
+        for food in converted_foods:
+            source = food.get('source', 'local')
+            if source == 'boohee':
+                has_boohee = True
+                break
+        
+        # 如果没有boohee结果，说明账号达到限制
+        if not has_boohee:
+            return True
+    
+    return False
+
+
 async def search_foods(
     keyword: str,
     page: int = 1,
     include_full_nutrition: bool = True,
 ) -> Dict[str, Any]:
-    """根据关键字调用薄荷API搜索食物"""
+    """
+    根据关键字调用薄荷API搜索食物
+    
+    如果检测到当前账号达到限制，会自动切换到下一个账号并重试。
+    如果所有账号都达到限制，返回空结果。
+    """
     if not EXTERNAL_API_ENABLED:
         return {"page": page, "total_pages": 0, "foods": []}
 
@@ -641,34 +759,65 @@ async def search_foods(
     if not keyword:
         return {"page": page, "total_pages": 0, "foods": []}
 
-    try:
-        endpoint = '/api/v1/foods/search'
-        params: Dict[str, Any] = {
-            'q': keyword,
-            'page': page,
-        }
+    # 记录起始账号索引，避免无限循环
+    with _current_account_index_lock:
+        start_account_index = _current_account_index
+        max_attempts = len(BOOHEE_ACCOUNTS) if BOOHEE_ACCOUNTS else 1
+    
+    for attempt in range(max_attempts):
+        try:
+            endpoint = '/api/v1/foods/search'
+            params: Dict[str, Any] = {
+                'q': keyword,
+                'page': page,
+            }
 
-        result = await _call_boohee_api(endpoint, params, method='GET')
+            # 使用当前账号索引调用API（线程安全获取）
+            with _current_account_index_lock:
+                current_index = _current_account_index
+            result = await _call_boohee_api(endpoint, params, method='GET', account_index=current_index)
 
-        if not result:
-            return {"page": page, "total_pages": 0, "foods": []}
+            if not result:
+                # API调用失败，尝试下一个账号
+                _switch_to_next_account()
+                continue
 
-        foods_data = []
-        for boohee_food in result.get('foods', []):
-            converted = await _convert_boohee_search_food(
-                boohee_food,
-                fetch_full_nutrition=include_full_nutrition,
-            )
-            foods_data.append(converted)
+            # 转换数据格式
+            foods_data = []
+            for boohee_food in result.get('foods', []):
+                converted = await _convert_boohee_search_food(
+                    boohee_food,
+                    fetch_full_nutrition=include_full_nutrition,
+                )
+                foods_data.append(converted)
+            
+            # 检查是否达到限制（在转换后检查）
+            if _is_account_limit_reached(result, foods_data):
+                # 达到限制，切换到下一个账号
+                _clear_token_cache(current_index)
+                _switch_to_next_account()
+                
+                # 如果已经尝试了所有账号，返回空结果
+                if attempt == max_attempts - 1:
+                    return {"page": page, "total_pages": 0, "foods": []}
+                
+                # 继续尝试下一个账号
+                continue
 
-        return {
-            "page": result.get('page', page),
-            "total_pages": result.get('total_pages', 0),
-            "foods": foods_data,
-        }
+            return {
+                "page": result.get('page', page),
+                "total_pages": result.get('total_pages', 0),
+                "foods": foods_data,
+            }
 
-    except Exception:
-        return {"page": page, "total_pages": 0, "foods": []}
+        except Exception:
+            # 发生异常，尝试下一个账号
+            _switch_to_next_account()
+            if attempt == max_attempts - 1:
+                return {"page": page, "total_pages": 0, "foods": []}
+    
+    # 所有账号都尝试失败，返回空结果
+    return {"page": page, "total_pages": 0, "foods": []}
 
 
 async def get_food_by_boohee_id(
