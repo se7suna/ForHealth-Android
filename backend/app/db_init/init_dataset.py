@@ -256,11 +256,6 @@ async def initialize_sports_table():
     app_dir = Path(__file__).parent  # backend/app
     backend_dir = app_dir.parent  # backend/
     dataset_path = backend_dir / "db_init" / "initial_sports_dataset.json"
-
-    for sport in settings.DefaultSports:
-        existing = await db["sports"].find_one({"sport_type": sport["sport_type"],"email": settings.DEFAULT_SPORT_EMAIL})
-        if not existing:
-            await db["sports"].insert_one(sport)
     
     if not dataset_path.exists():
         print("""⚠ 警告: 运动数据集文件不存在，跳过初始化运动表""")
