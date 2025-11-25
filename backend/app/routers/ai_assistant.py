@@ -1,7 +1,8 @@
 from __future__ import annotations
 
-from fastapi import APIRouter, UploadFile, File, Depends, HTTPException, status, Query
-from datetime import date
+from typing import Optional
+from fastapi import APIRouter, UploadFile, File, Depends, HTTPException, status, Query, Form
+from datetime import date, datetime
 
 from app.routers.auth import get_current_user
 from app.schemas.ai_assistant import (
@@ -10,10 +11,8 @@ from app.schemas.ai_assistant import (
     FoodRecognitionConfirmResponse,
     MealPlanRequest,
     MealPlanResponse,
-    NutritionQuestionRequest,
-    NutritionQuestionResponse,
-    SportsQuestionRequest,
-    SportsQuestionResponse,
+    QuestionRequest,
+    QuestionResponse,
     ReminderSettingsRequest,
     ReminderSettingsResponse,
     NotificationListResponse,
@@ -27,81 +26,99 @@ router = APIRouter(prefix="/ai", tags=["AI 助手"])
 
 
 @router.post(
-    "/food/recognize-image",
-    response_model=FoodImageRecognitionResponse,
-    summary="拍照识别食物",
-    description="上传一张食物照片，调用多模态大模型进行识别。若本地数据库中存在匹配食物，则优先使用数据库的营养信息。",
-)
-async def recognize_food_from_image(
-    file: UploadFile = File(..., description="食物图片文件"),
-    current_user: str = Depends(get_current_user),
-) -> FoodImageRecognitionResponse:
-    """
-    拍照识别食物：
-
-    - 输入：前端通过 multipart/form-data 上传图片文件字段 `file`；
-    - 输出：识别到的食物列表及汇总营养信息。
-    """
-    try:
-        return await ai_assistant_service.recognize_food_image(file, current_user)
-    except HTTPException:
-        # 透传业务异常
-        raise
-    except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"食物图片识别失败：{str(e)}",
-        )
-
-
-@router.post(
-    "/food/confirm-recognition",
+    "/food/recognize",
     response_model=FoodRecognitionConfirmResponse,
-    summary="处理AI识别结果，确保食物存在于本地数据库",
+    summary="拍照识别食物并自动处理",
+    description="上传一张食物照片，调用多模态大模型进行识别，并自动处理识别结果（创建/匹配食物）。若本地数据库中存在匹配食物，则优先使用数据库的营养信息。",
 )
-async def confirm_food_recognition(
-    payload: FoodRecognitionConfirmRequest,
+async def recognize_and_process_food(
+    file: UploadFile = File(..., description="食物图片文件"),
+    meal_type: Optional[str] = Form(None, description="餐次类型（可选：早餐、午餐、晚餐、加餐）"),
+    notes: Optional[str] = Form(None, description="备注（可选）"),
+    recorded_at: Optional[str] = Form(None, description="摄入时间（可选，ISO格式，如：2025-11-03T12:30:00）"),
     current_user: str = Depends(get_current_user),
 ) -> FoodRecognitionConfirmResponse:
     """
-    处理AI识别结果，确保食物存在于本地数据库。
+    拍照识别食物并自动处理识别结果（合并了识别和确认功能）。
     
-    功能：
-    1. 对于有 food_id 的项，验证 food_id 是否存在
-    2. 对于没有 food_id 的项，根据 AI 识别结果自动创建本地食物
+    **功能**：
+    1. 上传图片并调用AI识别食物
+    2. 自动处理识别结果（创建/匹配本地食物）
     3. 返回处理后的食物信息（包含 food_id 和 serving_amount 建议）
+    4. 识别完成后自动删除临时图片
+    
+    **输入**（multipart/form-data）：
+    - **file**: 食物图片文件（必填）
+    - **meal_type**: 餐次类型（可选：早餐、午餐、晚餐、加餐）
+    - **notes**: 备注（可选）
+    - **recorded_at**: 摄入时间（可选，ISO格式）
+    
+    **输出**：
+    - **processed_foods**: 处理后的食物信息列表（包含 food_id 和 serving_amount）
+    - **total_foods**: 成功处理的食物数量
     
     **重要**：此接口不创建饮食记录。前端需要：
     1. 调用此接口获取处理后的食物信息（包含 food_id）
     2. 然后调用 `POST /api/food/record` 创建饮食记录
     
-    示例流程：
+    **示例流程**：
     ```python
-    # 1. 调用此接口处理识别结果
-    confirm_response = await client.post("/api/ai/food/confirm-recognition", json=payload)
-    processed_foods = confirm_response.json()["processed_foods"]
+    # 1. 上传图片并识别处理
+    with open("food.jpg", "rb") as f:
+        response = await client.post(
+            "/api/ai/food/recognize",
+            files={"file": f},
+            data={
+                "meal_type": "午餐",
+                "notes": "AI识别",
+                "recorded_at": "2025-11-03T12:30:00"
+            }
+        )
+    processed_foods = response.json()["processed_foods"]
     
     # 2. 对每个处理后的食物，调用创建记录接口
     for food in processed_foods:
         record_payload = {
             "food_id": food["food_id"],
             "serving_amount": food["serving_amount"],
-            "recorded_at": payload.recorded_at,
-            "meal_type": payload.meal_type,
-            "notes": payload.notes,
+            "recorded_at": "2025-11-03T12:30:00",
+            "meal_type": "午餐",
+            "notes": "AI识别",
             "source": "local"
         }
         await client.post("/api/food/record", json=record_payload)
     ```
     """
+    # 解析 recorded_at（如果提供）
+    parsed_recorded_at = None
+    if recorded_at:
+        try:
+            parsed_recorded_at = datetime.fromisoformat(recorded_at.replace("Z", "+00:00"))
+        except Exception:
+            # 如果解析失败，忽略该参数
+            pass
+    
+    # 验证 meal_type（如果提供）
+    if meal_type and meal_type not in ["早餐", "午餐", "晚餐", "加餐", "breakfast", "lunch", "dinner", "snack"]:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="餐次类型必须是：早餐、午餐、晚餐、加餐 之一",
+        )
+    
     try:
-        return await ai_assistant_service.confirm_food_recognition(current_user, payload)
+        return await ai_assistant_service.recognize_and_process_food_image(
+            file=file,
+            user_email=current_user,
+            meal_type=meal_type,
+            notes=notes,
+            recorded_at=parsed_recorded_at,
+        )
     except HTTPException:
         raise
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"确认识别结果失败：{str(e)}",
+            detail=f"食物图片识别处理失败：{str(e)}",
         )
 
 
@@ -129,63 +146,62 @@ async def generate_meal_plan(
 
 
 @router.post(
-    "/nutrition/ask",
-    response_model=NutritionQuestionResponse,
-    summary="营养知识问答",
+    "/ask/{question_type}",
+    response_model=QuestionResponse,
+    summary="知识问答（统一接口）",
+    description="统一的问答接口，支持营养和运动知识问答。",
 )
-async def ask_nutrition_question(
-    payload: NutritionQuestionRequest,
+async def ask_question(
+    question_type: str,
+    payload: QuestionRequest,
     current_user: str = Depends(get_current_user),
-) -> NutritionQuestionResponse:
+) -> QuestionResponse:
     """
-    回答用户关于营养知识的问题。
+    回答用户关于健康知识的问题（支持营养和运动）。
     
-    使用专业 prompt 引导大模型参考营养学知识回答，并自动过滤敏感信息。
+    **问题类型（question_type）**：
+    - `nutrition`：营养知识问答
+    - `sports`：运动知识问答
     
     **上下文信息（context）**：
     - `context` 参数为可选项，如果未提供，系统会自动从用户档案中读取相关信息（如体重、活动水平、健康目标等）
     - 如果提供了 `context`，则优先使用请求中的值，用于临时覆盖用户档案中的信息
     - 支持的 context 字段：`user_goal`（用户目标）、`activity_level`（活动水平）、`weight`（体重）、`height`（身高）、`age`（年龄）
+    
+    **示例**：
+    ```python
+    # 营养知识问答
+    POST /api/ai/ask/nutrition
+    {
+        "question": "蛋白质补充的最佳时间是什么时候？",
+        "context": {"user_goal": "增肌"}
+    }
+    
+    # 运动知识问答
+    POST /api/ai/ask/sports
+    {
+        "question": "如何制定一个有效的减脂运动计划？",
+        "context": {"activity_level": "moderately_active"}
+    }
+    ```
     """
+    if question_type not in ["nutrition", "sports"]:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"不支持的问题类型: {question_type}，支持的类型：nutrition（营养）、sports（运动）",
+        )
+    
     try:
-        return await ai_assistant_service.answer_nutrition_question(current_user, payload)
+        return await ai_assistant_service.answer_question(current_user, payload, question_type)
     except HTTPException:
         raise
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"营养知识问答失败：{str(e)}",
+            detail=f"知识问答失败：{str(e)}",
         )
 
 
-@router.post(
-    "/sports/ask",
-    response_model=SportsQuestionResponse,
-    summary="运动知识问答",
-)
-async def ask_sports_question(
-    payload: SportsQuestionRequest,
-    current_user: str = Depends(get_current_user),
-) -> SportsQuestionResponse:
-    """
-    回答用户关于运动知识的问题。
-    
-    使用专业 prompt 引导大模型参考运动科学知识回答，并自动过滤敏感信息。
-    
-    **上下文信息（context）**：
-    - `context` 参数为可选项，如果未提供，系统会自动从用户档案中读取相关信息（如体重、身高、活动水平、健康目标等）
-    - 如果提供了 `context`，则优先使用请求中的值，用于临时覆盖用户档案中的信息
-    - 支持的 context 字段：`user_goal`（用户目标）、`activity_level`（活动水平）、`weight`（体重）、`height`（身高）、`age`（年龄）
-    """
-    try:
-        return await ai_assistant_service.answer_sports_question(current_user, payload)
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"运动知识问答失败：{str(e)}",
-        )
 
 
 # ========== 智能提醒与反馈 ==========
