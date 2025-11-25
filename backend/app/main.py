@@ -15,7 +15,8 @@ from app.routers import auth, user, sports, food, recipe, visualization
 async def lifespan(app: FastAPI):
     """应用生命周期管理""" 
     # 启动时执行
-    print("🚀 启动 FastAPI 应用...")
+    # 注意：避免在 Windows GBK 控制台下使用 emoji，防止 UnicodeEncodeError
+    print("启动 FastAPI 应用...")
     await connect_to_mongo()
 
     asyncio.create_task(run_initialization())# 异步初始化数据
@@ -23,7 +24,7 @@ async def lifespan(app: FastAPI):
     yield
 
     # 关闭时执行
-    print("👋 关闭 FastAPI 应用...")
+    print("关闭 FastAPI 应用...")
     await close_mongo_connection()
 
 async def run_initialization():
@@ -66,6 +67,7 @@ app.include_router(sports.router, prefix="/api")
 app.include_router(food.router, prefix="/api")
 app.include_router(recipe.router, prefix="/api")
 app.include_router(visualization.router)
+app.include_router(ai_assistant.router, prefix="/api")
 
 # 配置静态文件服务（用于访问上传的图片）
 # 基于 backend 目录构建上传路径，确保路径一致性

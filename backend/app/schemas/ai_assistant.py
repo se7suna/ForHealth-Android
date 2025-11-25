@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from pydantic import BaseModel, Field, field_validator, ConfigDict
 from typing import Optional, List, Dict, Any
 from datetime import datetime, date
@@ -603,12 +605,19 @@ class NotificationListResponse(BaseModel):
 
 
 class FeedbackDataResponse(BaseModel):
-    """反馈数据"""
-    date: date = Field(..., description="日期")
+    """反馈数据
+
+    注意：为避免 Pydantic v2 在生成 schema 时与嵌套模型产生兼容性问题，
+    这里将日期与营养摘要简化为基础类型，便于前后端解耦。
+    """
+
+    # 使用字符串表示日期（YYYY-MM-DD），避免 datetime.date 在某些环境下的 schema 问题
+    date: str = Field(..., description="日期（YYYY-MM-DD）")
     daily_calories: float = Field(..., ge=0, description="当日摄入热量")
     target_calories: float = Field(..., gt=0, description="目标热量")
     calories_progress: float = Field(..., ge=0, le=1, description="热量完成进度（0-1）")
-    nutrition_summary: NutritionData = Field(..., description="营养摘要")
+    # 使用 dict 表示营养摘要，结构与 NutritionData 一致，由调用方自行约定字段含义
+    nutrition_summary: Dict[str, Any] = Field(..., description="营养摘要（结构与 NutritionData 相同）")
     meal_count: int = Field(..., ge=0, description="进食次数")
     goal_status: str = Field(..., description="目标状态：on_track（正常）、exceeded（超标）、below（不足）")
     suggestions: List[str] = Field(..., description="个性化建议")
