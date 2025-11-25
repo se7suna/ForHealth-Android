@@ -18,11 +18,14 @@ BOOHEE_API_URL = "https://fc.boohee.com"
 
 # 由于每天单个账号有限制，所以需要使用多个应用ID和应用密钥
 # 备用id和key
-BOOHEE_APP_ID = "5c44cee028"
-BOOHEE_APP_KEY = "3d5c25cfe7b2a33ae104d0f36ecb07a1"
+#BOOHEE_APP_ID = "5c44cee028"
+#BOOHEE_APP_KEY = "3d5c25cfe7b2a33ae104d0f36ecb07a1"
 
 #BOOHEE_APP_ID = "07f4dffa0c"
 #BOOHEE_APP_KEY = "a30bfebe328e516ead6c96afea1cdd28"
+
+BOOHEE_APP_ID = "9438bda1f3"
+BOOHEE_APP_KEY = "57f1f2639c667e6ad572c82fd44fafc4"
 
 #建议从https://fc.boohee.com中注册，只需要填写手机号和验证码即可
 
