@@ -16,14 +16,17 @@ from app.schemas.ai_assistant import (
     ProcessedFoodItem,
     MealPlanRequest,
     MealPlanResponse,
+    QuestionRequest,
+    QuestionResponse,
     NutritionQuestionRequest,
     NutritionQuestionResponse,
     SportsQuestionRequest,
     SportsQuestionResponse,
 )
+from datetime import datetime
 from app.schemas.food import FoodRecordCreateRequest, FoodCreateRequest
 from app.services import food_service, user_service
-from app.utils.image_storage import save_food_image, get_image_url, validate_image_file
+from app.utils.image_storage import save_food_image, get_image_url, validate_image_file, delete_food_image
 from app.utils.qwen_vl_client import call_qwen_vl_with_local_file, call_qwen_vl_with_url
 from datetime import date, timedelta, datetime
 
@@ -122,7 +125,8 @@ async def recognize_food_image(
     2. 调用多模态模型识别食物列表；
     3. 对每个识别结果，优先到本地数据库中匹配（按名称模糊搜索），若有命中则使用数据库营养信息；
        否则使用 AI 返回的营养信息；
-    4. 汇总得到 FoodImageRecognitionResponse。
+    4. 汇总得到 FoodImageRecognitionResponse；
+    5. 识别完成后自动删除临时图片文件。
     """
     # 先做基础类型校验（非图片直接报错，给出友好信息）
     if not file.content_type or not file.content_type.startswith("image/"):
@@ -142,17 +146,26 @@ async def recognize_food_image(
     image_path = Path(settings.IMAGE_STORAGE_PATH) / relative_path
 
     try:
+        # 调用 AI 识别
         ai_foods = await _call_ai_for_foods(image_path)
     except Exception as e:
         # AI 调用失败时，仍然返回结构化响应
-        return FoodImageRecognitionResponse(
+        # 注意：图片会在函数末尾的 finally 块中删除
+        response = FoodImageRecognitionResponse(
             success=False,
             message=f"AI 识别失败：{str(e)}",
             recognized_foods=[],
             total_calories=0.0,
             total_nutrition=None,
-            image_url=image_url,
+            image_url=None,  # 识别失败时不返回图片URL，因为图片会被删除
         )
+        # 在返回前删除图片
+        try:
+            delete_food_image(relative_path)
+        except Exception as del_e:
+            # 删除失败不影响主流程，只记录错误
+            print(f"警告：删除临时识别图片失败 {relative_path}: {str(del_e)}")
+        return response
 
     recognized_items: List[RecognizedFoodItemResponse] = []
 
@@ -246,13 +259,255 @@ async def recognize_food_image(
         else "未能从图片中识别到明确的食物，请尝试更清晰的照片"
     )
 
-    return FoodImageRecognitionResponse(
+    # 构建响应
+    response = FoodImageRecognitionResponse(
         success=bool(recognized_items),
         message=message,
         recognized_foods=recognized_items,
         total_calories=total_calories,
         total_nutrition=total_nutrition,
-        image_url=image_url,
+        image_url=None,  # 识别完成后图片会被删除，不返回URL
+    )
+    
+    # 识别完成后自动删除临时图片
+    try:
+        delete_food_image(relative_path)
+    except Exception as e:
+        # 删除失败不影响主流程，只记录错误
+        print(f"警告：删除临时识别图片失败 {relative_path}: {str(e)}")
+    
+    return response
+
+
+async def recognize_and_process_food_image(
+    file: UploadFile,
+    user_email: str,
+    meal_type: Optional[str] = None,
+    notes: Optional[str] = None,
+    recorded_at: Optional[datetime] = None,
+) -> FoodRecognitionConfirmResponse:
+    """
+    上传图片、识别食物并自动处理识别结果（合并了识别和确认功能）。
+    
+    流程：
+    1. 验证并保存图片
+    2. 调用多模态模型识别食物列表
+    3. 自动处理识别结果（创建/匹配食物）
+    4. 返回处理后的食物信息（包含 food_id 和 serving_amount）
+    5. 识别完成后自动删除临时图片
+    
+    注意：此函数不创建饮食记录，前端需要调用 /api/food/record 来创建记录。
+    """
+    # 先做基础类型校验
+    if not file.content_type or not file.content_type.startswith("image/"):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="请上传图片文件（content-type 需要为 image/*）",
+        )
+
+    # 进一步使用项目统一的图片校验逻辑
+    validate_image_file(file)
+
+    # 保存图片，获得相对路径与 URL
+    relative_path = await save_food_image(file)
+    image_url = get_image_url(relative_path)
+
+    # 计算本地物理路径，用于传给 Qwen
+    image_path = Path(settings.IMAGE_STORAGE_PATH) / relative_path
+
+    try:
+        # 调用 AI 识别
+        ai_foods = await _call_ai_for_foods(image_path)
+    except Exception as e:
+        # AI 调用失败时，删除图片并返回错误响应
+        try:
+            delete_food_image(relative_path)
+        except Exception:
+            pass
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"AI 识别失败：{str(e)}",
+        )
+
+    # 将 AI 识别结果转换为 RecognizedFoodItemResponse 列表
+    recognized_items: List[RecognizedFoodItemResponse] = []
+
+    for item in ai_foods:
+        food_name = (item.get("food_name") or "").strip()
+        if not food_name:
+            continue
+
+        serving_size = float(item.get("serving_size") or 0.0)
+        serving_unit = item.get("serving_unit") or "克"
+        confidence = item.get("confidence")
+        category = item.get("category")
+
+        # 1. 先在本地数据库中按名称搜索，优先使用本地数据
+        local_candidates = await food_service.search_local_foods_only(
+            keyword=food_name,
+            user_email=user_email,
+            limit=1,
+        )
+
+        if local_candidates:
+            local = local_candidates[0]
+            nutrition = local.get("nutrition_per_serving") or {}
+            recognized_items.append(
+                RecognizedFoodItemResponse(
+                    food_name=local.get("name", food_name),
+                    serving_size=serving_size if serving_size > 0 else float(local.get("serving_size") or 100.0),
+                    serving_unit=serving_unit or (local.get("serving_unit") or "克"),
+                    nutrition_per_serving=nutrition,
+                    full_nutrition=local.get("full_nutrition"),
+                    confidence=float(confidence) if confidence is not None else 1.0,
+                    food_id=str(local.get("food_id") or local.get("_id")),
+                    source="database",
+                    category=local.get("category") or category,
+                    image_url=local.get("image_url"),
+                )
+            )
+        else:
+            # 2. 使用大模型返回的营养信息
+            nutrition_ai = _build_nutrition_from_ai(item.get("nutrition_per_serving") or {})
+            recognized_items.append(
+                RecognizedFoodItemResponse(
+                    food_name=food_name,
+                    serving_size=serving_size if serving_size > 0 else 100.0,
+                    serving_unit=serving_unit,
+                    nutrition_per_serving=nutrition_ai,
+                    full_nutrition=None,
+                    confidence=float(confidence) if confidence is not None else None,
+                    food_id=None,
+                    source="ai",
+                    category=category,
+                    image_url=None,
+                )
+            )
+
+    # 识别完成后自动删除临时图片
+    try:
+        delete_food_image(relative_path)
+    except Exception as e:
+        # 删除失败不影响主流程，只记录错误
+        print(f"警告：删除临时识别图片失败 {relative_path}: {str(e)}")
+
+    # 如果没有识别到任何食物，直接返回
+    if not recognized_items:
+        return FoodRecognitionConfirmResponse(
+            success=False,
+            message="未能从图片中识别到明确的食物，请尝试更清晰的照片",
+            processed_foods=[],
+            total_foods=0,
+        )
+
+    # 处理识别结果：创建/匹配食物
+    processed_foods: List[ProcessedFoodItem] = []
+
+    for item in recognized_items:
+        # 1. 优先尝试使用已有 food_id（如果存在且合法）
+        food = None
+        food_id: str | None = item.food_id
+        if food_id:
+            food = await food_service.get_food_by_id(food_id)
+
+        # 2. 如果没有 food_id 或查不到对应食物，则根据 AI 结果自动创建本地食物
+        if not food:
+            # 使用 AI 识别结果构建 FoodCreateRequest
+            try:
+                food_create = FoodCreateRequest(
+                    name=item.food_name,
+                    category=item.category,
+                    serving_size=item.serving_size if item.serving_size > 0 else 100.0,
+                    serving_unit=item.serving_unit or "克",
+                    nutrition_per_serving=item.nutrition_per_serving,
+                    full_nutrition=item.full_nutrition,
+                    brand=None,
+                    barcode=None,
+                    image=None,
+                )
+            except Exception:
+                # 如果构建失败，跳过该识别项
+                continue
+
+            try:
+                food = await food_service.create_food(food_create, creator_email=user_email)
+                food_id = food.get("_id")
+            except ValueError:
+                # 如果名称冲突等原因导致创建失败，尝试按名称在本地查找已有食物
+                local_candidates = await food_service.search_local_foods_only(
+                    keyword=item.food_name,
+                    user_email=user_email,
+                    limit=1,
+                )
+                if local_candidates:
+                    food = local_candidates[0]
+                    food_id = str(food.get("food_id") or food.get("_id"))
+                else:
+                    # 仍然失败则跳过该识别项
+                    continue
+
+        if not food or not food_id:
+            # 兜底：既没有找到食物也无法创建时跳过
+            continue
+
+        base_serving_size = float(food.get("serving_size") or 100.0)
+        if base_serving_size <= 0:
+            base_serving_size = 100.0
+
+        # 根据克数推导份数，例如：图片估计 150g，标准份量为 100g，则 serving_amount=1.5
+        serving_amount = item.serving_size / base_serving_size
+
+        # 获取营养信息（优先使用数据库中的，因为食物已经在数据库中了）
+        nutrition = food.get("nutrition_per_serving") or {}
+        if not nutrition:
+            # 如果数据库中没有，使用识别结果中的营养信息
+            nutrition = item.nutrition_per_serving
+        
+        # 确定 source（使用识别时的 source，因为这是识别阶段的来源）
+        source = item.source if item.source else ("database" if item.food_id else "ai")
+
+        # 转换营养信息为 NutritionData 对象
+        if isinstance(nutrition, NutritionData):
+            nutrition_data = nutrition
+        elif isinstance(nutrition, dict):
+            nutrition_data = NutritionData(**nutrition)
+        else:
+            # 兜底：创建默认营养数据
+            nutrition_data = NutritionData(
+                calories=0.0,
+                protein=0.0,
+                carbohydrates=0.0,
+                fat=0.0,
+                fiber=None,
+                sugar=None,
+                sodium=None,
+            )
+
+        # 保存处理后的食物信息，供前端调用 /api/food/record 创建记录
+        processed_foods.append(
+            ProcessedFoodItem(
+                food_id=food_id,
+                food_name=item.food_name,
+                serving_amount=serving_amount,
+                serving_size=item.serving_size,
+                serving_unit=item.serving_unit,
+                nutrition_per_serving=nutrition_data,
+                source=source,
+            )
+        )
+
+    success = len(processed_foods) > 0
+    message = (
+        f"成功识别并处理 {len(processed_foods)} 种食物，请调用 /api/food/record 创建饮食记录"
+        if success
+        else "未能处理任何识别项（可能所有识别项都无法创建或匹配到食物）"
+    )
+
+    return FoodRecognitionConfirmResponse(
+        success=success,
+        message=message,
+        processed_foods=processed_foods,
+        total_foods=len(processed_foods),
     )
 
 
@@ -326,6 +581,32 @@ async def confirm_food_recognition(
         # 根据克数推导份数，例如：图片估计 150g，标准份量为 100g，则 serving_amount=1.5
         serving_amount = item.serving_size / base_serving_size
 
+        # 获取营养信息（优先使用数据库中的，因为食物已经在数据库中了）
+        nutrition = food.get("nutrition_per_serving") or {}
+        if not nutrition:
+            # 如果数据库中没有，使用识别结果中的营养信息
+            nutrition = item.nutrition_per_serving
+        
+        # 确定 source（使用识别时的 source，因为这是识别阶段的来源）
+        source = item.source if item.source else ("database" if item.food_id else "ai")
+
+        # 转换营养信息为 NutritionData 对象
+        if isinstance(nutrition, NutritionData):
+            nutrition_data = nutrition
+        elif isinstance(nutrition, dict):
+            nutrition_data = NutritionData(**nutrition)
+        else:
+            # 兜底：创建默认营养数据
+            nutrition_data = NutritionData(
+                calories=0.0,
+                protein=0.0,
+                carbohydrates=0.0,
+                fat=0.0,
+                fiber=None,
+                sugar=None,
+                sodium=None,
+            )
+
         # 保存处理后的食物信息，供前端调用 /api/food/record 创建记录
         processed_foods.append(
             ProcessedFoodItem(
@@ -334,6 +615,8 @@ async def confirm_food_recognition(
                 serving_amount=serving_amount,
                 serving_size=item.serving_size,
                 serving_unit=item.serving_unit,
+                nutrition_per_serving=nutrition_data,
+                source=source,
             )
         )
 
@@ -478,10 +761,34 @@ async def generate_meal_plan(
         )
 
 
-async def answer_nutrition_question(
+async def answer_question(
     user_email: str,
-    payload: NutritionQuestionRequest,
-) -> NutritionQuestionResponse:
+    payload: QuestionRequest,
+    question_type: str,
+) -> QuestionResponse:
+    """
+    统一的问答接口，支持营养和运动知识问答。
+    
+    Args:
+        user_email: 用户邮箱
+        payload: 问答请求
+        question_type: 问题类型，"nutrition"（营养）或 "sports"（运动）
+    
+    Returns:
+        问答响应
+    """
+    if question_type == "nutrition":
+        return await _answer_nutrition_question_internal(user_email, payload)
+    elif question_type == "sports":
+        return await _answer_sports_question_internal(user_email, payload)
+    else:
+        raise ValueError(f"不支持的问题类型: {question_type}，支持的类型：nutrition, sports")
+
+
+async def _answer_nutrition_question_internal(
+    user_email: str,
+    payload: QuestionRequest,
+) -> QuestionResponse:
     """
     回答用户关于营养知识的问题。
     
@@ -577,7 +884,7 @@ async def answer_nutrition_question(
         related_topics = _extract_related_topics(filtered_answer)
         sources = _extract_sources(filtered_answer)
         
-        return NutritionQuestionResponse(
+        return QuestionResponse(
             success=True,
             question=payload.question,
             answer=filtered_answer,
@@ -587,7 +894,7 @@ async def answer_nutrition_question(
         )
         
     except Exception as e:
-        return NutritionQuestionResponse(
+        return QuestionResponse(
             success=False,
             question=payload.question,
             answer=f"抱歉，无法回答您的问题：{str(e)}",
@@ -595,6 +902,19 @@ async def answer_nutrition_question(
             sources=None,
             confidence=None
         )
+
+
+async def answer_nutrition_question(
+    user_email: str,
+    payload: NutritionQuestionRequest,
+) -> NutritionQuestionResponse:
+    """
+    回答用户关于营养知识的问题（已废弃，请使用 answer_question）。
+    
+    保留此函数以保持向后兼容。
+    """
+    response = await _answer_nutrition_question_internal(user_email, payload)
+    return NutritionQuestionResponse(**response.model_dump())
 
 
 def _filter_sensitive_content(content: str) -> str:
@@ -687,10 +1007,10 @@ def _extract_sources(answer: str) -> List[str]:
     return mentioned_sources if mentioned_sources else default_sources
 
 
-async def answer_sports_question(
+async def _answer_sports_question_internal(
     user_email: str,
-    payload: SportsQuestionRequest,
-) -> SportsQuestionResponse:
+    payload: QuestionRequest,
+) -> QuestionResponse:
     """
     回答用户关于运动知识的问题。
     
@@ -786,7 +1106,7 @@ async def answer_sports_question(
         related_topics = _extract_sports_related_topics(filtered_answer)
         sources = _extract_sports_sources(filtered_answer)
         
-        return SportsQuestionResponse(
+        return QuestionResponse(
             success=True,
             question=payload.question,
             answer=filtered_answer,
@@ -796,7 +1116,7 @@ async def answer_sports_question(
         )
         
     except Exception as e:
-        return SportsQuestionResponse(
+        return QuestionResponse(
             success=False,
             question=payload.question,
             answer=f"抱歉，无法回答您的问题：{str(e)}",
@@ -804,6 +1124,19 @@ async def answer_sports_question(
             sources=None,
             confidence=None
         )
+
+
+async def answer_sports_question(
+    user_email: str,
+    payload: SportsQuestionRequest,
+) -> SportsQuestionResponse:
+    """
+    回答用户关于运动知识的问题（已废弃，请使用 answer_question）。
+    
+    保留此函数以保持向后兼容。
+    """
+    response = await _answer_sports_question_internal(user_email, payload)
+    return SportsQuestionResponse(**response.model_dump())
 
 
 def _filter_sensitive_sports_content(content: str) -> str:

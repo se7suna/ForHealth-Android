@@ -180,6 +180,8 @@ class ProcessedFoodItem(BaseModel):
     serving_amount: float = Field(..., ge=0, description="建议的食用份量数（基于识别结果计算）")
     serving_size: float = Field(..., ge=0, description="识别到的份量大小")
     serving_unit: str = Field(..., description="份量单位")
+    nutrition_per_serving: NutritionData = Field(..., description="每份基础营养数据")
+    source: str = Field(..., description="数据来源：ai（AI识别）或 database（数据库匹配）")
 
 
 class FoodRecognitionConfirmResponse(BaseModel):
@@ -200,14 +202,34 @@ class FoodRecognitionConfirmResponse(BaseModel):
                         "food_name": "苹果",
                         "serving_amount": 1.5,
                         "serving_size": 150,
-                        "serving_unit": "克"
+                        "serving_unit": "克",
+                        "nutrition_per_serving": {
+                            "calories": 81,
+                            "protein": 0.45,
+                            "carbohydrates": 20.25,
+                            "fat": 0.3,
+                            "fiber": 3.6,
+                            "sugar": 15.3,
+                            "sodium": 1.5
+                        },
+                        "source": "database"
                     },
                     {
                         "food_id": "64f1f0c2e13e5f7b12345679",
                         "food_name": "香蕉",
                         "serving_amount": 1.2,
                         "serving_size": 120,
-                        "serving_unit": "克"
+                        "serving_unit": "克",
+                        "nutrition_per_serving": {
+                            "calories": 105,
+                            "protein": 1.3,
+                            "carbohydrates": 27,
+                            "fat": 0.3,
+                            "fiber": 3.1,
+                            "sugar": 14.4,
+                            "sodium": 1
+                        },
+                        "source": "ai"
                     }
                 ],
                 "total_foods": 2
@@ -457,9 +479,9 @@ class MealPlanResponse(BaseModel):
         }
 
 
-# ========== 营养知识问答 ==========
-class NutritionQuestionRequest(BaseModel):
-    """营养知识问答请求"""
+# ========== 统一知识问答（营养和运动） ==========
+class QuestionRequest(BaseModel):
+    """知识问答请求（统一接口，支持营养和运动）"""
     question: str = Field(..., min_length=1, max_length=500, description="用户问题（自然语言）")
     context: Optional[Dict[str, Any]] = Field(
         None, 
@@ -480,13 +502,13 @@ class NutritionQuestionRequest(BaseModel):
     )
 
 
-class NutritionQuestionResponse(BaseModel):
-    """营养知识问答响应"""
+class QuestionResponse(BaseModel):
+    """知识问答响应（统一接口，支持营养和运动）"""
     success: bool = Field(..., description="是否回答成功")
     question: str = Field(..., description="用户问题")
     answer: str = Field(..., description="AI回答内容")
     related_topics: Optional[List[str]] = Field(None, description="相关话题建议")
-    sources: Optional[List[str]] = Field(None, description="参考来源（如：营养学指南、研究论文等）")
+    sources: Optional[List[str]] = Field(None, description="参考来源（如：营养学指南、运动科学指南、研究论文等）")
     confidence: Optional[float] = Field(None, ge=0, le=1, description="回答置信度（0-1）")
 
     class Config:
@@ -509,58 +531,25 @@ class NutritionQuestionResponse(BaseModel):
         }
 
 
-# ========== 运动知识问答 ==========
-class SportsQuestionRequest(BaseModel):
-    """运动知识问答请求"""
-    question: str = Field(..., min_length=1, max_length=500, description="用户问题（自然语言）")
-    context: Optional[Dict[str, Any]] = Field(
-        None, 
-        description="上下文信息（可选）。如果未提供，系统会自动从用户档案中读取相关信息（如体重、身高、活动水平、健康目标等）。如果提供，则优先使用请求中的值。支持的字段：user_goal（用户目标）、activity_level（活动水平）、weight（体重）、height（身高）、age（年龄）"
-    )
-
-    model_config = ConfigDict(
-        extra="forbid",
-        json_schema_extra={
-            "example": {
-                "question": "如何制定一个有效的减脂运动计划？",
-                "context": {
-                    "user_goal": "减脂",
-                    "activity_level": "moderately_active",
-                    "weight": 70,
-                    "height": 175
-                }
-            }
-        }
-    )
+# ========== 保留旧接口的 schema（向后兼容） ==========
+class NutritionQuestionRequest(QuestionRequest):
+    """营养知识问答请求（已废弃，请使用统一接口 /api/ai/ask/{question_type}）"""
+    pass
 
 
-class SportsQuestionResponse(BaseModel):
-    """运动知识问答响应"""
-    success: bool = Field(..., description="是否回答成功")
-    question: str = Field(..., description="用户问题")
-    answer: str = Field(..., description="AI回答内容")
-    related_topics: Optional[List[str]] = Field(None, description="相关话题建议")
-    sources: Optional[List[str]] = Field(None, description="参考来源（如：运动科学指南、研究论文等）")
-    confidence: Optional[float] = Field(None, ge=0, le=1, description="回答置信度（0-1）")
+class NutritionQuestionResponse(QuestionResponse):
+    """营养知识问答响应（已废弃，请使用统一接口 /api/ai/ask/{question_type}）"""
+    pass
 
-    class Config:
-        json_schema_extra = {
-            "example": {
-                "success": True,
-                "question": "如何制定一个有效的减脂运动计划？",
-                "answer": "制定有效的减脂运动计划需要考虑以下几个方面：\n\n1. **有氧运动**：建议每周进行150-300分钟的中等强度有氧运动，如快走、慢跑、游泳、骑行等。\n\n2. **力量训练**：每周进行2-3次力量训练，有助于增加肌肉量，提高基础代谢率。\n\n3. **运动频率**：建议每周至少运动3-5次，保持规律性。\n\n4. **循序渐进**：从低强度开始，逐步增加运动强度和时长。\n\n5. **结合饮食**：运动减脂需要配合合理的饮食控制，创造热量缺口。\n\n需要注意的是，运动计划应根据个人身体状况和目标制定，如有健康问题请咨询专业教练或医生。",
-                "related_topics": [
-                    "有氧运动计划",
-                    "力量训练基础",
-                    "运动与营养搭配"
-                ],
-                "sources": [
-                    "运动科学原理",
-                    "ACSM运动指南"
-                ],
-                "confidence": 0.9
-            }
-        }
+
+class SportsQuestionRequest(QuestionRequest):
+    """运动知识问答请求（已废弃，请使用统一接口 /api/ai/ask/{question_type}）"""
+    pass
+
+
+class SportsQuestionResponse(QuestionResponse):
+    """运动知识问答响应（已废弃，请使用统一接口 /api/ai/ask/{question_type}）"""
+    pass
 
 
 # ========== 智能提醒与反馈 ==========
