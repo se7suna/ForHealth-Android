@@ -173,24 +173,44 @@ class FoodRecognitionConfirmRequest(BaseModel):
     )
 
 
+class ProcessedFoodItem(BaseModel):
+    """处理后的食物信息"""
+    food_id: str = Field(..., description="食物ID（用于创建饮食记录）")
+    food_name: str = Field(..., description="食物名称")
+    serving_amount: float = Field(..., ge=0, description="建议的食用份量数（基于识别结果计算）")
+    serving_size: float = Field(..., ge=0, description="识别到的份量大小")
+    serving_unit: str = Field(..., description="份量单位")
+
+
 class FoodRecognitionConfirmResponse(BaseModel):
     """确认识别结果响应"""
-    success: bool = Field(..., description="是否成功添加")
+    success: bool = Field(..., description="是否成功处理")
     message: str = Field(..., description="响应消息")
-    created_records: List[str] = Field(..., description="创建的食物记录ID列表")
-    total_records: int = Field(..., ge=0, description="成功创建的记录数量")
+    processed_foods: List[ProcessedFoodItem] = Field(..., description="处理后的食物信息列表（包含 food_id 和 serving_amount 建议）")
+    total_foods: int = Field(..., ge=0, description="成功处理的食物数量")
 
     class Config:
         json_schema_extra = {
             "example": {
                 "success": True,
-                "message": "成功添加3条食物记录到饮食日志",
-                "created_records": [
-                    "64f1f0c2e13e5f7b12345678",
-                    "64f1f0c2e13e5f7b12345679",
-                    "64f1f0c2e13e5f7b12345680"
+                "message": "成功处理3种食物，请调用 /api/food/record 创建饮食记录",
+                "processed_foods": [
+                    {
+                        "food_id": "64f1f0c2e13e5f7b12345678",
+                        "food_name": "苹果",
+                        "serving_amount": 1.5,
+                        "serving_size": 150,
+                        "serving_unit": "克"
+                    },
+                    {
+                        "food_id": "64f1f0c2e13e5f7b12345679",
+                        "food_name": "香蕉",
+                        "serving_amount": 1.2,
+                        "serving_size": 120,
+                        "serving_unit": "克"
+                    }
                 ],
-                "total_records": 3
+                "total_foods": 2
             }
         }
 
