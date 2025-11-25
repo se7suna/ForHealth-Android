@@ -57,14 +57,42 @@ async def recognize_food_from_image(
 @router.post(
     "/food/confirm-recognition",
     response_model=FoodRecognitionConfirmResponse,
-    summary="确认识别结果并写入饮食日志",
+    summary="处理AI识别结果，确保食物存在于本地数据库",
 )
 async def confirm_food_recognition(
     payload: FoodRecognitionConfirmRequest,
     current_user: str = Depends(get_current_user),
 ) -> FoodRecognitionConfirmResponse:
     """
-    前端在用户确认 / 编辑识别结果后，调用该接口将食物记录写入饮食日志。
+    处理AI识别结果，确保食物存在于本地数据库。
+    
+    功能：
+    1. 对于有 food_id 的项，验证 food_id 是否存在
+    2. 对于没有 food_id 的项，根据 AI 识别结果自动创建本地食物
+    3. 返回处理后的食物信息（包含 food_id 和 serving_amount 建议）
+    
+    **重要**：此接口不创建饮食记录。前端需要：
+    1. 调用此接口获取处理后的食物信息（包含 food_id）
+    2. 然后调用 `POST /api/food/record` 创建饮食记录
+    
+    示例流程：
+    ```python
+    # 1. 调用此接口处理识别结果
+    confirm_response = await client.post("/api/ai/food/confirm-recognition", json=payload)
+    processed_foods = confirm_response.json()["processed_foods"]
+    
+    # 2. 对每个处理后的食物，调用创建记录接口
+    for food in processed_foods:
+        record_payload = {
+            "food_id": food["food_id"],
+            "serving_amount": food["serving_amount"],
+            "recorded_at": payload.recorded_at,
+            "meal_type": payload.meal_type,
+            "notes": payload.notes,
+            "source": "local"
+        }
+        await client.post("/api/food/record", json=record_payload)
+    ```
     """
     try:
         return await ai_assistant_service.confirm_food_recognition(current_user, payload)

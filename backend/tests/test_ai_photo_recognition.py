@@ -92,15 +92,16 @@ async def auth_client():
 @pytest.mark.asyncio
 async def test_ai_photo_pure_ai_flow_creates_record(auth_client: AsyncClient):
     """
-    测试：纯 AI 识别结果（无 food_id）也会自动创建本地食物并生成一条饮食记录。
+    测试：纯 AI 识别结果（无 food_id）会自动创建本地食物，然后通过 /api/food/record 创建记录。
 
     步骤：
     1. 构造一个仅包含 AI 结果的确认请求（source='ai'，food_id=None）；
-    2. 调用 /api/ai/food/confirm-recognition；
+    2. 调用 /api/ai/food/confirm-recognition 处理识别结果；
     3. 断言：
-       - 接口 success == True，total_records == 1；
-       - 返回的 created_records 非空；
-    4. 再调用 /api/food/record/list，确认记录确实写入（且带有 food_id）。
+       - 接口 success == True，total_foods == 1；
+       - 返回的 processed_foods 包含 food_id 和 serving_amount；
+    4. 调用 /api/food/record 创建饮食记录；
+    5. 验证记录确实被写入，并且带有 food_id。
     """
 
     recorded_at = datetime.now()
@@ -131,7 +132,7 @@ async def test_ai_photo_pure_ai_flow_creates_record(auth_client: AsyncClient):
         "notes": "AI 纯识别结果自动落地测试",
     }
 
-    # 1. 调用确认接口
+    # 1. 调用确认接口处理识别结果
     response = await auth_client.post(
         "/api/ai/food/confirm-recognition",
         json=confirm_payload,
@@ -141,11 +142,35 @@ async def test_ai_photo_pure_ai_flow_creates_record(auth_client: AsyncClient):
     data = response.json()
 
     assert data.get("success") is True
-    assert data.get("total_records") == 1
-    created_records = data.get("created_records") or []
-    assert len(created_records) == 1
+    assert data.get("total_foods") == 1
+    processed_foods = data.get("processed_foods") or []
+    assert len(processed_foods) == 1
+    
+    # 验证返回的食物信息
+    processed_food = processed_foods[0]
+    assert "food_id" in processed_food
+    assert processed_food["food_name"] == food_name
+    assert "serving_amount" in processed_food
+    assert processed_food["serving_amount"] > 0
 
-    # 2. 从饮食记录列表中确认这条记录确实被写入，并且带有 food_id
+    # 2. 调用 /api/food/record 创建饮食记录
+    record_payload = {
+        "food_id": processed_food["food_id"],
+        "serving_amount": processed_food["serving_amount"],
+        "recorded_at": recorded_at.isoformat(),
+        "meal_type": confirm_payload["meal_type"],
+        "notes": confirm_payload["notes"],
+        "source": "local",
+    }
+    
+    record_response = await auth_client.post(
+        "/api/food/record",
+        json=record_payload,
+    )
+    
+    assert record_response.status_code == 201, f"创建记录失败: {record_response.text}"
+
+    # 3. 从饮食记录列表中确认这条记录确实被写入，并且带有 food_id
     target_date = recorded_at.date().isoformat()
     list_resp = await auth_client.get(
         "/api/food/record/list",
@@ -169,6 +194,12 @@ async def test_ai_photo_pure_ai_flow_creates_record(auth_client: AsyncClient):
 
     # 至少有一条记录带有 food_id（说明已经落地到本地食物库并建立关联）
     assert any(r.get("food_id") for r in matched), "纯 AI 食物记录未关联 food_id"
+    
+    # 清理：删除创建的记录
+    for record in matched:
+        record_id = record.get("id")
+        if record_id:
+            await auth_client.delete(f"/api/food/record/{record_id}")
 
 
 @pytest.mark.asyncio
@@ -248,9 +279,14 @@ async def test_ai_photo_existing_food_creates_record(auth_client: AsyncClient):
         data = response.json()
 
         assert data.get("success") is True, f"确认失败: {data.get('message')}"
-        assert data.get("total_records") == 1
-        created_records = data.get("created_records") or []
-        assert len(created_records) == 1
+        assert data.get("total_foods") == 1
+        processed_foods = data.get("processed_foods") or []
+        assert len(processed_foods) == 1
+        
+        # 验证返回的食物信息
+        processed_food = processed_foods[0]
+        assert processed_food["food_id"] == existing_food_id, "应该使用已有food_id"
+        assert processed_food["food_name"] == food_name
 
         # 4. 验证不会重复创建食物：查询食物列表，确认只有一条该名称的食物
         search_response = await auth_client.get(
@@ -266,7 +302,24 @@ async def test_ai_photo_existing_food_creates_record(auth_client: AsyncClient):
             len(foods_with_same_name) == 1
         ), f"应该只有一条名为 {food_name} 的食物，但找到 {len(foods_with_same_name)} 条: {foods_with_same_name}"
 
-        # 5. 验证记录使用的是已有food_id
+        # 5. 调用 /api/food/record 创建饮食记录
+        record_payload = {
+            "food_id": processed_food["food_id"],
+            "serving_amount": processed_food["serving_amount"],
+            "recorded_at": recorded_at.isoformat(),
+            "meal_type": confirm_payload["meal_type"],
+            "notes": confirm_payload["notes"],
+            "source": "local",
+        }
+        
+        record_response = await auth_client.post(
+            "/api/food/record",
+            json=record_payload,
+        )
+        
+        assert record_response.status_code == 201, f"创建记录失败: {record_response.text}"
+
+        # 6. 验证记录使用的是已有food_id
         target_date = recorded_at.date().isoformat()
         list_resp = await auth_client.get(
             "/api/food/record/list",
@@ -392,11 +445,33 @@ async def test_ai_photo_existing_food_with_food_id_creates_record(auth_client: A
         data = response.json()
 
         assert data.get("success") is True, f"确认失败: {data.get('message')}"
-        assert data.get("total_records") == 1
-        created_records = data.get("created_records") or []
-        assert len(created_records) == 1
+        assert data.get("total_foods") == 1
+        processed_foods = data.get("processed_foods") or []
+        assert len(processed_foods) == 1
+        
+        # 验证返回的食物信息
+        processed_food = processed_foods[0]
+        assert processed_food["food_id"] == existing_food_id, "应该使用提供的food_id"
+        assert processed_food["food_name"] == food_name
 
-        # 4. 验证记录使用的是提供的food_id
+        # 4. 调用 /api/food/record 创建饮食记录
+        record_payload = {
+            "food_id": processed_food["food_id"],
+            "serving_amount": processed_food["serving_amount"],
+            "recorded_at": recorded_at.isoformat(),
+            "meal_type": confirm_payload["meal_type"],
+            "notes": confirm_payload["notes"],
+            "source": "local",
+        }
+        
+        record_response = await auth_client.post(
+            "/api/food/record",
+            json=record_payload,
+        )
+        
+        assert record_response.status_code == 201, f"创建记录失败: {record_response.text}"
+
+        # 5. 验证记录使用的是提供的food_id
         target_date = recorded_at.date().isoformat()
         list_resp = await auth_client.get(
             "/api/food/record/list",
@@ -421,7 +496,7 @@ async def test_ai_photo_existing_food_with_food_id_creates_record(auth_client: A
             record_food_id == existing_food_id
         ), f"记录应该使用food_id {existing_food_id}，但实际使用了 {record_food_id}"
 
-        # 5. 验证不会创建新食物（查询食物列表，确认只有一条）
+        # 6. 验证不会创建新食物（查询食物列表，确认只有一条）
         search_response = await auth_client.get(
             "/api/food/search-id",
             params={"keyword": food_name, "limit": 10},
@@ -555,9 +630,43 @@ async def test_ai_photo_mixed_foods_creates_records(auth_client: AsyncClient):
         data = response.json()
 
         assert data.get("success") is True, f"确认失败: {data.get('message')}"
-        assert data.get("total_records") == 2, f"应该创建2条记录，但实际创建了 {data.get('total_records')} 条"
+        assert data.get("total_foods") == 2, f"应该处理2种食物，但实际处理了 {data.get('total_foods')} 种"
+        processed_foods = data.get("processed_foods") or []
+        assert len(processed_foods) == 2
 
-        # 4. 验证记录
+        # 找到处理后的食物信息
+        existing_processed = next((f for f in processed_foods if f["food_name"] == existing_food_name), None)
+        new_processed = next((f for f in processed_foods if f["food_name"] == new_food_name), None)
+        
+        assert existing_processed is not None, "应该找到已存在食物的处理结果"
+        assert new_processed is not None, "应该找到新食物的处理结果"
+        
+        # 验证已存在食物使用已有food_id
+        assert existing_processed["food_id"] == existing_food_id, "已存在食物应该使用已有food_id"
+        
+        # 验证新食物创建了新food_id
+        assert new_processed["food_id"] != existing_food_id, "新食物应该有不同的food_id"
+        assert new_processed["food_id"], "新食物应该有food_id"
+
+        # 4. 调用 /api/food/record 创建饮食记录（为两个食物分别创建）
+        for processed_food in processed_foods:
+            record_payload = {
+                "food_id": processed_food["food_id"],
+                "serving_amount": processed_food["serving_amount"],
+                "recorded_at": recorded_at.isoformat(),
+                "meal_type": confirm_payload["meal_type"],
+                "notes": confirm_payload["notes"],
+                "source": "local",
+            }
+            
+            record_response = await auth_client.post(
+                "/api/food/record",
+                json=record_payload,
+            )
+            
+            assert record_response.status_code == 201, f"创建记录失败: {record_response.text}"
+
+        # 5. 验证记录
         target_date = recorded_at.date().isoformat()
         list_resp = await auth_client.get(
             "/api/food/record/list",

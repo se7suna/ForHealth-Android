@@ -13,6 +13,7 @@ from app.schemas.ai_assistant import (
     RecognizedFoodItemResponse,
     FoodRecognitionConfirmRequest,
     FoodRecognitionConfirmResponse,
+    ProcessedFoodItem,
     MealPlanRequest,
     MealPlanResponse,
     NutritionQuestionRequest,
@@ -260,14 +261,16 @@ async def confirm_food_recognition(
     payload: FoodRecognitionConfirmRequest,
 ) -> FoodRecognitionConfirmResponse:
     """
-    确认识别结果并将食物添加到饮食日志。
-
-    仅对带有 food_id 的项创建正式食物记录：
-    - 根据 food_id 查询本地食物，读取其标准 serving_size；
-    - 使用 recognized_food.serving_size / 标准份量 得到 serving_amount；
-    - 调用已有的 create_food_record 逻辑，保证与其它入口行为一致。
+    处理AI识别结果，确保食物存在于本地数据库。
+    
+    功能：
+    1. 对于有 food_id 的项，验证 food_id 是否存在
+    2. 对于没有 food_id 的项，根据 AI 识别结果自动创建本地食物
+    3. 返回处理后的食物信息（包含 food_id 和 serving_amount 建议）
+    
+    注意：此函数不创建饮食记录，前端需要调用 /api/food/record 来创建记录。
     """
-    created_ids: List[str] = []
+    processed_foods: List[ProcessedFoodItem] = []
 
     for item in payload.recognized_foods:
         # 1. 优先尝试使用已有 food_id（如果存在且合法）
@@ -323,30 +326,29 @@ async def confirm_food_recognition(
         # 根据克数推导份数，例如：图片估计 150g，标准份量为 100g，则 serving_amount=1.5
         serving_amount = item.serving_size / base_serving_size
 
-        record_req = FoodRecordCreateRequest(
-            food_id=food_id,
-            source="local",
-            serving_amount=serving_amount,
-            recorded_at=payload.recorded_at,
-            meal_type=payload.meal_type,
-            notes=payload.notes,
+        # 保存处理后的食物信息，供前端调用 /api/food/record 创建记录
+        processed_foods.append(
+            ProcessedFoodItem(
+                food_id=food_id,
+                food_name=item.food_name,
+                serving_amount=serving_amount,
+                serving_size=item.serving_size,
+                serving_unit=item.serving_unit,
+            )
         )
 
-        record = await food_service.create_food_record(user_email, record_req)
-        created_ids.append(record["_id"])
-
-    success = len(created_ids) > 0
+    success = len(processed_foods) > 0
     message = (
-        f"成功添加 {len(created_ids)} 条食物记录到饮食日志"
+        f"成功处理 {len(processed_foods)} 种食物，请调用 /api/food/record 创建饮食记录"
         if success
-        else "未能创建任何食物记录（可能所有识别项都缺少 food_id）"
+        else "未能处理任何识别项（可能所有识别项都无法创建或匹配到食物）"
     )
 
     return FoodRecognitionConfirmResponse(
         success=success,
         message=message,
-        created_records=created_ids,
-        total_records=len(created_ids),
+        processed_foods=processed_foods,
+        total_foods=len(processed_foods),
     )
 
 
