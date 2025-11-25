@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from pydantic import BaseModel, Field, field_validator, ConfigDict
+from pydantic import BaseModel, Field, field_validator, ConfigDict, ValidationInfo
 from typing import Optional, List, Dict, Any
 from datetime import datetime, date
 from app.models.food import NutritionData, FullNutritionData
@@ -237,8 +237,9 @@ class MealPlanRequest(BaseModel):
 
     @field_validator("plan_days")
     @classmethod
-    def validate_plan_days(cls, v, values):
-        plan_duration = values.data.get("plan_duration") if hasattr(values, "data") else None
+    def validate_plan_days(cls, v, info: ValidationInfo):
+        # Pydantic V2: 使用 ValidationInfo 获取同级字段数据
+        plan_duration = info.data.get("plan_duration")
         if plan_duration == "day" and v is None:
             raise ValueError("当计划时间为day时，必须指定plan_days")
         return v
@@ -440,7 +441,10 @@ class MealPlanResponse(BaseModel):
 class NutritionQuestionRequest(BaseModel):
     """营养知识问答请求"""
     question: str = Field(..., min_length=1, max_length=500, description="用户问题（自然语言）")
-    context: Optional[Dict[str, Any]] = Field(None, description="上下文信息（可选，如用户当前的健康数据）")
+    context: Optional[Dict[str, Any]] = Field(
+        None, 
+        description="上下文信息（可选）。如果未提供，系统会自动从用户档案中读取相关信息（如体重、活动水平、健康目标等）。如果提供，则优先使用请求中的值。支持的字段：user_goal（用户目标）、activity_level（活动水平）、weight（体重）、height（身高）、age（年龄）"
+    )
 
     model_config = ConfigDict(
         extra="forbid",
@@ -481,6 +485,60 @@ class NutritionQuestionResponse(BaseModel):
                     "运动营养学原理"
                 ],
                 "confidence": 0.95
+            }
+        }
+
+
+# ========== 运动知识问答 ==========
+class SportsQuestionRequest(BaseModel):
+    """运动知识问答请求"""
+    question: str = Field(..., min_length=1, max_length=500, description="用户问题（自然语言）")
+    context: Optional[Dict[str, Any]] = Field(
+        None, 
+        description="上下文信息（可选）。如果未提供，系统会自动从用户档案中读取相关信息（如体重、身高、活动水平、健康目标等）。如果提供，则优先使用请求中的值。支持的字段：user_goal（用户目标）、activity_level（活动水平）、weight（体重）、height（身高）、age（年龄）"
+    )
+
+    model_config = ConfigDict(
+        extra="forbid",
+        json_schema_extra={
+            "example": {
+                "question": "如何制定一个有效的减脂运动计划？",
+                "context": {
+                    "user_goal": "减脂",
+                    "activity_level": "moderately_active",
+                    "weight": 70,
+                    "height": 175
+                }
+            }
+        }
+    )
+
+
+class SportsQuestionResponse(BaseModel):
+    """运动知识问答响应"""
+    success: bool = Field(..., description="是否回答成功")
+    question: str = Field(..., description="用户问题")
+    answer: str = Field(..., description="AI回答内容")
+    related_topics: Optional[List[str]] = Field(None, description="相关话题建议")
+    sources: Optional[List[str]] = Field(None, description="参考来源（如：运动科学指南、研究论文等）")
+    confidence: Optional[float] = Field(None, ge=0, le=1, description="回答置信度（0-1）")
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "success": True,
+                "question": "如何制定一个有效的减脂运动计划？",
+                "answer": "制定有效的减脂运动计划需要考虑以下几个方面：\n\n1. **有氧运动**：建议每周进行150-300分钟的中等强度有氧运动，如快走、慢跑、游泳、骑行等。\n\n2. **力量训练**：每周进行2-3次力量训练，有助于增加肌肉量，提高基础代谢率。\n\n3. **运动频率**：建议每周至少运动3-5次，保持规律性。\n\n4. **循序渐进**：从低强度开始，逐步增加运动强度和时长。\n\n5. **结合饮食**：运动减脂需要配合合理的饮食控制，创造热量缺口。\n\n需要注意的是，运动计划应根据个人身体状况和目标制定，如有健康问题请咨询专业教练或医生。",
+                "related_topics": [
+                    "有氧运动计划",
+                    "力量训练基础",
+                    "运动与营养搭配"
+                ],
+                "sources": [
+                    "运动科学原理",
+                    "ACSM运动指南"
+                ],
+                "confidence": 0.9
             }
         }
 

@@ -119,6 +119,8 @@ async def get_profile(current_user: str = Depends(get_current_user)):
     - 活动水平
     - 健康目标
     - 计算结果（BMR、TDEE、每日卡路里目标）
+    - 食物偏好（喜欢的食物、不喜欢的食物、过敏原、饮食限制、口味偏好、烹饪技能）
+    - 预算信息（每日预算、是否考虑预算）
 
     注意：年龄是根据出生日期动态计算的
     """
@@ -158,6 +160,14 @@ async def update_profile(
     - **activity_level**: 活动水平
     - **health_goal_type**: 健康目标类型
     - **target_weight**: 目标体重
+    - **liked_foods**: 喜欢的食物列表
+    - **disliked_foods**: 不吃的食物列表
+    - **allergies**: 过敏食物列表
+    - **dietary_restrictions**: 饮食限制（如：素食、无麸质、低钠等）
+    - **preferred_tastes**: 偏好的口味（如：清淡、辛辣、甜味等）
+    - **cooking_skills**: 烹饪技能水平（如：初级、中级、高级）
+    - **budget_per_day**: 每日预算（元）
+    - **include_budget**: 是否在生成计划时考虑预算
     - **goal_period_weeks**: 目标周期
 
     如果修改了出生日期，系统会自动重新计算年龄

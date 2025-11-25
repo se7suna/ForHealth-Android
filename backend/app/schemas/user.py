@@ -1,5 +1,5 @@
 from pydantic import BaseModel, EmailStr, Field, validator
-from typing import Optional
+from typing import Optional, List
 from datetime import date
 from app.models.user import ActivityLevel, HealthGoalType, Gender
 
@@ -102,6 +102,18 @@ class UserProfileUpdate(BaseModel):
     health_goal_type: Optional[HealthGoalType] = None
     target_weight: Optional[float] = Field(None, ge=20, le=300)
     goal_period_weeks: Optional[int] = Field(None, ge=1, le=104)
+    
+    # 食物偏好
+    liked_foods: Optional[List[str]] = Field(None, description="喜欢的食物列表")
+    disliked_foods: Optional[List[str]] = Field(None, description="不吃的食物列表")
+    allergies: Optional[List[str]] = Field(None, description="过敏食物列表")
+    dietary_restrictions: Optional[List[str]] = Field(None, description="饮食限制（如：素食、无麸质、低钠等）")
+    preferred_tastes: Optional[List[str]] = Field(None, description="偏好的口味（如：清淡、辛辣、甜味等）")
+    cooking_skills: Optional[str] = Field(None, description="烹饪技能水平（如：初级、中级、高级）")
+    
+    # 预算信息
+    budget_per_day: Optional[float] = Field(None, gt=0, description="每日预算（元）")
+    include_budget: Optional[bool] = Field(None, description="是否在生成计划时考虑预算")
 
 
 class UserProfileResponse(BaseModel):
@@ -120,6 +132,18 @@ class UserProfileResponse(BaseModel):
     bmr: Optional[float] = None
     tdee: Optional[float] = None
     daily_calorie_goal: Optional[float] = None
+    
+    # 食物偏好
+    liked_foods: Optional[List[str]] = None
+    disliked_foods: Optional[List[str]] = None
+    allergies: Optional[List[str]] = None
+    dietary_restrictions: Optional[List[str]] = None
+    preferred_tastes: Optional[List[str]] = None
+    cooking_skills: Optional[str] = None
+    
+    # 预算信息
+    budget_per_day: Optional[float] = None
+    include_budget: bool = False
 
 
 # ========== 密码重置 ==========
