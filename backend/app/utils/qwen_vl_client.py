@@ -46,13 +46,14 @@ def _get_api_key() -> str:
 
 
 def call_qwen_vl_with_url(
-    image_url: str,
+    image_url: Optional[str],
     prompt: str,
     api_key: Optional[str] = None,
     model: str = "qwen-vl-plus",
 ) -> str:
     """
     使用图片 URL 调用 Qwen-VL 模型，返回模型文本回答。
+    image_url 可选，若为 None 则仅发送文本。
     """
     if api_key is None:
         api_key = _get_api_key()
@@ -62,15 +63,18 @@ def call_qwen_vl_with_url(
         base_url="https://dashscope.aliyuncs.com/compatible-mode/v1",
     )
 
+    # 构建 content 列表：如果有图片则包含图片，否则只包含文本
+    content_list = []
+    if image_url:
+        content_list.append({"type": "image_url", "image_url": {"url": image_url}})
+    content_list.append({"type": "text", "text": prompt})
+
     completion = client.chat.completions.create(
         model=model,
         messages=[
             {
                 "role": "user",
-                "content": [
-                    {"type": "image_url", "image_url": {"url": image_url}},
-                    {"type": "text", "text": prompt},
-                ],
+                "content": content_list,
             }
         ],
     )
