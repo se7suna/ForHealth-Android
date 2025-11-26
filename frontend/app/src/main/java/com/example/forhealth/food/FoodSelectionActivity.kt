@@ -64,16 +64,16 @@ class FoodSelectionActivity : AppCompatActivity() {
 
             mealType = intent.getStringExtra("meal_type") ?: "早餐"
             android.util.Log.d("FoodSelection", "onCreate: 餐次类型 = $mealType")
-            
+
             initViews()
             android.util.Log.d("FoodSelection", "onCreate: 视图初始化完成")
-            
+
             setupRecyclerView()
             android.util.Log.d("FoodSelection", "onCreate: RecyclerView设置完成")
-            
+
             setupSearch()
             android.util.Log.d("FoodSelection", "onCreate: 搜索设置完成")
-            
+
             setupButtons()
             android.util.Log.d("FoodSelection", "onCreate: 按钮设置完成")
 
@@ -82,7 +82,7 @@ class FoodSelectionActivity : AppCompatActivity() {
 
             loadCustomFoodsFromCache()
             android.util.Log.d("FoodSelection", "onCreate: 自定义食物加载完成")
-            
+
             loadCommonFoods()
             android.util.Log.d("FoodSelection", "onCreate: 开始加载食物")
         } catch (e: Exception) {
@@ -417,7 +417,7 @@ class FoodSelectionActivity : AppCompatActivity() {
         }
 
         showLoading(true)
-        
+
         lifecycleScope.launch {
             try {
                 val response = RetrofitClient.api.searchFoods(
@@ -459,39 +459,71 @@ class FoodSelectionActivity : AppCompatActivity() {
         }
     }
 
+    private val unitNames = arrayOf("克", "份", "碗", "盘")
+    private val unitGrams = arrayOf(1.0, 100.0, 200.0, 400.0)
+
     private fun showServingDialog(food: SimplifiedFoodSearchItem) {
         val dialog = android.app.AlertDialog.Builder(this)
         val view = layoutInflater.inflate(R.layout.dialog_serving_amount, null)
-        
+
         val tvFoodName = view.findViewById<TextView>(R.id.tvDialogFoodName)
         val etServingAmount = view.findViewById<EditText>(R.id.etServingAmount)
         val tvServingInfo = view.findViewById<TextView>(R.id.tvServingInfo)
-        
+        val spServingUnit = view.findViewById<Spinner>(R.id.spServingUnit)
+
         tvFoodName.text = food.name
-        tvServingInfo.text = "每份 ${food.weight.toInt()}${food.weightUnit} = ${food.nutrition.calories.toInt()}千卡"
         etServingAmount.setText("1.0")
-        
+
+        // 单位选择
+        val adapter = ArrayAdapter(
+            this,
+            android.R.layout.simple_spinner_item,
+            unitNames
+        )
+        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+        spServingUnit.adapter = adapter
+        spServingUnit.setSelection(1) // 默认“份”
+
+        // 显示参考份：接口提供的标准单位
+        tvServingInfo.text = "参考: ${food.weight.toInt()}${food.weightUnit} = ${food.nutrition.calories.toInt()} 千卡"
+
+        // 每克卡路里
+        val calPerGram = food.nutrition.calories / food.weight
+
         dialog.setView(view)
             .setTitle("设置份量")
             .setPositiveButton("确定") { _, _ ->
                 val amount = etServingAmount.text.toString().toDoubleOrNull() ?: 1.0
-                addFoodToSelection(food, amount)
+                val unitIndex = spServingUnit.selectedItemPosition
+
+                val grams = unitGrams[unitIndex] * amount // 总克数
+                val calories = calPerGram * grams        // 计算总热量
+
+                // 创建更新后的 food 数据
+                val updatedFood = food.copy(
+                    weight = grams,
+                    weightUnit = unitNames[unitIndex],
+                    nutrition = food.nutrition.copy(calories = calories)
+                )
+
+                addFoodToSelection(updatedFood, amount)
             }
             .setNegativeButton("取消", null)
             .show()
     }
 
+
     private fun addFoodToSelection(food: SimplifiedFoodSearchItem, servingAmount: Double) {
         val foodId = food.foodId ?: return
-        
+
         selectedFoods[foodId] = SelectedFoodItem(
             food = food,
             servingAmount = servingAmount
         )
-        
+
         foodAdapter.notifyDataSetChanged()
         updateCompleteButton()
-        
+
         Toast.makeText(
             this,
             "已添加 ${food.name} ${servingAmount}份",

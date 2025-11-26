@@ -5,6 +5,7 @@
     android:orientation="vertical"
     android:padding="16dp">
 
+    <!-- 食物名称 -->
     <TextView
         android:id="@+id/tvDialogFoodName"
         android:layout_width="match_parent"
@@ -14,8 +15,9 @@
         android:textColor="#333333"
         android:textStyle="bold"
         android:gravity="center"
-        android:layout_marginBottom="16dp"/>
+        android:layout_marginBottom="12dp"/>
 
+    <!-- 参考份量显示 -->
     <TextView
         android:id="@+id/tvServingInfo"
         android:layout_width="match_parent"
@@ -26,18 +28,20 @@
         android:gravity="center"
         android:layout_marginBottom="16dp"/>
 
+    <!-- 份量 + 单位选择 -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
-        android:gravity="center">
+        android:gravity="center_vertical">
 
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="份量："
             android:textSize="16sp"
-            android:textColor="#333333"/>
+            android:textColor="#333333"
+            android:layout_marginEnd="8dp"/>
 
         <EditText
             android:id="@+id/etServingAmount"
@@ -52,18 +56,19 @@
             android:hint="1.0"
             android:maxLines="1"/>
 
-        <TextView
-            android:layout_width="wrap_content"
+        <!-- 改为 Spinner -->
+        <Spinner
+            android:id="@+id/spServingUnit"
+            android:layout_width="40dp"
             android:layout_height="wrap_content"
-            android:text="份"
-            android:textSize="16sp"
-            android:textColor="#333333"/>
+            android:layout_marginStart="8dp"/>
     </LinearLayout>
 
+    <!-- 提示 -->
     <TextView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="提示：输入份量数量，例如 1.5 表示 1.5 份"
+        android:text="请输入数量，并选择单位，例如 1.5 份 / 碗"
         android:textSize="12sp"
         android:textColor="#999999"
         android:gravity="center"

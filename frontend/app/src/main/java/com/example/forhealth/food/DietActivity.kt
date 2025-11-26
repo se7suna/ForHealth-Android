@@ -6,6 +6,7 @@ import android.text.Editable
 import android.text.TextWatcher
 import android.view.View
 import android.widget.*
+import androidx.activity.OnBackPressedCallback
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
@@ -14,9 +15,7 @@ import com.example.forhealth.R
 import com.example.forhealth.model.SimplifiedFoodSearchItem
 import com.example.forhealth.network.RetrofitClient
 import com.example.forhealth.utils.PrefsHelper
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
+import kotlinx.coroutines.*
 import com.google.gson.Gson
 
 class DietActivity : AppCompatActivity() {
@@ -29,21 +28,32 @@ class DietActivity : AppCompatActivity() {
     private lateinit var btnSaveRecipe: Button
 
     private lateinit var foodAdapter: FoodSelectionAdapter
-    private val selectedFoods = mutableMapOf<String, Pair<SimplifiedFoodSearchItem, Double>>() // foodId -> (food, servingAmount)
+    private val selectedFoods = mutableMapOf<String, Pair<SimplifiedFoodSearchItem, Double>>()
     private var searchJob: Job? = null
+    private var requestJob: Job? = null
+
     private var commonFoods: List<SimplifiedFoodSearchItem> = emptyList()
     private val gson = Gson()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_food_selection) // 使用之前的布局文件
+        setContentView(R.layout.activity_diet)
 
-        initViews()
-        setupRecyclerView()
-        setupSearch()
-        setupButtons()
+        // 找到按钮
+        val btnBackToFood = findViewById<Button>(R.id.btnBackToFood)
+        val btnComplete = findViewById<Button>(R.id.btnComplete)
 
-        loadCommonFoods()
+        // 返回按钮点击事件，直接结束当前页面，回到 FoodSelectionActivity
+        btnBackToFood.setOnClickListener {
+            finish()
+        }
+
+        // 完成按钮点击事件，保持原功能，执行保存操作后再返回
+        btnComplete.setOnClickListener {
+            saveRecipe()  // 你的保存功能函数
+            finish()
+        }
+
     }
 
     private fun initViews() {
@@ -52,41 +62,51 @@ class DietActivity : AppCompatActivity() {
         rvFoods = findViewById(R.id.rvFoods)
         progressBar = findViewById(R.id.progressBar)
         tvEmpty = findViewById(R.id.tvEmpty)
-        btnSaveRecipe = findViewById(R.id.btnComplete)  // 使用 "完成" 按钮保存食谱
-
-        // 设置标题
+        btnSaveRecipe = findViewById(R.id.btnComplete)
         tvTitle.text = "创建食谱"
     }
 
     private fun setupRecyclerView() {
         foodAdapter = FoodSelectionAdapter(
             onAddClick = { food -> showServingDialog(food) },
-            selectedFoods = convertSelectedFoodsToAdapterFormat()  // 转换数据结构
+            selectedFoods = convertSelectedFoodsToAdapterFormat()
         )
-        rvFoods.apply {
-            layoutManager = LinearLayoutManager(this@DietActivity)
-            adapter = foodAdapter
-        }
+        rvFoods.layoutManager = LinearLayoutManager(this)
+        rvFoods.adapter = foodAdapter
     }
 
     private fun setupSearch() {
         etSearch.addTextChangedListener(object : TextWatcher {
-            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
-            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
             override fun afterTextChanged(s: Editable?) {
                 searchJob?.cancel()
                 searchJob = lifecycleScope.launch {
-                    delay(500) // 防抖
+                    delay(400)
                     searchFoods(s?.toString())
                 }
             }
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
         })
     }
 
     private fun setupButtons() {
-        btnSaveRecipe.setOnClickListener {
-            saveRecipe()
-        }
+        btnSaveRecipe.setOnClickListener { saveRecipe() }
+    }
+
+    private fun setupBackPressLogic() {
+        onBackPressedDispatcher.addCallback(this,
+            object : OnBackPressedCallback(true) {
+                override fun handleOnBackPressed() {
+                    cancelActiveRequests()
+                    finish()
+                }
+            })
+    }
+
+    private fun cancelActiveRequests() {
+        searchJob?.cancel()
+        requestJob?.cancel()
+        println("All network requests canceled due to BACK")
     }
 
     private fun loadCommonFoods() {
@@ -100,9 +120,10 @@ class DietActivity : AppCompatActivity() {
             return
         }
 
+        cancelActiveRequests()
         showLoading(true)
 
-        lifecycleScope.launch {
+        requestJob = lifecycleScope.launch {
             try {
                 val response = RetrofitClient.api.searchFoods(
                     token = "Bearer $token",
@@ -111,23 +132,26 @@ class DietActivity : AppCompatActivity() {
                     simplified = true
                 )
 
+                if (!isActive) return@launch
+                showLoading(false)
+
                 if (response.isSuccessful && response.body() != null) {
                     commonFoods = response.body()!!.foods
-                    if (commonFoods.isEmpty()) {
-                        showEmpty(true)
-                    } else {
+                    if (commonFoods.isEmpty()) showEmpty(true)
+                    else {
                         showEmpty(false)
                         foodAdapter.submitList(commonFoods)
                     }
                 } else {
-                    commonFoods = emptyList()
                     showEmpty(true)
                 }
+            } catch (_: CancellationException) {
+                // 这是正常情况：因为用户点击了返回或重新搜索
+                println("Request canceled normally")
             } catch (e: Exception) {
-                commonFoods = emptyList()
                 showEmpty(true)
             } finally {
-                showLoading(false)
+                if (isActive) showLoading(false)
             }
         }
     }
@@ -155,21 +179,14 @@ class DietActivity : AppCompatActivity() {
     }
 
     private fun addFoodToSelection(food: SimplifiedFoodSearchItem, servingAmount: Double) {
-        val foodId = food.foodId ?: return
-
-        // 将食物和份量添加到 selectedFoods 中
-        selectedFoods[foodId] = Pair(food, servingAmount)
-
+        selectedFoods[food.foodId ?: return] = Pair(food, servingAmount)
         foodAdapter.notifyDataSetChanged()
         updateSaveButton()
     }
 
     private fun updateSaveButton() {
-        btnSaveRecipe.text = if (selectedFoods.isEmpty()) {
-            "保存食谱"
-        } else {
-            "保存食谱 (${selectedFoods.size})"
-        }
+        btnSaveRecipe.text = if (selectedFoods.isEmpty()) "保存食谱"
+        else "保存食谱 (${selectedFoods.size})"
     }
 
     private fun saveRecipe() {
@@ -178,10 +195,7 @@ class DietActivity : AppCompatActivity() {
             return
         }
 
-        // 生成食谱的ID，例如食谱1、2、3等
         val recipeId = "食谱${System.currentTimeMillis() / 1000}"
-
-        // 保存食谱
         saveRecipeToDatabase(recipeId)
 
         Toast.makeText(this, "食谱已保存为：$recipeId", Toast.LENGTH_SHORT).show()
@@ -189,51 +203,50 @@ class DietActivity : AppCompatActivity() {
     }
 
     private fun saveRecipeToDatabase(recipeId: String) {
-        // 构建食谱，保存选择的食物及其份量
-        val recipeList = selectedFoods.map { entry ->
+        val recipeList = selectedFoods.map {
             mapOf(
-                "foodId" to entry.key,
-                "foodName" to entry.value.first.name,
-                "servingAmount" to entry.value.second
+                "foodId" to it.key,
+                "foodName" to it.value.first.name,
+                "servingAmount" to it.value.second
             )
         }
-
-        // 将食谱保存为 JSON 格式
         val recipeJson = gson.toJson(recipeList)
-
-        // 保存到 SharedPreferences 或数据库
-        val prefs = getSharedPreferences("recipes", Context.MODE_PRIVATE)
-        prefs.edit().putString(recipeId, recipeJson).apply()
+        getSharedPreferences("recipes", Context.MODE_PRIVATE)
+            .edit().putString(recipeId, recipeJson).apply()
     }
 
-    private fun convertSelectedFoodsToAdapterFormat(): MutableMap<String, FoodSelectionActivity.SelectedFoodItem> {
-        // 将 selectedFoods 转换为 FoodSelectionActivity.SelectedFoodItem 格式
-        return selectedFoods.mapValues { entry ->
-            FoodSelectionActivity.SelectedFoodItem(
-                food = entry.value.first,
-                servingAmount = entry.value.second
-            )
+    private fun convertSelectedFoodsToAdapterFormat() =
+        selectedFoods.mapValues {
+            FoodSelectionActivity.SelectedFoodItem(it.value.first, it.value.second)
         }.toMutableMap()
-    }
 
     private fun showLoading(show: Boolean) {
-        progressBar.visibility = if (show) View.VISIBLE else View.GONE
+        if (!isFinishing) {
+            progressBar.visibility = if (show) View.VISIBLE else View.GONE
+        }
     }
 
     private fun showEmpty(show: Boolean) {
-        tvEmpty.text = "暂无食物"
-        tvEmpty.visibility = if (show) View.VISIBLE else View.GONE
-        rvFoods.visibility = if (show) View.GONE else View.VISIBLE
+        if (!isFinishing) {
+            tvEmpty.visibility = if (show) View.VISIBLE else View.GONE
+            rvFoods.visibility = if (show) View.GONE else View.VISIBLE
+        }
     }
 
     private fun redirectToLogin() {
         Toast.makeText(this, "请先登录", Toast.LENGTH_SHORT).show()
-        val intent = android.content.Intent(this, com.example.forhealth.auth.LoginActivity::class.java)
-        intent.flags = android.content.Intent.FLAG_ACTIVITY_NEW_TASK or android.content.Intent.FLAG_ACTIVITY_CLEAR_TASK
+        val intent = android.content.Intent(
+            this,
+            com.example.forhealth.auth.LoginActivity::class.java
+        )
+        intent.flags = android.content.Intent.FLAG_ACTIVITY_NEW_TASK or
+                android.content.Intent.FLAG_ACTIVITY_CLEAR_TASK
         startActivity(intent)
         finish()
     }
+
+    override fun onDestroy() {
+        cancelActiveRequests()
+        super.onDestroy()
+    }
 }
-
-
-
