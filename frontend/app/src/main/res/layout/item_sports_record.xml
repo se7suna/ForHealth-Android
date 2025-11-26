@@ -21,7 +21,6 @@
             android:layout_width="60dp"
             android:layout_height="60dp"
             android:layout_marginEnd="12dp"
-            android:src="@drawable/ic_default_sport"
         android:scaleType="centerCrop"
         android:background="@drawable/circle_background"
         android:backgroundTint="#E3F2FD"/>
