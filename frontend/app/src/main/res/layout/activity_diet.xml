@@ -11,7 +11,7 @@
         android:id="@+id/tvTitle"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="11月17日晚餐"
+        android:text="食谱"
         android:textSize="18sp"
         android:textColor="#333333"
         android:textStyle="bold"
@@ -69,28 +69,6 @@
         android:paddingVertical="8dp"
         app:layout_constraintTop_toBottomOf="@id/searchCard">
 
-        <Button
-            android:id="@+id/btnPhotos"
-            android:layout_width="0dp"
-            android:layout_height="36dp"
-            android:layout_weight="1"
-            android:text="📷 拍照记录"
-            android:textSize="12sp"
-            android:textColor="@color/primary_green"
-            android:background="@drawable/button_outline_green"
-            android:layout_marginEnd="8dp"/>
-
-
-
-        <Button
-            android:id="@+id/btnScanBarcode"
-            android:layout_width="0dp"
-            android:layout_height="36dp"
-            android:layout_weight="1"
-            android:text="🔍 扫条形码"
-            android:textSize="12sp"
-            android:textColor="@color/primary_green"
-            android:background="@drawable/button_outline_green"/>
     </LinearLayout>
 
     <!-- 分类标签 -->
@@ -155,19 +133,6 @@
                     android:layout_marginStart="6dp"/>
             </LinearLayout>
 
-            <TextView
-                android:id="@+id/tabRecipeFoods"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="食谱"
-                android:textSize="14sp"
-                android:textColor="#666666"
-                android:background="@drawable/bg_category_tab_unselected"
-                android:paddingHorizontal="16dp"
-                android:paddingVertical="8dp"
-                android:layout_marginEnd="8dp"
-                android:clickable="true"
-                android:focusable="true"/>
 
         </LinearLayout>
     </HorizontalScrollView>
@@ -224,4 +189,3 @@
         app:layout_constraintBottom_toBottomOf="parent"/>
 
 </androidx.constraintlayout.widget.ConstraintLayout>
-

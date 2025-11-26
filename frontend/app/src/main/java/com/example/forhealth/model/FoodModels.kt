@@ -112,6 +112,7 @@ data class FoodRecord(
     @SerializedName("nutrition_data") val nutritionData: NutritionData,
     @SerializedName("recorded_at") val recordedAt: String,
     @SerializedName("meal_type") val mealType: String?,
+    @SerializedName("image_url") val imageUrl: String?,
     val notes: String?,
     @SerializedName("food_id") val foodId: String?,
     @SerializedName("created_at") val createdAt: String,

@@ -28,6 +28,8 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.*
+import android.content.Intent
+
 
 class FoodSelectionActivity : AppCompatActivity() {
 
@@ -150,13 +152,10 @@ class FoodSelectionActivity : AppCompatActivity() {
             createFoodRecords()
         }
 
-        findViewById<Button>(R.id.btnCopyRecord).setOnClickListener {
-            Toast.makeText(this, "复制记录功能待实现", Toast.LENGTH_SHORT).show()
+        findViewById<Button>(R.id.btnPhotos).setOnClickListener {
+            Toast.makeText(this, "拍照记录功能待实现", Toast.LENGTH_SHORT).show()
         }
 
-        findViewById<Button>(R.id.btnQuickAdd).setOnClickListener {
-            Toast.makeText(this, "快速记录功能待实现", Toast.LENGTH_SHORT).show()
-        }
 
         findViewById<Button>(R.id.btnScanBarcode).setOnClickListener {
             Toast.makeText(this, "扫条形码功能待实现", Toast.LENGTH_SHORT).show()
@@ -172,11 +171,10 @@ class FoodSelectionActivity : AppCompatActivity() {
         }
 
         findViewById<TextView>(R.id.tabRecipeFoods)?.setOnClickListener {
-            Toast.makeText(this, "食谱功能开发中", Toast.LENGTH_SHORT).show()
+            val intent = Intent(this, DietActivity::class.java)
+            startActivity(intent)//食谱功能
         }
-        findViewById<TextView>(R.id.tabFavoriteFoods)?.setOnClickListener {
-            Toast.makeText(this, "收藏功能开发中", Toast.LENGTH_SHORT).show()
-        }
+
 
         updateTabStyles()
     }

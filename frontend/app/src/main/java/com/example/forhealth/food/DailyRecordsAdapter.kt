@@ -96,9 +96,9 @@ class DailyRecordsAdapter(
             tvNutrition.text = "蛋白${protein}g 脂肪${fat}g 碳水${carbs}g"
 
             // 使用 Glide 加载食物图片
-            //Glide.with(itemView.context)
-             //   .load(record.simplifiedFood.imageUrl) // 使用 simplifiedFood.imageUrl 加载图片
-             //   .into(ivFoodImage) // 将图片加载到 ImageView 中
+            Glide.with(itemView.context)
+                .load(record.imageUrl)
+                 .into(ivFoodImage) // 将图片加载到 ImageView 中
 
             itemView.setOnLongClickListener {
                 onFoodLongClick(record)

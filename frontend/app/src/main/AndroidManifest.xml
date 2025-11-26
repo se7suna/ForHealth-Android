@@ -87,6 +87,12 @@
             android:exported="false"
             android:theme="@style/AppThemeWithActionBar"
             android:windowSoftInputMode="adjustResize" />
+        
+        <activity
+            android:name=".food.DietActivity"
+            android:exported="false"
+            android:theme="@style/AppThemeWithActionBar"
+            android:windowSoftInputMode="adjustResize" />
 
         <!-- 运动选择 -->
         <activity
