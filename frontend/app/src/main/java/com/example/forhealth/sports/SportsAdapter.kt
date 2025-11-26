@@ -4,6 +4,8 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Button
+import android.widget.ImageView
+import com.bumptech.glide.Glide
 import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
 import com.example.forhealth.R
@@ -33,6 +35,7 @@ class SportsAdapter(
     override fun getItemCount(): Int = sportsList.size
 
     inner class SportsViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
+        private val ivSportImage: ImageView = itemView.findViewById(R.id.ivSportImage)
         private val tvSportType: TextView = itemView.findViewById(R.id.tvSportType)
         private val tvSportDesc: TextView = itemView.findViewById(R.id.tvSportDesc)
         private val btnSelect: Button = itemView.findViewById(R.id.btnSelect)
@@ -52,6 +55,9 @@ class SportsAdapter(
             btnSelect.setOnClickListener {
                 onSelectClick(sport)
             }
+            Glide.with(itemView.context)
+                .load(sport.imageUrl)  // 请确保你的 SearchSportsResponse 有 imageUrl 字段
+                .into(ivSportImage)
         }
     }
 }

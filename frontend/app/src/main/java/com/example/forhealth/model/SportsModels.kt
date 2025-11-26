@@ -8,7 +8,8 @@ import com.google.gson.annotations.SerializedName
 data class SearchSportsResponse(
     @SerializedName("sport_type") val sportType: String?,
     val describe: String?,
-    @SerializedName("METs") val mets: Double?
+    @SerializedName("METs") val mets: Double?,
+    @SerializedName("image_url") val imageUrl: String?
 )
 
 /**
