@@ -106,6 +106,7 @@ async def test_initialize_sports_talbe_success(auth_client, sport_data, expected
     # 查找运动类型
     exist = False
     for sport in result:
+        print(sport)
         if sport.get("sport_name") == sport_data.get("sport_name"):
             exist = True
             # 判断字段是否存在
