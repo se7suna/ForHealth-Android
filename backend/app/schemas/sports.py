@@ -20,11 +20,13 @@ class CreateSportsRequest(BaseModel):
     sport_name: Optional[str] = None
     describe: Optional[str] = None
     METs: Optional[float] = Field(None, gt=0)
+
     # 在router中接受image_file
 
 # 更新自定义运动类型的请求
 class UpdateSportsRequest(BaseModel):
-    sport_name: Optional[str] = None
+    old_sport_name: Optional[str] = None
+    new_sport_name: Optional[str] = None
     describe: Optional[str] = None
     METs: Optional[float] = Field(None, gt=0)
     # 在router中接受image_file
@@ -34,6 +36,7 @@ class SearchSportsRequest(BaseModel):
     sport_name: Optional[str] = None
 
 class SearchSportsResponse(BaseModel):
+    sport_type: Optional[str] = None
     sport_name: Optional[str] = None
     describe: Optional[str] = None
     METs: Optional[float] = None

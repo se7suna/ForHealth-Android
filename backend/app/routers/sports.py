@@ -1,4 +1,5 @@
-from fastapi import APIRouter, HTTPException, status, Depends
+from fastapi import APIRouter, HTTPException, status, Depends,File,Form
+from typing import Optional
 from app.routers.auth import get_current_user
 from app.services import sports_service
 from fastapi import UploadFile
@@ -18,13 +19,30 @@ router = APIRouter(prefix="/sports", tags=["运动记录"])
 
 # 新建运动类型：自定义并写入表
 @router.post("/create-sport",response_model=SimpleSportsResponse)
-async def create_sports(create_request: CreateSportsRequest, image_file: UploadFile, current_user: str = Depends(get_current_user)):
+async def create_sports(sport_name: Optional[str] = Form(None),
+                        describe: Optional[str] = Form(None),
+                        METs: Optional[float] = Form(None),
+                        image_file: UploadFile = File(None), current_user: str = Depends(get_current_user)):
     """
     创建自定义运动类型
     - **sport_name**: 运动名称
     - **describe**: 运动描述
     - **METs**: 运动强度（必须大于0）
     """
+    if not sport_name or not describe or not METs:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="至少需要提供运动名称、描述或强度"
+        )
+    if METs<=0:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="运动强度必须大于0"
+        )
+    create_request=CreateSportsRequest(
+        sport_name=sport_name,
+        describe=describe,
+        METs=METs)
     result=await sports_service.create_sports(create_request,image_file,current_user)
 
     if result.inserted_id:
@@ -37,13 +55,29 @@ async def create_sports(create_request: CreateSportsRequest, image_file: UploadF
 
 # 更新自定义运动类型
 @router.post("/update-sport",response_model=SimpleSportsResponse)
-async def update_sports(update_request: UpdateSportsRequest, image_file: UploadFile, current_user: str = Depends(get_current_user)):
+async def update_sports(
+                        old_sport_name: Optional[str] = Form(None),
+                        new_sport_name: Optional[str] = Form(None),
+                        describe: Optional[str] = Form(None),
+                        METs: Optional[float] = Form(None),
+                        image_file: UploadFile = File(None), current_user: str = Depends(get_current_user)):
     """
     更新自定义运动类型
     - **sport_name**: 运动名称
     - **describe**: 运动描述
     - **METs**: 运动强度（必须大于0）
     """
+    if not old_sport_name or (not new_sport_name and not describe and not METs and not image_file):
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="至少需要提供旧运动名称以及改动信息"
+        )
+    update_request=UpdateSportsRequest(
+        old_sport_name=old_sport_name,
+        new_sport_name=new_sport_name,
+        describe=describe,
+        METs=METs)
+
     result = await sports_service.update_sports(update_request,image_file,current_user)
 
     if result:

@@ -41,21 +41,21 @@ async def auth_client():
 @pytest.mark.asyncio
 @pytest.mark.parametrize("sport_data,expected_status,expected_success", [
     # 正常情况
-    ({"sport_type": "自定义跑步", "describe": "户外跑步", "METs": 8.0}, 200, True),
+    ({"sport_name": "自定义跑步3", "describe": "户外跑步", "METs": 8.0}, 200, True),
     # 边界情况：缺少必填字段
-    #({"sport_type": "", "describe": "户外跑步", "METs": 8.0}, 422, False),
+    #({"sport_name": "", "describe": "户外跑步", "METs": 8.0}, 422, False),
     # 边界情况：METs为负数
-    #({"sport_type": "自定义游泳", "describe": "室内游泳", "METs": -5.0}, 422, False),
+    #({"sport_name": "自定义游泳1", "describe": "室内游泳", "METs": -5.0}, 422, False),
 ])
 async def test_create_sports(auth_client,sport_data, expected_status, expected_success):
     """测试创建自定义运动类型 - 正常情况和边界条件"""
     response = None
     try:
-        response = await auth_client.post("/api/sports/create-sport", json=sport_data)
+        response = await auth_client.post("/api/sports/create-sport", data=sport_data,files={})
         result = response.json()
         assert response.status_code == expected_status
         assert result["success"] == expected_success
     finally:
-        if response and result.get("success"):        # 完成测试后删除创建的运动类型
-            response = await auth_client.delete(f"/api/sports/delete-sport/{sport_data['sport_type']}")
+        if response and result["success"]:        # 完成测试后删除创建的运动类型
+            response = await auth_client.delete(f"/api/sports/delete-sport/{sport_data['sport_name']}")
             assert response.status_code == 200
