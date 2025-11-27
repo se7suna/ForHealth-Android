@@ -17,14 +17,17 @@ class RecipeListActivity : AppCompatActivity() {
     private lateinit var rvRecipes: RecyclerView
     private lateinit var tvEmpty: TextView
     private lateinit var adapter: RecipeAdapter
-
+    private lateinit var btnBack: Button
     private val gson = Gson()
     private var recipeMap = mutableMapOf<String, String>() // recipeId -> JSON
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_recipe_list)
-
+        btnBack = findViewById(R.id.btnBack)
+        btnBack.setOnClickListener {
+            finish()
+        }
         rvRecipes = findViewById(R.id.rvRecipes)
         tvEmpty = findViewById(R.id.tvEmpty)
 

@@ -64,6 +64,18 @@ data class SimplifiedFoodSearchItem(
     @SerializedName("image_url") val imageUrl: String?,
     val nutrition: SimplifiedNutritionData
 )
+data class CustomFoodForm(
+    val name: String,
+    val category: String?,
+    val brand: String?,
+    val servingSize: Double,
+    val servingUnit: String,
+    val calories: Double,
+    val protein: Double,
+    val carbohydrates: Double,
+    val fat: Double
+)
+
 
 /**
  * 简化的营养数据

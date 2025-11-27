@@ -15,10 +15,15 @@ import com.example.forhealth.R
 import com.example.forhealth.model.SimplifiedFoodSearchItem
 import com.example.forhealth.network.RetrofitClient
 import com.example.forhealth.utils.PrefsHelper
+import com.example.forhealth.model.CustomFoodForm
+import com.example.forhealth.model.FoodCreateRequest
+import com.example.forhealth.model.NutritionData
 import kotlinx.coroutines.*
 import com.google.gson.Gson
 import androidx.appcompat.app.AlertDialog
 import com.example.forhealth.model.SimplifiedNutritionData
+
+
 
 class DietActivity : AppCompatActivity() {
 
@@ -90,6 +95,148 @@ class DietActivity : AppCompatActivity() {
 
     private fun setupButtons() {
         btnSaveRecipe.setOnClickListener { saveRecipe() }
+        val btnAddCustomFood = findViewById<TextView>(R.id.tabCustomFoods)
+        btnAddCustomFood.setOnClickListener {
+            showCustomFoodDialog()
+        }
+    }
+
+    fun CustomFoodForm.toRequest(): FoodCreateRequest {
+        return FoodCreateRequest(
+            name = this.name,
+            category = this.category,
+            servingSize = this.servingSize,
+            servingUnit = this.servingUnit,
+            nutritionPerServing = NutritionData(
+                calories = this.calories,
+                protein = this.protein,
+                carbohydrates = this.carbohydrates,
+                fat = this.fat,
+                fiber = null,
+                sugar = null,
+                sodium = null
+            ),
+            brand = this.brand,
+            barcode = null,
+            imageUrl = null,
+            fullNutrition = null
+        )
+    }
+
+
+    // 弹窗输入自定义食物
+    private fun showCustomFoodDialog() {
+        val view = layoutInflater.inflate(R.layout.dialog_custom_food, null)
+
+        val nameInput = view.findViewById<EditText>(R.id.etCustomFoodName)
+        val categoryInput = view.findViewById<EditText>(R.id.etCustomFoodCategory)
+        val brandInput = view.findViewById<EditText>(R.id.etCustomFoodBrand)
+        val servingSizeInput = view.findViewById<EditText>(R.id.etCustomFoodServingSize)
+        val servingUnitInput = view.findViewById<EditText>(R.id.etCustomFoodServingUnit)
+        val caloriesInput = view.findViewById<EditText>(R.id.etCustomFoodCalories)
+        val proteinInput = view.findViewById<EditText>(R.id.etCustomFoodProtein)
+        val carbsInput = view.findViewById<EditText>(R.id.etCustomFoodCarbs)
+        val fatInput = view.findViewById<EditText>(R.id.etCustomFoodFat)
+
+        val dialog = AlertDialog.Builder(this)
+            .setTitle("添加自定义食物")
+            .setView(view)
+            .setNegativeButton("取消", null)
+            .setPositiveButton("保存", null)
+            .create()
+
+        dialog.setOnShowListener {
+            val saveBtn = dialog.getButton(AlertDialog.BUTTON_POSITIVE)
+            saveBtn.setOnClickListener {
+                val name = nameInput.text.toString().trim()
+                if (name.isEmpty()) {
+                    nameInput.error = "请输入名称"
+                    return@setOnClickListener
+                }
+
+                val servingSize = servingSizeInput.text.toString().toDoubleOrNull()
+                if (servingSize == null) {
+                    servingSizeInput.error = "格式错误"
+                    return@setOnClickListener
+                }
+
+                val calories = caloriesInput.text.toString().toDoubleOrNull()
+                if (calories == null) {
+                    caloriesInput.error = "格式错误"
+                    return@setOnClickListener
+                }
+
+                val form = CustomFoodForm(
+                    name = name,
+                    category = categoryInput.text.toString().ifBlank { null },
+                    brand = brandInput.text.toString().ifBlank { null },
+                    servingSize = servingSize,
+                    servingUnit = servingUnitInput.text.toString().ifBlank { "克" },
+                    calories = calories,
+                    protein = proteinInput.text.toString().toDoubleOrNull() ?: 0.0,
+                    carbohydrates = carbsInput.text.toString().toDoubleOrNull() ?: 0.0,
+                    fat = fatInput.text.toString().toDoubleOrNull() ?: 0.0
+                )
+
+                dialog.dismiss()
+                createCustomFood(form)
+            }
+        }
+
+        dialog.show()
+    }
+
+    // 调用接口创建自定义食物
+    private fun createCustomFood(form: CustomFoodForm) {
+        showLoading(true)
+
+        lifecycleScope.launch {
+            try {
+                val token = PrefsHelper.getToken(this@DietActivity)
+
+                val response = RetrofitClient.api.createFood(
+                    token = "Bearer $token",
+                    request = form.toRequest()
+                )
+
+                if (response.isSuccessful && response.body() != null) {
+                    val newFoodResponse = response.body()!!
+
+                    // 将接口返回 FoodResponse 转为 SimplifiedFoodSearchItem，方便 UI 使用
+                    val newFood = SimplifiedFoodSearchItem(
+                        source = newFoodResponse.source ?: "custom",
+                        foodId = newFoodResponse.id,
+                        booheeId = newFoodResponse.booheeId,
+                        code = newFoodResponse.booheeCode ?: "",
+                        name = newFoodResponse.name,
+                        weight = newFoodResponse.servingSize,
+                        weightUnit = newFoodResponse.servingUnit,
+                        brand = newFoodResponse.brand,
+                        imageUrl = newFoodResponse.imageUrl,
+                        nutrition = SimplifiedNutritionData(
+                            calories = newFoodResponse.nutritionPerServing.calories,
+                            protein = newFoodResponse.nutritionPerServing.protein,
+                            fat = newFoodResponse.nutritionPerServing.fat,
+                            carbohydrates = newFoodResponse.nutritionPerServing.carbohydrates,
+                            sugar = null,
+                            sodium = null
+                        )
+                    )
+
+                    // 加入当前列表最前面并刷新
+                    commonFoods = listOf(newFood) + commonFoods
+                    foodAdapter.submitList(commonFoods)
+
+                    Toast.makeText(this@DietActivity, "自定义食物已添加", Toast.LENGTH_SHORT).show()
+                } else {
+                    Toast.makeText(this@DietActivity, "创建失败：${response.code()}", Toast.LENGTH_SHORT).show()
+                }
+            } catch (e: Exception) {
+                Toast.makeText(this@DietActivity, "网络错误：${e.message}", Toast.LENGTH_SHORT).show()
+            } finally {
+                showLoading(false)
+            }
+        }
     }
 
     private fun setupBackPressLogic() {
@@ -294,6 +441,7 @@ class DietActivity : AppCompatActivity() {
             rvFoods.visibility = if (show) View.GONE else View.VISIBLE
         }
     }
+
 
     private fun redirectToLogin() {
         Toast.makeText(this, "请先登录", Toast.LENGTH_SHORT).show()
