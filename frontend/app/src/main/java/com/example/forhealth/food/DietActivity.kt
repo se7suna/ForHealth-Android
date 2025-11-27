@@ -17,6 +17,8 @@ import com.example.forhealth.network.RetrofitClient
 import com.example.forhealth.utils.PrefsHelper
 import kotlinx.coroutines.*
 import com.google.gson.Gson
+import androidx.appcompat.app.AlertDialog
+import com.example.forhealth.model.SimplifiedNutritionData
 
 class DietActivity : AppCompatActivity() {
 
@@ -39,22 +41,18 @@ class DietActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_diet)
 
-        // 找到按钮
-        val btnBackToFood = findViewById<Button>(R.id.btnBackToFood)
-        val btnComplete = findViewById<Button>(R.id.btnComplete)
+        initViews()
+        setupRecyclerView()
+        setupSearch()
+        setupButtons()
+        setupBackPressLogic(
 
-        // 返回按钮点击事件，直接结束当前页面，回到 FoodSelectionActivity
-        btnBackToFood.setOnClickListener {
-            finish()
-        }
+        )
 
-        // 完成按钮点击事件，保持原功能，执行保存操作后再返回
-        btnComplete.setOnClickListener {
-            saveRecipe()  // 你的保存功能函数
-            finish()
-        }
-
+        // 🚀 关键：加载假数据
+        loadCommonFoods()
     }
+
 
     private fun initViews() {
         tvTitle = findViewById(R.id.tvTitle)
@@ -65,6 +63,7 @@ class DietActivity : AppCompatActivity() {
         btnSaveRecipe = findViewById(R.id.btnComplete)
         tvTitle.text = "创建食谱"
     }
+
 
     private fun setupRecyclerView() {
         foodAdapter = FoodSelectionAdapter(
@@ -94,14 +93,12 @@ class DietActivity : AppCompatActivity() {
     }
 
     private fun setupBackPressLogic() {
-        onBackPressedDispatcher.addCallback(this,
-            object : OnBackPressedCallback(true) {
-                override fun handleOnBackPressed() {
-                    cancelActiveRequests()
-                    finish()
-                }
-            })
+        val backBtn = findViewById<Button>(R.id.btnBackToFood)
+        backBtn.setOnClickListener {
+            finish() // 返回上一个页面
+        }
     }
+
 
     private fun cancelActiveRequests() {
         searchJob?.cancel()
@@ -110,15 +107,57 @@ class DietActivity : AppCompatActivity() {
     }
 
     private fun loadCommonFoods() {
-        searchFoods("")
+        // 临时假数据（确保符合 SimplifiedFoodSearchItem 字段）
+        val testFoods = listOf(
+            SimplifiedFoodSearchItem(
+                source = "local",
+                foodId = "F001",
+                booheeId = null,
+                code = "LOCAL_APPLE",
+                name = "苹果",
+                weight = 100.0,
+                weightUnit = "克",
+                brand = "自然农庄",
+                imageUrl = null,
+                nutrition = SimplifiedNutritionData(
+                    calories = 52.0,
+                    protein = 0.3,
+                    fat = 0.2,
+                    carbohydrates = 14.0,
+                    sugar = 10.4,
+                    sodium = 1.0
+                )
+            ),
+            SimplifiedFoodSearchItem(
+                source = "local",
+                foodId = "F002",
+                booheeId = null,
+                code = "LOCAL_BREAD",
+                name = "全麦面包",
+                weight = 30.0,
+                weightUnit = "克",
+                brand = "家家麦",
+                imageUrl = null,
+                nutrition = SimplifiedNutritionData(
+                    calories = 79.0,
+                    protein = 4.0,
+                    fat = 1.0,
+                    carbohydrates = 14.0,
+                    sugar = 2.0,
+                    sodium = 130.0
+                )
+            )
+        )
+
+        commonFoods = testFoods
+        foodAdapter.submitList(commonFoods)
+        showEmpty(false)
     }
+
+
 
     private fun searchFoods(keyword: String?) {
         val token = PrefsHelper.getToken(this)
-        if (token.isBlank()) {
-            redirectToLogin()
-            return
-        }
 
         cancelActiveRequests()
         showLoading(true)
@@ -195,14 +234,32 @@ class DietActivity : AppCompatActivity() {
             return
         }
 
-        val recipeId = "食谱${System.currentTimeMillis() / 1000}"
-        saveRecipeToDatabase(recipeId)
-
-        Toast.makeText(this, "食谱已保存为：$recipeId", Toast.LENGTH_SHORT).show()
-        finish()
+        showInputRecipeNameDialog()
     }
 
-    private fun saveRecipeToDatabase(recipeId: String) {
+    private fun showInputRecipeNameDialog() {
+        val editText = EditText(this)
+        editText.hint = "请输入食谱名称"
+        editText.setText("我的食谱")  // 默认值，可修改
+
+        AlertDialog.Builder(this)
+            .setTitle("保存食谱")
+            .setView(editText)
+            .setPositiveButton("保存") { _, _ ->
+                val name = editText.text.toString().trim()
+                if (name.isEmpty()) {
+                    Toast.makeText(this, "食谱名称不能为空", Toast.LENGTH_SHORT).show()
+                } else {
+                    saveRecipeToDatabase(name)
+                    Toast.makeText(this, "已保存：$name", Toast.LENGTH_SHORT).show()
+                    finish()
+                }
+            }
+            .setNegativeButton("取消", null)
+            .show()
+    }
+
+    private fun saveRecipeToDatabase(name: String) {
         val recipeList = selectedFoods.map {
             mapOf(
                 "foodId" to it.key,
@@ -210,10 +267,14 @@ class DietActivity : AppCompatActivity() {
                 "servingAmount" to it.value.second
             )
         }
-        val recipeJson = gson.toJson(recipeList)
+
+        val json = gson.toJson(recipeList)
         getSharedPreferences("recipes", Context.MODE_PRIVATE)
-            .edit().putString(recipeId, recipeJson).apply()
+            .edit()
+            .putString(name, json)
+            .apply()
     }
+
 
     private fun convertSelectedFoodsToAdapterFormat() =
         selectedFoods.mapValues {

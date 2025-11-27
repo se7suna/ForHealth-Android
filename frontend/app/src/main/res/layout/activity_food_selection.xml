@@ -159,7 +159,21 @@
                 android:id="@+id/tabRecipeFoods"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="食谱"
+                android:text="创建食谱"
+                android:textSize="14sp"
+                android:textColor="#666666"
+                android:background="@drawable/bg_category_tab_unselected"
+                android:paddingHorizontal="16dp"
+                android:paddingVertical="8dp"
+                android:layout_marginEnd="8dp"
+                android:clickable="true"
+                android:focusable="true"/>
+
+            <TextView
+                android:id="@+id/tabReviewRecipeFoods"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="查看食谱"
                 android:textSize="14sp"
                 android:textColor="#666666"
                 android:background="@drawable/bg_category_tab_unselected"

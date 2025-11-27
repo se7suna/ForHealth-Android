@@ -94,6 +94,12 @@
             android:theme="@style/AppThemeWithActionBar"
             android:windowSoftInputMode="adjustResize" />
 
+        <activity
+            android:name=".food.RecipeListActivity"
+            android:exported="false"
+            android:theme="@style/AppThemeWithActionBar"
+            android:windowSoftInputMode="adjustResize" />
+
         <!-- 运动选择 -->
         <activity
             android:name=".sports.SportsSelectionActivity"

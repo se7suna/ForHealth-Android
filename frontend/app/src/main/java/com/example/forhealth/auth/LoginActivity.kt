@@ -23,7 +23,6 @@ class LoginActivity : AppCompatActivity() {
     private lateinit var etPassword: EditText
     private lateinit var btnLogin: Button
     private lateinit var btnRegister: Button
-    private val apiService = RetrofitClient.apiService
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -35,7 +34,7 @@ class LoginActivity : AppCompatActivity() {
         btnRegister = findViewById(R.id.btnRegister)
 
         btnLogin.setOnClickListener { login() }
-        btnRegister.setOnClickListener { 
+        btnRegister.setOnClickListener {
             val intent = Intent(this, RegisterActivity::class.java)
             startActivity(intent)
         }
@@ -50,68 +49,36 @@ class LoginActivity : AppCompatActivity() {
             return
         }
 
-        CoroutineScope(Dispatchers.IO).launch {
-            try {
-                val result = RetrofitClient.apiService.login(mapOf("email" to email, "password" to password))
+        // 模拟网络请求延迟，方便观察UI变化
+        CoroutineScope(Dispatchers.Main).launch {
+            // 模拟延时1秒，假装在请求服务器
+            kotlinx.coroutines.delay(1000)
 
-                result.fold(
-                    onSuccess = { tokenResponse ->
-                        val token = tokenResponse.access_token
-                        RetrofitClient.saveToken(token)
-                        withContext(Dispatchers.Main) {
-                            Toast.makeText(this@LoginActivity, "登录成功", Toast.LENGTH_SHORT).show()
-                            // 检查用户是否已完成信息填写
-                            checkUserProfileAndNavigate()
-                        }
-                    },
-                    onFailure = { e ->
-                        withContext(Dispatchers.Main) {
-                            Toast.makeText(this@LoginActivity, "登录失败，请检查邮箱和密码", Toast.LENGTH_SHORT).show()
-                        }
-                    }
-                )
-            } catch (e: Exception) {
-                withContext(Dispatchers.Main) {
-                    Toast.makeText(this@LoginActivity, "网络错误: ${e.message}", Toast.LENGTH_SHORT).show()
-                }
+            // 假设登录成功的账号密码是 test@example.com / 123456
+            if (email == "test@example.com" && password == "123456") {
+                Toast.makeText(this@LoginActivity, "登录成功（模拟）", Toast.LENGTH_SHORT).show()
+
+                // 模拟检查用户信息（这里随便写个判断）
+                checkUserProfileAndNavigateSimulated()
+            } else {
+                Toast.makeText(this@LoginActivity, "登录失败，账号或密码错误（模拟）", Toast.LENGTH_SHORT).show()
             }
         }
     }
 
-    private fun checkUserProfileAndNavigate() {
-        CoroutineScope(Dispatchers.IO).launch {
-            try {
-                val result = RetrofitClient.apiService.getProfile()
-                result.fold(
-                    onSuccess = { user ->
-                        withContext(Dispatchers.Main) {
-                            // 如果用户信息不完整，跳转到填写页面；否则跳转到主页
-                            if (user.height == null || user.weight == null) {
-                                val intent = Intent(this@LoginActivity, BodyDataActivity::class.java)
-                                startActivity(intent)
-                            } else {
-                                val intent = Intent(this@LoginActivity, HomeActivity::class.java)
-                                startActivity(intent)
-                            }
-                            finish()
-                        }
-                    },
-                    onFailure = {
-                        withContext(Dispatchers.Main) {
-                            // 如果获取用户信息失败，默认跳转到数据填写页面
-                            val intent = Intent(this@LoginActivity, BodyDataActivity::class.java)
-                            startActivity(intent)
-                            finish()
-                        }
-                    }
-                )
-            } catch (e: Exception) {
-                withContext(Dispatchers.Main) {
-                    val intent = Intent(this@LoginActivity, BodyDataActivity::class.java)
-                    startActivity(intent)
-                    finish()
-                }
-            }
+    private fun checkUserProfileAndNavigateSimulated() {
+        // 模拟用户信息
+        val userHeight: Double? = null // null代表信息未填写，需要跳转填写页面
+        val userWeight: Double? = 60.0
+
+        if (userHeight == null || userWeight == null) {
+            // 跳转到信息填写页面
+            startActivity(Intent(this, BodyDataActivity::class.java))
+        } else {
+            // 跳转主页
+            startActivity(Intent(this, HomeActivity::class.java))
         }
+        finish()
     }
 }
+

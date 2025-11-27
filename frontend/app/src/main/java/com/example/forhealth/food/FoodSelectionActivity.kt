@@ -172,12 +172,17 @@ class FoodSelectionActivity : AppCompatActivity() {
 
         findViewById<TextView>(R.id.tabRecipeFoods)?.setOnClickListener {
             val intent = Intent(this, DietActivity::class.java)
-            startActivity(intent)//食谱功能
+            startActivity(intent) // 食谱功能
         }
 
+        findViewById<TextView>(R.id.tabReviewRecipeFoods)?.setOnClickListener {
+            val intent = Intent(this, RecipeListActivity::class.java)
+            startActivity(intent) // 查看食谱列表
+        }
 
         updateTabStyles()
     }
+
 
     private fun loadCommonFoods() {
         // 加载常见食物（空关键词搜索）
@@ -318,15 +323,19 @@ class FoodSelectionActivity : AppCompatActivity() {
     }
 
     private fun createCustomFood(form: CustomFoodForm) {
-        val token = PrefsHelper.getToken(this)
-        if (token.isBlank()) {
-            redirectToLogin()
-            return
-        }
+        // 删除token判断，直接调用
+        // val token = PrefsHelper.getToken(this)
+        // if (token.isBlank()) {
+        //     redirectToLogin()
+        //     return
+        // }
 
         showLoading(true)
         lifecycleScope.launch {
             try {
+                // 如果接口需要token，可以给个固定字符串或者空字符串
+                val token = "no-token" // 或者 ""
+
                 val response = RetrofitClient.api.createFood(
                     token = "Bearer $token",
                     request = form.toRequest()
@@ -359,6 +368,7 @@ class FoodSelectionActivity : AppCompatActivity() {
             }
         }
     }
+
 
     private fun foodResponseToSimplified(response: FoodResponse): SimplifiedFoodSearchItem {
         val nutrition = response.nutritionPerServing
@@ -410,16 +420,19 @@ class FoodSelectionActivity : AppCompatActivity() {
             return
         }
 
-        val token = PrefsHelper.getToken(this)
-        if (token.isBlank()) {
-            redirectToLogin()
-            return
-        }
+        // 删除token判断
+        // val token = PrefsHelper.getToken(this)
+        // if (token.isBlank()) {
+        //     redirectToLogin()
+        //     return
+        // }
 
         showLoading(true)
 
         lifecycleScope.launch {
             try {
+                val token = "no-token" // 模拟token
+
                 val response = RetrofitClient.api.searchFoods(
                     token = "Bearer $token",
                     keyword = keyword?.ifBlank { null },
@@ -458,6 +471,7 @@ class FoodSelectionActivity : AppCompatActivity() {
             }
         }
     }
+
 
     private val unitNames = arrayOf("克", "份", "碗", "盘")
     private val unitGrams = arrayOf(1.0, 100.0, 200.0, 400.0)
@@ -545,11 +559,12 @@ class FoodSelectionActivity : AppCompatActivity() {
             return
         }
 
-        val token = PrefsHelper.getToken(this)
-        if (token.isBlank()) {
-            redirectToLogin()
-            return
-        }
+        // 删除登录判断
+        // val token = PrefsHelper.getToken(this)
+        // if (token.isBlank()) {
+        //     redirectToLogin()
+        //     return
+        // }
 
         showLoading(true)
         val sdf = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.US)
@@ -558,6 +573,8 @@ class FoodSelectionActivity : AppCompatActivity() {
         lifecycleScope.launch {
             var successCount = 0
             var failCount = 0
+
+            val token = "no-token" // 模拟token
 
             for ((foodId, selectedItem) in selectedFoods) {
                 try {
@@ -600,6 +617,7 @@ class FoodSelectionActivity : AppCompatActivity() {
         }
     }
 
+
     private fun showLoading(show: Boolean) {
         progressBar.visibility = if (show) View.VISIBLE else View.GONE
     }
@@ -611,11 +629,7 @@ class FoodSelectionActivity : AppCompatActivity() {
     }
 
     private fun redirectToLogin() {
-        Toast.makeText(this, "请先登录", Toast.LENGTH_SHORT).show()
-        val intent = android.content.Intent(this, com.example.forhealth.auth.LoginActivity::class.java)
-        intent.flags = android.content.Intent.FLAG_ACTIVITY_NEW_TASK or android.content.Intent.FLAG_ACTIVITY_CLEAR_TASK
-        startActivity(intent)
-        finish()
+
     }
 
     override fun onSupportNavigateUp(): Boolean {
