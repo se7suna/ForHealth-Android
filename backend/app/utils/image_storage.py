@@ -19,13 +19,6 @@ ALLOWED_IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp", ".gif","svg"}
 # 最大文件大小（10MB）
 MAX_FILE_SIZE = 10 * 1024 * 1024
 
-def get_full_image_base_url() -> str:
-    """获取完整的图片访问基础URL（包含协议和主机）"""
-    protocol = "https" if settings.PORT == 443 else "http"
-    # 去掉 IMAGE_BASE_URL 开头的斜杠（如果有）
-    base_url_path = settings.IMAGE_BASE_URL.lstrip("/")
-    return f"{protocol}://{settings.HOST}:{settings.PORT}/{base_url_path}"
-
 
 def get_image_storage_path() -> Path:
     """
