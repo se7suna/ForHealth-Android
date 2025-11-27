@@ -113,11 +113,10 @@ async def test_initialize_sports_talbe_success(auth_client, sport_data, expected
             assert "METs" in sport, "运动类型应该有METs字段"
             assert "describe" in sport, "运动类型应该有describe字段"
             assert "image_url" in sport, "运动类型应该有image_url字段"
-            print(sport.get("image_url"))
-            print(type(sport.get("image_url")))
-            local_path = Path(__file__).parent.parent / settings.IMAGE_STORAGE_PATH / "sports_images" / sport["image_url"]
-            # 判断url是否在本地对应位置
-            assert os.path.exists(local_path),"文件不存在"
+            # 判断url是否在本地静态位置可访问
+            async with AsyncClient(timeout=10.0) as client:
+                response = await client.get(sport["image_url"])
+                assert response.status_code == 200, "图片URL不可访问"
             # 验证字段值
             assert sport.get("describe") == sport_data.get("describe"), "描述不一致"
             assert sport.get("METs") == sport_data.get("METs"), "METs不一致"

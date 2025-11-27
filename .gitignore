@@ -74,8 +74,7 @@ logs/
 local.properties
 
 # 后端上传的文件
-backend/uploads/food_images
-backend/uploads/sport_images
+backend/uploads/
 *.jpg
 *.jpeg
 *.png

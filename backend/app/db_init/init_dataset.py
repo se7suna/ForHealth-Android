@@ -224,7 +224,6 @@ async def initialize_foods_table():
             })
             
             if existing:
-                print("食物存在并跳过")
                 continue
             
             # 处理图片：如果是外部URL，下载并保存到本地
@@ -267,16 +266,17 @@ async def _download_and_save_sport_image(image_url: str, sport_name: str) -> Opt
     Returns:
         本地图片访问URL，如果下载失败则返回None
     """
-    if not image_url or not image_url.startswith(("http://", "https://")):
+    if not image_url:
         print("url不存在或者格式错误")
         return None
-    # 下载图片
-    async with httpx.AsyncClient(timeout=10.0) as client:
-        response = await client.get(image_url)
-        if(response.status_code!=200):
-                print("download failed:",response.status_code)
-                return None
-        content = response.content
+    
+    src_dir= Path(__file__).parent / "src"  # backend/app/db_init/src
+    src_file = src_dir / image_url
+    try:
+        with open(src_file, "rb") as f:
+            content = f.read()
+    except:
+        print(f"文件读取失败")
     
     # 确定文件扩展名
     from urllib.parse import urlparse

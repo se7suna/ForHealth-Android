@@ -5,7 +5,7 @@
         "METs": 2.8,
         "describe": "低强度有氧运动，适合初学者或恢复期人群，有助于改善心血管健康和日常活动能力",
         "created_by": "all",
-        "image_url": "http://127.0.0.1:8000/static/src/walk-svgrepo-com.svg"
+        "image_url": "walk-svgrepo-com.svg"
     },
     {
         "sport_type": "走路",
@@ -13,7 +13,7 @@
         "METs": 3.8,
         "describe": "中等强度有氧运动，有效提升心肺功能，适合大多数健康成年人，对关节冲击小",
         "created_by": "all",
-        "image_url": "http://127.0.0.1:8000/static/src/walk-svgrepo-com.svg"
+        "image_url": "walk-svgrepo-com.svg"
     },
     {
         "sport_type": "走路",
@@ -21,7 +21,7 @@
         "METs": 5.0,
         "describe": "中高强度有氧运动，燃烧卡路里效果好，适合想要提升运动强度的人群",
         "created_by": "all",
-        "image_url": "http://127.0.0.1:8000/static/src/walk-svgrepo-com.svg"
+        "image_url": "walk-svgrepo-com.svg"
     },
     {
         "sport_type": "跑步",
@@ -29,7 +29,7 @@
         "METs": 6.0,
         "describe": "中等强度有氧运动，有效提升心肺功能和燃烧卡路里，适合大多数健康成年人",
         "created_by": "all",
-        "image_url": "http://127.0.0.1:8000/static/src/treadmill-svgrepo-com.svg"
+        "image_url": "treadmill-svgrepo-com.svg"
     },
     {
         "sport_type": "跑步",
@@ -37,7 +37,7 @@
         "METs": 8.3,
         "describe": "高强度有氧运动，有效提升心肺功能和燃烧卡路里，适合有一定运动基础的人群",
         "created_by": "all",
-        "image_url": "http://127.0.0.1:8000/static/src/treadmill-svgrepo-com.svg"
+        "image_url": "treadmill-svgrepo-com.svg"
     },
     {
         "sport_type": "跑步",
@@ -45,7 +45,7 @@
         "METs": 11.0,
         "describe": "极高强度有氧运动，快速燃烧卡路里，提升心肺耐力和速度，适合有良好运动基础的人群",
         "created_by": "all",
-        "image_url": "http://127.0.0.1:8000/static/src/treadmill-svgrepo-com.svg"
+        "image_url": "treadmill-svgrepo-com.svg"
     },
     {
         "sport_type": "跑步",
@@ -53,7 +53,7 @@
         "METs": 14.5,
         "describe": "极高强度有氧运动，最大程度提升心肺功能和爆发力，适合专业运动员或高水平运动者",
         "created_by": "all",
-        "image_url": "http://127.0.0.1:8000/static/src/treadmill-svgrepo-com.svg"
+        "image_url": "treadmill-svgrepo-com.svg"
     },
     {
         "sport_type": "骑行",
@@ -61,7 +61,7 @@
         "METs": 4.0,
         "describe": "低强度有氧运动，主要锻炼下肢肌肉，对关节友好，适合初学者",
         "created_by": "all",
-        "image_url": "http://127.0.0.1:8000/static/src/bicycle-svgrepo-com.svg"
+        "image_url": "bicycle-svgrepo-com.svg"
     },
     {
         "sport_type": "骑行",
@@ -69,7 +69,7 @@
         "METs": 6.8,
         "describe": "中等强度有氧运动，主要锻炼下肢肌肉，提升心肺耐力，可调节强度适应不同体能水平",
         "created_by": "all",
-        "image_url": "http://127.0.0.1:8000/static/src/bicycle-svgrepo-com.svg"
+        "image_url": "bicycle-svgrepo-com.svg"
     },
     {
         "sport_type": "骑行",
@@ -77,7 +77,7 @@
         "METs": 10.0,
         "describe": "高强度有氧运动，有效锻炼下肢力量和心肺功能，快速燃烧卡路里",
         "created_by": "all",
-        "image_url": "http://127.0.0.1:8000/static/src/bicycle-svgrepo-com.svg"
+        "image_url": "bicycle-svgrepo-com.svg"
     },
     {
         "sport_type": "骑行",
@@ -85,7 +85,7 @@
         "METs": 8.5,
         "describe": "高强度有氧运动，在复杂地形中骑行，锻炼全身协调性和核心力量",
         "created_by": "all",
-        "image_url": "http://127.0.0.1:8000/static/src/bicycle-svgrepo-com.svg"
+        "image_url": "bicycle-svgrepo-com.svg"
     },
     {
         "sport_type": "球类",
@@ -93,7 +93,7 @@
         "METs": 8.0,
         "describe": "高强度全身运动，锻炼速度、敏捷性和协调性，有效提升心肺功能和肌肉力量",
         "created_by": "all",
-        "image_url": "http://127.0.0.1:8000/static/src/basketball-svgrepo-com.svg"
+        "image_url": "basketball-svgrepo-com.svg"
     },
     {
         "sport_type": "球类",
@@ -101,7 +101,7 @@
         "METs": 7.0,
         "describe": "高强度有氧运动，锻炼全身肌肉群，提升心肺耐力和团队协作能力",
         "created_by": "all",
-        "image_url": "http://127.0.0.1:8000/static/src/football-ball-svgrepo-com.svg"
+        "image_url": "football-ball-svgrepo-com.svg"
     },
     {
         "sport_type": "球类",
@@ -109,7 +109,7 @@
         "METs": 5.5,
         "describe": "中高强度有氧运动，锻炼反应速度、协调性和灵活性，对关节冲击相对较小",
         "created_by": "all",
-        "image_url": "http://127.0.0.1:8000/static/src/badminton-game-svgrepo-com.svg"
+        "image_url": "badminton-game-svgrepo-com.svg"
     },
     {
         "sport_type": "球类",
@@ -117,7 +117,7 @@
         "METs": 4.0,
         "describe": "中等强度运动，锻炼反应速度和手眼协调能力，适合各年龄段人群",
         "created_by": "all",
-        "image_url": "http://127.0.0.1:8000/static/src/pingpong-ping-pong-racket-ball-svgrepo-com.svg"
+        "image_url": "pingpong-ping-pong-racket-ball-svgrepo-com.svg"
     },
     {
         "sport_type": "球类",
@@ -125,7 +125,7 @@
         "METs": 7.3,
         "describe": "高强度有氧运动，锻炼全身力量和协调性，有效提升心肺功能和爆发力",
         "created_by": "all",
-        "image_url": "http://127.0.0.1:8000/static/src/tennis-2-svgrepo-com.svg"
+        "image_url": "tennis-2-svgrepo-com.svg"
     },
     {
         "sport_type": "球类",
@@ -133,7 +133,7 @@
         "METs": 4.0,
         "describe": "中等强度运动，锻炼全身协调性和团队协作能力，对关节相对友好",
         "created_by": "all",
-        "image_url": "http://127.0.0.1:8000/static/src/volleyball-svgrepo-com.svg"
+        "image_url": "volleyball-svgrepo-com.svg"
     },
     {
         "sport_type": "健身",
@@ -141,7 +141,7 @@
         "METs": 3.5,
         "describe": "使用自身体重或轻量器械（哑铃、弹力带），训练强度为最大负荷的30-50%",
         "created_by": "all",
-        "image_url": "http://127.0.0.1:8000/static/src/fitness-centre-svgrepo-com.svg"
+        "image_url": "fitness-centre-svgrepo-com.svg"
     },
     {
         "sport_type": "健身",
@@ -149,7 +149,7 @@
         "METs": 5.0,
         "describe": "使用中等重量器械（杠铃、哑铃、器械训练），训练强度为最大负荷的50-70%",
         "created_by": "all",
-        "image_url": "http://127.0.0.1:8000/static/src/fitness-centre-svgrepo-com.svg"
+        "image_url": "fitness-centre-svgrepo-com.svg"
     },
     {
         "sport_type": "健身",
@@ -157,7 +157,7 @@
         "METs": 6.0,
         "describe": "使用大重量器械（杠铃、深蹲架、力量举器械），训练强度为最大负荷的70-90%",
         "created_by": "all",
-        "image_url": "http://127.0.0.1:8000/static/src/fitness-centre-svgrepo-com.svg"
+        "image_url": "fitness-centre-svgrepo-com.svg"
     },
     {
         "sport_type": "健身",
@@ -165,7 +165,7 @@
         "METs": 8.0,
         "describe": "极高强度间歇训练，短时间内快速燃烧卡路里，提升心肺功能和肌肉耐力",
         "created_by": "all",
-        "image_url": "http://127.0.0.1:8000/static/src/push-up-svgrepo-com.svg"
+        "image_url": "push-up-svgrepo-com.svg"
     },
     {
         "sport_type": "游泳",
@@ -173,7 +173,7 @@
         "METs": 5.8,
         "describe": "中等强度全身运动，低冲击性，锻炼几乎所有肌肉群，对关节友好，适合各年龄段人群",
         "created_by": "all",
-        "image_url": "http://127.0.0.1:8000/static/src/swim-svgrepo-com.svg"
+        "image_url": "swim-svgrepo-com.svg"
     },
     {
         "sport_type": "游泳",
@@ -181,7 +181,7 @@
         "METs": 7.0,
         "describe": "中高强度全身运动，有效提升心肺功能和肌肉力量，适合有一定游泳基础的人群",
         "created_by": "all",
-        "image_url": "http://127.0.0.1:8000/static/src/swim-svgrepo-com.svg"
+        "image_url": "swim-svgrepo-com.svg"
     },
     {
         "sport_type": "游泳",
@@ -189,7 +189,7 @@
         "METs": 10.0,
         "describe": "高强度全身运动，快速燃烧卡路里，最大程度提升心肺功能和肌肉耐力",
         "created_by": "all",
-        "image_url": "http://127.0.0.1:8000/static/src/swim-svgrepo-com.svg"
+        "image_url": "swim-svgrepo-com.svg"
     },
     {
         "sport_type": "游泳",
@@ -197,7 +197,7 @@
         "METs": 8.3,
         "describe": "高强度游泳方式，锻炼全身肌肉群，特别是肩部和背部，有效提升心肺功能",
         "created_by": "all",
-        "image_url": "http://127.0.0.1:8000/static/src/swim-svgrepo-com.svg"
+        "image_url": "swim-svgrepo-com.svg"
     },
     {
         "sport_type": "游泳",
@@ -205,7 +205,7 @@
         "METs": 6.0,
         "describe": "中等强度游泳方式，主要锻炼下肢和核心力量，对关节冲击小",
         "created_by": "all",
-        "image_url": "http://127.0.0.1:8000/static/src/swim-svgrepo-com.svg"
+        "image_url": "swim-svgrepo-com.svg"
     },
     {
         "sport_type": "游泳",
@@ -213,7 +213,7 @@
         "METs": 6.0,
         "describe": "中等强度游泳方式，锻炼背部和肩部肌肉，改善体态",
         "created_by": "all",
-        "image_url": "http://127.0.0.1:8000/static/src/swim-svgrepo-com.svg"
+        "image_url": "swim-svgrepo-com.svg"
     },
     {
         "sport_type": "游泳",
@@ -221,6 +221,6 @@
         "METs": 11.0,
         "describe": "极高强度游泳方式，锻炼全身肌肉群，特别是核心和肩部，快速燃烧卡路里",
         "created_by": "all",
-        "image_url": "http://127.0.0.1:8000/static/src/swim-svgrepo-com.svg"
+        "image_url": "swim-svgrepo-com.svg"
     }
 ]

@@ -28,9 +28,12 @@ def get_image_storage_path() -> Path:
         食物图片存储目录的Path对象（uploads/food_images）
     """
     # 从配置中获取基础存储路径，然后拼接 food_images 子文件夹
+    backend_dir= Path(__file__).parent.parent.parent
     base_path = Path(settings.IMAGE_STORAGE_PATH)
-    storage_path = base_path / "food_images"
+    storage_path = backend_dir / base_path / "food_images"
+
     storage_path.mkdir(parents=True, exist_ok=True)
+    
     return storage_path
 
 
