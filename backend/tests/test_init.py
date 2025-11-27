@@ -1,4 +1,5 @@
 
+import os
 import sys
 from pathlib import Path
 backend_path = str(Path(__file__).parent.parent.absolute())
@@ -11,7 +12,7 @@ from httpx import AsyncClient
 from app.config import settings
 
 # 测试用户凭证
-from app.config import settings
+
 TEST_USER = {
     "email": settings.USER_EMAIL,
     "password": settings.USER_PASSWORD
@@ -81,7 +82,7 @@ async def test_initialize_foods_table_success(auth_client, food_data, expected_s
     assert exist, f"食物 '{food_data.get('name')}' 不存在"
 
 # ================== 测试：初始化运动类型成功 ==================
-# 加载食物数据集
+# 加载运动数据集
 def load_sport_data():
     """加载运动数据集"""
     dataset_path = Path(__file__).parent.parent / "app" / "db_init" / "initial_sports_dataset.json"
@@ -93,7 +94,6 @@ sports_data = load_sport_data()
 
 @pytest.mark.asyncio
 @pytest.mark.parametrize("sport_data,expected_status,expected_success", [
-    # 正常情况
     ({"sport_name": sports_data[0]["sport_name"], "describe": sports_data[0]["describe"], "METs": sports_data[0]["METs"]}, 200, True),
 ])
 async def test_initialize_sports_talbe_success(auth_client, sport_data, expected_status, expected_success):
@@ -112,6 +112,12 @@ async def test_initialize_sports_talbe_success(auth_client, sport_data, expected
             assert "sport_name" in sport, "运动类型应该有sport_name字段"
             assert "METs" in sport, "运动类型应该有METs字段"
             assert "describe" in sport, "运动类型应该有describe字段"
+            assert "image_url" in sport, "运动类型应该有image_url字段"
+            print(sport.get("image_url"))
+            print(type(sport.get("image_url")))
+            local_path = Path(__file__).parent.parent / settings.IMAGE_STORAGE_PATH / "sports_images" / sport["image_url"]
+            # 判断url是否在本地对应位置
+            assert os.path.exists(local_path),"文件不存在"
             # 验证字段值
             assert sport.get("describe") == sport_data.get("describe"), "描述不一致"
             assert sport.get("METs") == sport_data.get("METs"), "METs不一致"

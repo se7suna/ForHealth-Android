@@ -14,7 +14,7 @@ from app.config import settings
 
 # 允许的图片格式
 ALLOWED_IMAGE_TYPES = {"image/jpeg", "image/jpg", "image/png", "image/webp", "image/gif"}
-ALLOWED_IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp", ".gif"}
+ALLOWED_IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp", ".gif","svg"}
 
 # 最大文件大小（10MB）
 MAX_FILE_SIZE = 10 * 1024 * 1024
@@ -154,7 +154,7 @@ def get_image_url(relative_path: str) -> str:
     Returns:
         完整的图片访问URL（从配置中读取，格式：{protocol}://{host}:{port}/{IMAGE_BASE_URL}/{relative_path}）
     """
-    base_url = settings.get_full_image_base_url()
+    base_url = get_full_image_base_url()
     return f"{base_url}/{relative_path}"
 
 

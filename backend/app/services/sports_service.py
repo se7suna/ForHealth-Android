@@ -53,7 +53,8 @@ async def create_sports(create_request,current_user):
         describe=create_request.describe,
         sport_type="自定义",
         sport_name=create_request.sport_name,
-        METs=create_request.METs
+        METs=create_request.METs,
+        image_url=create_request.image_url
     )
 
     return await db["sports"].insert_one(SportType.model_dump())# 转为字典插入
@@ -117,7 +118,7 @@ async def get_available_sports(current_user: str):
     # 查询默认运动类型和用户自定义的运动类型
     sports = await db["sports"].find(
         {"$or": [{"created_by": "all"}, {"created_by": current_user}]},
-        {"sport_type": 1, "sport_name": 1, "describe": 1, "METs": 1, "_id": 0}
+        {"sport_type": 1, "sport_name": 1, "describe": 1, "METs": 1,"image_url":1, "_id": 0}
     ).to_list(length=1000)
 
     return sports

@@ -82,7 +82,7 @@ from pathlib import Path
 from typing import Optional
 from datetime import datetime
 from PIL import Image
-from app.utils.image_storage import get_image_url
+from app.utils.image_storage import get_image_url,ALLOWED_IMAGE_EXTENSIONS
 
 async def _download_and_save_food_image(image_url: str, food_name: str) -> Optional[str]:
     """
@@ -150,7 +150,7 @@ async def _download_and_save_food_image(image_url: str, food_name: str) -> Optio
         filename = f"{food_name_hash}_{uuid.uuid4().hex[:8]}{file_ext}"
         
         # 获取存储路径（基于项目根目录 backend/）
-        app_dir = Path(__file__).parent  # backend/app
+        app_dir = Path(__file__).parent.parent  # backend/app
         backend_dir = app_dir.parent  # backend/
         base_path_str = settings.IMAGE_STORAGE_PATH
         if Path(base_path_str).is_absolute():
@@ -214,6 +214,7 @@ async def initialize_foods_table():
         try:
             food_name = food.get('name', '未命名')
             original_image_url = food.get('image_url')
+            print(original_image_url)
             
             # 检查是否已存在（通过 name 和 created_by="all"）
             existing = await db["foods"].find_one({
@@ -222,6 +223,7 @@ async def initialize_foods_table():
             })
             
             if existing:
+                print("食物存在并跳过")
                 continue
             
             # 处理图片：如果是外部URL，下载并保存到本地
@@ -229,6 +231,12 @@ async def initialize_foods_table():
                 local_image_url = await _download_and_save_food_image(original_image_url, food_name)
                 if local_image_url:
                     food['image_url'] = local_image_url
+                    print(food['image_url'])
+                    print(local_image_url)
+                else:
+                    print("图片下载或保存失败，返回为空")
+            else:
+                print("url不存在或者格式错误")
             
             # 添加时间戳
             food['created_at'] = now
@@ -248,6 +256,70 @@ async def initialize_foods_table():
 from app.config import settings
 from app.database import get_database
 from app.models.sports import SportsTypeInDB
+
+async def _download_and_save_sport_image(image_url: str, sport_name: str) -> Optional[str]:
+    """
+    从外部URL下载图片并保存到本地文件系统（与init_dataset.py中的逻辑一致）
+    
+    Args:
+        image_url: 外部图片URL
+        sport_name: 食物名称（用于生成文件名）
+        
+    Returns:
+        本地图片访问URL，如果下载失败则返回None
+    """
+    if not image_url or not image_url.startswith(("http://", "https://")):
+        print("url不存在或者格式错误")
+        return None
+    # 下载图片
+    async with httpx.AsyncClient(timeout=10.0) as client:
+        response = await client.get(image_url)
+        content = response.content
+        
+    # 确定文件扩展名
+    from urllib.parse import urlparse
+    parsed = urlparse(image_url)# 从URL中获取扩展名
+    path_ext = Path(parsed.path).suffix.lower()
+    file_ext = path_ext
+             
+    # 生成文件名（使用运动名称的哈希和UUID）
+    sport_name_hash = str(hash(sport_name))[:8]
+    filename = f"{sport_name_hash}_{uuid.uuid4().hex[:8]}{file_ext}"
+        
+    # 获取存储路径（基于项目根目录 backend/）
+    backend_dir = Path(__file__).parent.parent.parent  # backend
+    base_path_str = settings.IMAGE_STORAGE_PATH
+    if Path(base_path_str).is_absolute():
+        base_path = Path(base_path_str)
+    else:
+        base_path = backend_dir / base_path_str
+    storage_path = base_path / "sport_images"
+        
+    # 确保 storage_path 是 backend/ 的子目录
+    try:
+        storage_path.relative_to(backend_dir)
+    except ValueError:
+        storage_path = backend_dir / "uploads" / "sport_images"
+        
+    # 创建文件夹（如果不存在）
+    if not storage_path.exists():
+        storage_path.mkdir(parents=True, exist_ok=True)
+        
+    file_path = storage_path / filename
+        
+    # 保存图片
+    with open(file_path, "wb") as f:
+        f.write(content)
+        #print("图片保存成功:",file_path)
+        
+    # 生成本地访问URL
+    relative_path = f"sport_images/{filename}"
+    local_url = get_image_url(relative_path)
+        
+    return local_url
+
+
+
 async def initialize_sports_table():
     
     db = get_database()
@@ -273,8 +345,13 @@ async def initialize_sports_table():
         existing = await db["sports"].find_one({"sport_name": sport["sport_name"]})
         if existing:
             continue
-        sport["image_url"] = ""  # 运动类型暂不处理图片
-        
+        # 处理图片：将外部URL下载并保存到本地
+        if "image_url" in sport:
+            local_image_url = await _download_and_save_sport_image(sport["image_url"], sport["sport_name"])
+            if local_image_url:
+                sport["image_url"] = local_image_url
+        else:
+            sport["image_url"] = ""
         await db["sports"].insert_one(SportsTypeInDB(**sport).model_dump())
     
 
