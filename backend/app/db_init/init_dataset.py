@@ -102,7 +102,11 @@ async def _download_and_save_food_image(image_url: str, food_name: str) -> Optio
         # 下载图片
         async with httpx.AsyncClient(timeout=10.0) as client:
             response = await client.get(image_url)
-            response.raise_for_status()
+            if(response.status_code!=200):
+                print("download failed:",response.status_code)
+                return None
+            else:
+                print("download success")
             content = response.content
         
         # 检查文件大小（10MB限制）
