@@ -32,10 +32,10 @@ async def run_initialization():
     
     print("⚙️ 开始初始化默认用户...")
     await initialize_default_user()
-    print("⚙️ 开始初始化食物表...")
-    await initialize_foods_table()
     print("⚙️ 开始初始化运动表...")
     await initialize_sports_table()
+    print("⚙️ 开始初始化食物表...")
+    await initialize_foods_table()
 
     print("✅ 数据库初始化完成！")
 
