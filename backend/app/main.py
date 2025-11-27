@@ -28,11 +28,12 @@ async def lifespan(app: FastAPI):
 
 async def run_initialization():
     """异步后台初始化：不会阻塞应用启动。"""
-    # print("⚙️ 开始初始化后台数据...")
+    print("⚙️ 开始初始化后台数据...")
+    
     print("⚙️ 开始初始化默认用户...")
     await initialize_default_user()
-    #print("⚙️ 开始初始化食物表...")
-    #await initialize_foods_table()
+    print("⚙️ 开始初始化食物表...")
+    await initialize_foods_table()
     print("⚙️ 开始初始化运动表...")
     await initialize_sports_table()
 

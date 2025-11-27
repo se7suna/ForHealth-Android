@@ -105,8 +105,6 @@ async def _download_and_save_food_image(image_url: str, food_name: str) -> Optio
             if(response.status_code!=200):
                 print("download failed:",response.status_code)
                 return None
-            else:
-                print("download success")
             content = response.content
         
         # 检查文件大小（10MB限制）
@@ -218,7 +216,6 @@ async def initialize_foods_table():
         try:
             food_name = food.get('name', '未命名')
             original_image_url = food.get('image_url')
-            print(original_image_url)
             
             # 检查是否已存在（通过 name 和 created_by="all"）
             existing = await db["foods"].find_one({
@@ -235,8 +232,6 @@ async def initialize_foods_table():
                 local_image_url = await _download_and_save_food_image(original_image_url, food_name)
                 if local_image_url:
                     food['image_url'] = local_image_url
-                    print(food['image_url'])
-                    print(local_image_url)
                 else:
                     print("图片下载或保存失败，返回为空")
             else:
@@ -278,8 +273,11 @@ async def _download_and_save_sport_image(image_url: str, sport_name: str) -> Opt
     # 下载图片
     async with httpx.AsyncClient(timeout=10.0) as client:
         response = await client.get(image_url)
+        if(response.status_code!=200):
+                print("download failed:",response.status_code)
+                return None
         content = response.content
-        
+    
     # 确定文件扩展名
     from urllib.parse import urlparse
     parsed = urlparse(image_url)# 从URL中获取扩展名
