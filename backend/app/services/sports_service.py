@@ -217,7 +217,7 @@ async def update_sports_record(update_request,current_user):
     update_data = {}
     # 查找运动
     sport = await db["sports"].find_one(
-    {"sport_name": update_request.sport_name}
+    {"sport_name": update_request.new_sport_name}
     )
     if not sport:
         raise HTTPException(
@@ -225,8 +225,8 @@ async def update_sports_record(update_request,current_user):
             detail="运动类型未找到"
         )
     # 只添加非None的值到更新数据中
-    if update_request.sport_name is not None:
-        update_data["sport_name"] = update_request.sport_name
+    if update_request.new_sport_name is not None:
+        update_data["sport_name"] = update_request.new_sport_name
         update_data["sport_type"] = sport["sport_type"]
     if update_request.created_at is not None:
         update_data["created_at"] = update_request.created_at
@@ -234,7 +234,7 @@ async def update_sports_record(update_request,current_user):
         update_data["duration_time"] = update_request.duration_time
 
     # 若有相关更改则重新计算消耗卡路里
-    if update_request.sport_name or update_request.duration_time:
+    if update_request.new_sport_name or update_request.duration_time:
         user_weight = await get_user_weight(current_user)
         mets = sport["METs"]
         calories_burned = await calculate_calories_burned(
