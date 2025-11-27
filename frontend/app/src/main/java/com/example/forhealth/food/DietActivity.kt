@@ -264,7 +264,8 @@ class DietActivity : AppCompatActivity() {
             mapOf(
                 "foodId" to it.key,
                 "foodName" to it.value.first.name,
-                "servingAmount" to it.value.second
+                "servingAmount" to it.value.second,
+                "calories" to it.value.first.nutrition.calories * it.value.second
             )
         }
 

@@ -72,8 +72,12 @@ class RecipeListActivity : AppCompatActivity() {
         val recipeList = gson.fromJson<List<Map<String, Any>>>(json, type)
 
         val msg = recipeList.joinToString("\n") {
-            "${it["foodName"]} x ${it["servingAmount"]}"
+            val foodName = it["foodName"]
+            val servingAmount = it["servingAmount"]
+            val calories = it["calories"] ?: "未知"
+            "$foodName x $servingAmount  卡路里: $calories kcal"
         }
+
 
         AlertDialog.Builder(this)
             .setTitle(id)
