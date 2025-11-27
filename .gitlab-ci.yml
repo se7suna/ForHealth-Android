@@ -134,7 +134,7 @@ test:unit:
       PYTHON_SCRIPT
     - echo "🧪 运行单元测试..."
     - sleep 120
-    - pytest tests/test_init.py -v --tb=short --junitxml=test-results.xml
+    - pytest tests/ -v --tb=short --junitxml=test-results.xml
   after_script:
     - cd backend
     - echo "🛑 停止服务器..."
