@@ -73,10 +73,5 @@ logs/
 .cxx
 local.properties
 
-# 后端上传的文件
+# 后端下载的文件
 backend/uploads/
-*.jpg
-*.jpeg
-*.png
-*.gif
-*.webp

@@ -3,7 +3,6 @@
 
 用于处理食物图片的上传、存储和访问
 """
-import os
 import io
 import uuid
 from pathlib import Path
@@ -15,24 +14,10 @@ from app.config import settings
 
 # 允许的图片格式
 ALLOWED_IMAGE_TYPES = {"image/jpeg", "image/jpg", "image/png", "image/webp", "image/gif"}
-ALLOWED_IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp", ".gif"}
+ALLOWED_IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp", ".gif","svg"}
 
 # 最大文件大小（10MB）
 MAX_FILE_SIZE = 10 * 1024 * 1024
-
-
-def get_image_storage_path() -> Path:
-    """
-    获取食物图片存储路径
-    
-    Returns:
-        食物图片存储目录的Path对象（uploads/food_images）
-    """
-    # 从配置中获取基础存储路径，然后拼接 food_images 子文件夹
-    base_path = Path(settings.IMAGE_STORAGE_PATH)
-    storage_path = base_path / "food_images"
-    storage_path.mkdir(parents=True, exist_ok=True)
-    return storage_path
 
 
 def validate_image_file(file: UploadFile) -> None:
@@ -60,6 +45,23 @@ def validate_image_file(file: UploadFile) -> None:
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=f"不支持的图片扩展名。支持的扩展名：{', '.join(ALLOWED_IMAGE_EXTENSIONS)}"
             )
+
+
+def get_food_image_storage_path() -> Path:
+    """
+    获取食物图片存储路径
+    
+    Returns:
+        食物图片存储目录的Path对象（uploads/food_images）
+    """
+    # 从配置中获取基础存储路径，然后拼接 food_images 子文件夹
+    backend_dir= Path(__file__).parent.parent.parent
+    base_path = Path(settings.IMAGE_STORAGE_PATH)
+    storage_path = backend_dir / base_path / "food_images"
+
+    storage_path.mkdir(parents=True, exist_ok=True)
+    
+    return storage_path
 
 
 async def save_food_image(file: UploadFile, food_id: Optional[str] = None) -> str:
@@ -90,7 +92,7 @@ async def save_food_image(file: UploadFile, food_id: Optional[str] = None) -> st
         filename = f"{uuid.uuid4().hex}{file_ext}"
     
     # 获取存储路径
-    storage_path = get_image_storage_path()
+    storage_path = get_food_image_storage_path()
     file_path = storage_path / filename
     
     try:
@@ -136,6 +138,56 @@ async def save_food_image(file: UploadFile, food_id: Optional[str] = None) -> st
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"保存图片失败：{str(e)}"
         )
+
+
+def get_sport_image_storage_path() -> Path:
+    """
+    获取食物图片存储路径
+    
+    Returns:
+        食物图片存储目录的Path对象（uploads/food_images）
+    """
+    # 从配置中获取基础存储路径，然后拼接 food_images 子文件夹
+    backend_dir= Path(__file__).parent.parent.parent
+    base_path = Path(settings.IMAGE_STORAGE_PATH)
+    storage_path = backend_dir / base_path / "sport_images"
+
+    storage_path.mkdir(parents=True, exist_ok=True)
+    
+    return storage_path
+
+async def save_sport_image(file: UploadFile, sport_name: Optional[str] = None) -> str:
+    #检查是否是图像
+    validate_image_file(file)
+
+    # 读取文件内容
+    content = await file.read()
+
+    # 检查文件大小
+    if len(content) > MAX_FILE_SIZE:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"图片文件过大。最大允许大小：{MAX_FILE_SIZE / 1024 / 1024}MB"
+        )
+
+    # 生成文件名（使用运动名称的哈希和UUID）
+    file_ext = Path(file.filename).suffix.lower() if file.filename else ".jpg"
+    sport_name_hash = str(hash(sport_name))[:8]
+    filename = f"{sport_name_hash}_{uuid.uuid4().hex[:8]}{file_ext}"
+
+    # 获取存储路径
+    storage_path = get_sport_image_storage_path()
+    file_path = storage_path / filename
+
+    # 保存文件
+    try:
+        with open(file_path, "wb") as f:
+            f.write(content)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"文件保存失败: {e}")
+    
+    #返回挂载到后端的静态url
+    return get_image_url(f"sport_images/{filename}")
 
 
 def get_image_url(relative_path: str) -> str:
@@ -195,11 +247,11 @@ def delete_food_image(image_url: Optional[str]) -> bool:
         # 如果 relative_path 已经包含 food_images/，直接使用
         # 否则需要添加 food_images/ 前缀
         if relative_path.startswith("food_images/"):
-            storage_path = get_image_storage_path().parent  # 回到uploads目录
+            storage_path = get_food_image_storage_path().parent  # 回到uploads目录
             file_path = storage_path / relative_path
         else:
             # 如果只是文件名，需要添加 food_images/ 前缀
-            storage_path = get_image_storage_path()
+            storage_path = get_food_image_storage_path()
             file_path = storage_path / relative_path
         
         # 删除文件
@@ -214,4 +266,40 @@ def delete_food_image(image_url: Optional[str]) -> bool:
         print(f"删除图片失败: {image_url}, 错误: {str(e)}")
         print(traceback.format_exc())
         return False
+
+async def delete_sport_image(image_url:str) -> bool:
+    if not image_url:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="图片URL不能为空"
+        )
+    
+    from urllib.parse import urlparse
+    parsed = urlparse(image_url)
+    url_path = parsed.path   # "/static/sport_images/image_name.xxx"
+
+    # 检查是否以 IMAGE_BASE_URL 开头
+    base = settings.IMAGE_BASE_URL  # "/static"
+    if not url_path.startswith(base + "/"):
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="无效的图片URL"
+        )
+    # 去掉 "/static/" 前缀 → 得到剩下部分
+    # "sport_images/image_name.xxx"
+    relative_path = url_path[len(base) + 1:]
+    # 获取 backend 目录
+    backend_dir = Path(__file__).resolve().parent.parent.parent
+    # backend/uploads/sport_images/image_name.xxx
+    file_path = backend_dir / settings.IMAGE_STORAGE_PATH / relative_path
+    # 删除文件
+    if file_path.exists() and file_path.is_file():
+        file_path.unlink()
+        return True
+    else:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="图片文件不存在"
+        )
+
 

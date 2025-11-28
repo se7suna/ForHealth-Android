@@ -23,6 +23,14 @@ class UserLoginRequest(BaseModel):
     email: EmailStr
     password: str
 
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "email": "user@example.com",
+                "password": "123456"
+            }
+        }
+
 
 class TokenResponse(BaseModel):
     """Token 响应"""

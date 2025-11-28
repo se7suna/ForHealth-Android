@@ -5,9 +5,11 @@ from app.config import settings
 
 from app.services.user_service import get_user_profile
 from app.models.sports import SportsLogInDB,SportsTypeInDB
+from app.utils.image_storage import save_sport_image,delete_sport_image
 from bson import ObjectId
 
 ###工具计算函数
+
 # 获取用户体重
 async def get_user_weight(email: str) -> float:
     user= await get_user_profile(email)
@@ -26,43 +28,55 @@ async def calculate_calories_burned(mets: float, weight: float, duration_minutes
     calories_burned = mets * weight * duration_hours
     return calories_burned
 
+
+
 ###服务调用函数
 
-
 # 创建自定义运动类型
-async def create_sports(create_request,current_user):
+async def create_sports(create_request,image_file,current_user):
     db = get_database()
-    # 检查是否已存在相同运动类型
+
+    # 检查是否已存在相同运动名
     existing_sport = await db["sports"].find_one({
-        "$or": [{"email": current_user}, {"email": settings.DEFAULT_SPORT_EMAIL}],
-        "sport_type": create_request.sport_type}
+        "$or": [{"created_by": current_user}, {"created_by": "all"}],
+        "sport_name": create_request.sport_name}
     )
     if existing_sport:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="该运动类型已存在"
         )
+    
     # 检查是否缺失值
-    if not create_request.sport_type or not create_request.describe or not create_request.METs:
+    if not create_request.sport_name or not create_request.describe or not create_request.METs:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail="运动类型、描述和卡路里消耗不能为空"
         )
+    
+    #若存在图像则保存图像并生成有效url
+    image_url = None
+    if image_file:
+        image_url = await save_sport_image(image_file, create_request.sport_name)
+    
     SportType=SportsTypeInDB(
-        email=current_user,
+        created_by=current_user,
         describe=create_request.describe,
-        sport_type=create_request.sport_type,
-        METs=create_request.METs
+        sport_type="自定义",
+        sport_name=create_request.sport_name,
+        METs=create_request.METs,
+        image_url=image_url
     )
 
     return await db["sports"].insert_one(SportType.model_dump())# 转为字典插入
 
 # 更新自定义运动类型
-async def update_sports(update_request,current_user):
+async def update_sports(update_request,image_file,current_user):
     db = get_database()
+
     # 查找运动
     sport = await db["sports"].find_one(
-        {"sport_type": update_request.sport_type, "email": current_user}
+        {"sport_name": update_request.old_sport_name, "created_by": current_user}
     )
     if not sport:
         raise HTTPException(
@@ -72,12 +86,21 @@ async def update_sports(update_request,current_user):
     
     update_data = {}
     # 只添加非None的值到更新数据中
-    if update_request.new_sport_type is not None:
-        update_data["sport_type"] = update_request.new_sport_type
+    if update_request.new_sport_name is not None:
+        update_data["sport_name"] = update_request.new_sport_name
     if update_request.METs is not None:
         update_data["METs"] = update_request.METs
     if update_request.describe is not None:
         update_data["describe"] = update_request.describe
+
+    #若存在图像则保存图像并生成有效url
+    if image_file:
+        #删除旧图片(若存在)
+        if sport["image_url"]:
+            await delete_sport_image(sport["image_url"])
+        #保存新图片，返回新的url
+        update_data["image_url"] = await save_sport_image(image_file, update_request.new_sport_name)
+
     
     # 如果没有要更新的字段（字典为空），返回原始记录
     if not update_data:
@@ -85,7 +108,7 @@ async def update_sports(update_request,current_user):
     
     # 执行更新
     result = await db["sports"].find_one_and_update(
-        {"sport_type": update_request.sport_type, "email": current_user},
+        {"sport_name": update_request.old_sport_name, "created_by": current_user},
         {"$set": update_data},
         return_document=True  # 返回更新后的文档
     )
@@ -93,43 +116,55 @@ async def update_sports(update_request,current_user):
     return result
 
 # 删除自定义运动类型
-async def delete_sports(sport_type: str, current_user: str):
+async def delete_sports(sport_name: str, current_user: str):
     """
     删除自定义运动类型
     """
     db = get_database()
-    # 查找并删除用户自定义的运动类型
+
+    #先查找运动类型
+    sport = await db["sports"].find_one({"sport_name": sport_name, "created_by": current_user})
+    if not sport:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="自定义运动类型未找到"
+        )
+    
+    #若url不为空，则先删除对应图片
+    if sport["image_url"]:
+        await delete_sport_image(sport["image_url"])
+    # 删除用户自定义的运动类型
     result = await db["sports"].delete_one({
-        "sport_type": sport_type,
-        "email": current_user
+        "sport_name": sport_name,
+        "created_by": current_user
     })
 
     # 返回删除是否成功（删除了至少一条记录）
     return result.deleted_count > 0
 
 # 获取用户可用运动类型列表
-async def get_available_sports_types(current_user: str):
+async def get_available_sports(current_user: str):
     """
     获取用户可用的运动类型列表，包括默认运动类型和用户自定义的运动类型
     """
     db = get_database()
     # 查询默认运动类型和用户自定义的运动类型
-    sports_types = await db["sports"].find(
-        {"$or": [{"email": settings.DEFAULT_SPORT_EMAIL}, {"email": current_user}]},
-        {"sport_type": 1, "describe": 1, "METs": 1, "_id": 0}
+    sports = await db["sports"].find(
+        {"$or": [{"created_by": "all"}, {"created_by": current_user}]},
+        {"sport_type": 1, "sport_name": 1, "describe": 1, "METs": 1,"image_url":1, "_id": 0}
     ).to_list(length=1000)
 
-    return sports_types
+    return sports
 
 # 记录运动
 async def log_sports_record(log_request,current_user):
     db = get_database()
     # 查找运动
     sport = await db["sports"].find_one({
-        "sport_type": log_request.sport_type,
+        "sport_name": log_request.sport_name,
         "$or": [
-            {"email": settings.DEFAULT_SPORT_EMAIL},
-            {"email": current_user}
+            {"created_by": "all"},
+            {"created_by": current_user}
         ]
     })
     if (not sport) :
@@ -155,8 +190,9 @@ async def log_sports_record(log_request,current_user):
         mets, user_weight, log_request.duration_time
     )
     SportLog=SportsLogInDB(
-        email=current_user,
-        sport_type=log_request.sport_type,
+        created_by=current_user,
+        sport_name=log_request.sport_name,
+        sport_type=sport["sport_type"],
         created_at=log_request.created_at,
         duration_time=log_request.duration_time,
         calories_burned=calories_burned
@@ -171,7 +207,7 @@ async def update_sports_record(update_request,current_user):
     db = get_database()
     # 查找运动记录
     record = await db["sports_log"].find_one(
-        {"_id": ObjectId(update_request.record_id), "email": current_user}
+        {"_id": ObjectId(update_request.record_id), "created_by": current_user}
     )
     if not record:
         raise HTTPException(
@@ -179,30 +215,39 @@ async def update_sports_record(update_request,current_user):
             detail="运动记录未找到"
         )
     update_data = {}
+    # 查找运动
+    sport = await db["sports"].find_one(
+    {"sport_name": update_request.new_sport_name}
+    )
+    if not sport:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="运动类型未找到"
+        )
     # 只添加非None的值到更新数据中
-    if update_request.sport_type is not None:
-        update_data["sport_type"] = update_request.sport_type
+    if update_request.new_sport_name is not None:
+        update_data["sport_name"] = update_request.new_sport_name
+        update_data["sport_type"] = sport["sport_type"]
     if update_request.created_at is not None:
         update_data["created_at"] = update_request.created_at
     if update_request.duration_time is not None:
         update_data["duration_time"] = update_request.duration_time
-        # 重新计算消耗卡路里
+
+    # 若有相关更改则重新计算消耗卡路里
+    if update_request.new_sport_name or update_request.duration_time:
         user_weight = await get_user_weight(current_user)
-        # 查找运动
-        sport = await db["sports"].find_one(
-            {"sport_type": update_request.sport_type}
-        )
         mets = sport["METs"]
         calories_burned = await calculate_calories_burned(
             mets, user_weight, update_request.duration_time
         )
         update_data["calories_burned"] = calories_burned
+
     # 如果没有要更新的字段（字典为空），返回原始记录
     if not update_data:
         return record
     # 执行更新
     result = await db["sports_log"].find_one_and_update(
-        {"_id": ObjectId(update_request.record_id), "email": current_user},
+        {"_id": ObjectId(update_request.record_id), "created_by": current_user},
         {"$set": update_data},
         return_document=True  # 返回更新后的文档
     )
@@ -217,7 +262,7 @@ async def delete_sports_record(record_id: str, current_user: str):
     # 查找并删除用户的运动记录
     result = await db["sports_log"].delete_one({
         "_id": ObjectId(record_id),
-        "email": current_user
+        "created_by": current_user
     })
     
     # 返回删除是否成功（删除了至少一条记录）
@@ -227,7 +272,7 @@ async def delete_sports_record(record_id: str, current_user: str):
 async def search_sports_record(search_request,current_user):
     db = get_database()
     query = {
-        "email": current_user
+        "created_by": current_user
     }
     if search_request.start_date:
         start_datetime = datetime.combine(search_request.start_date, datetime.min.time())
@@ -238,12 +283,12 @@ async def search_sports_record(search_request,current_user):
             query["created_at"]["$lte"] = end_datetime
         else:
             query["created_at"] = {"$lte": end_datetime}
-    if search_request.sport_type:
-        query["sport_type"] = search_request.sport_type
+    if search_request.sport_name:
+        query["sport_name"] = search_request.sport_name
 
     # 查询记录
     records = await db["sports_log"].find(query,
-    {"sport_type":1,"created_at":1,"duration_time":1,"calories_burned":1,"_id":1}).sort("created_at", -1).to_list(length=100)
+    {"sport_type":1,"sport_name":1,"created_at":1,"duration_time":1,"calories_burned":1,"_id":1}).sort("created_at", -1).to_list(length=100)
     # 创建时间最新的排在前面
     # records.sort(key=lambda x: x["created_at"], reverse=False)
 
@@ -278,7 +323,7 @@ async def generate_sports_report(email: str):
     search_request = type('obj', (object,), {})()
     search_request.start_date = last_7day
     search_request.end_date = last_day
-    search_request.sport_type = None
+    search_request.sport_name = None
     
     sports_logs = await search_sports_record(search_request, email)
     
@@ -299,9 +344,9 @@ async def generate_sports_report(email: str):
     # 统计各运动类型的详情
     sport_details = {}
     for log in sports_logs:
-        sport_type = log["sport_type"]
-        if sport_type not in sport_details:
-            sport_details[sport_type] = {
+        sport_name = log["sport_name"]
+        if sport_name not in sport_details:
+            sport_details[sport_name] = {
                 "count": 0,
                 "total_duration": 0,
                 "total_calories": 0,
@@ -309,12 +354,12 @@ async def generate_sports_report(email: str):
                 "avg_calories": 0
             }
         
-        sport_details[sport_type]["count"] += 1
-        sport_details[sport_type]["total_duration"] += log["duration_time"]
-        sport_details[sport_type]["total_calories"] += log["calories_burned"]
+        sport_details[sport_name]["count"] += 1
+        sport_details[sport_name]["total_duration"] += log["duration_time"]
+        sport_details[sport_name]["total_calories"] += log["calories_burned"]
     
     # 计算平均值
-    for sport_type, details in sport_details.items():
+    for sport_name, details in sport_details.items():
         details["avg_duration"] = details["total_duration"] / details["count"]
         details["avg_calories"] = details["total_calories"] / details["count"]
     
