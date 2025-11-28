@@ -147,6 +147,21 @@ class FoodSelectionActivity : AppCompatActivity() {
         })
     }
 
+
+    // 定义一个常量用于区分请求码
+    private val REQUEST_CODE_SCAN = 1
+
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+        if (requestCode == REQUEST_CODE_SCAN && resultCode == RESULT_OK) {
+            val barcode = data?.getStringExtra("barcode")
+            barcode?.let {
+                // 扫描成功后，可以将结果传递给 showCustomFoodDialog
+                showCustomFoodDialog(scannedBarcode = it)
+            }
+        }
+    }
+
     private fun setupButtons() {
         btnComplete.setOnClickListener {
             createFoodRecords()
@@ -158,7 +173,8 @@ class FoodSelectionActivity : AppCompatActivity() {
 
 
         findViewById<Button>(R.id.btnScanBarcode).setOnClickListener {
-            Toast.makeText(this, "扫条形码功能待实现", Toast.LENGTH_SHORT).show()
+            val intent = Intent(this, BarcodeActivity::class.java)
+            startActivityForResult(intent, REQUEST_CODE_SCAN) // 启动扫码活动并等待结果
         }
     }
 
@@ -255,7 +271,7 @@ class FoodSelectionActivity : AppCompatActivity() {
             .apply()
     }
 
-    private fun showCustomFoodDialog() {
+    private fun showCustomFoodDialog(scannedBarcode: String? = null) {
         val view = layoutInflater.inflate(R.layout.dialog_custom_food, null)
         val nameInput = view.findViewById<EditText>(R.id.etCustomFoodName)
         val categoryInput = view.findViewById<EditText>(R.id.etCustomFoodCategory)
@@ -267,8 +283,17 @@ class FoodSelectionActivity : AppCompatActivity() {
         val carbsInput = view.findViewById<EditText>(R.id.etCustomFoodCarbs)
         val fatInput = view.findViewById<EditText>(R.id.etCustomFoodFat)
 
+        // 通过条形码参数显示条形码值
+        val barcodeLabel = view.findViewById<TextView>(R.id.tvBarcodeLabel)
+        val barcodeValue = view.findViewById<TextView>(R.id.tvBarcodeValue)
+        if (scannedBarcode != null) {
+            barcodeLabel.visibility = View.VISIBLE
+            barcodeValue.visibility = View.VISIBLE
+            barcodeValue.text = scannedBarcode
+        }
+
         val dialog = android.app.AlertDialog.Builder(this)
-            .setTitle("添加自定义食物")
+            .setTitle(if (scannedBarcode == null) "添加自定义食物" else "扫码结果 - 填写食物信息")
             .setView(view)
             .setNegativeButton("取消", null)
             .setPositiveButton("保存", null)
@@ -311,7 +336,8 @@ class FoodSelectionActivity : AppCompatActivity() {
                     calories = calories,
                     protein = protein,
                     carbohydrates = carbs,
-                    fat = fat
+                    fat = fat,
+                    barcode = scannedBarcode // 使用条形码
                 )
 
                 dialog.dismiss()
@@ -321,6 +347,8 @@ class FoodSelectionActivity : AppCompatActivity() {
 
         dialog.show()
     }
+
+
 
     private fun createCustomFood(form: CustomFoodForm) {
         // 删除token判断，直接调用
@@ -651,7 +679,8 @@ class FoodSelectionActivity : AppCompatActivity() {
         val calories: Double,
         val protein: Double,
         val carbohydrates: Double,
-        val fat: Double
+        val fat: Double,
+        val barcode: String? = null  // 添加 barcode 参数
     ) {
         fun toRequest(): FoodCreateRequest {
             return FoodCreateRequest(

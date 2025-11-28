@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+    <!-- ZXing条形码扫描预览 -->
+    <com.journeyapps.barcodescanner.BarcodeView
+        android:id="@+id/zxing_barcode_surface"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"/>
+
+    <!-- 自定义扫描框 -->
+    <com.example.forhealth.view.CustomViewfinderView
+        android:id="@+id/zxing_viewfinder_view"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        app:lineColor="#ff8100"
+        app:cornerColor="#ff8100"
+        app:scanFrameWidth="180dp"
+        app:scanFrameHeight="180dp"/>
+
+    <!-- 扫描状态提示文本 -->
+    <TextView
+        android:id="@+id/zxing_status_view"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/zxing_msg_default_status"
+        android:textColor="@color/zxing_status_text"
+        android:background="@color/zxing_transparent"
+        android:layout_gravity="center"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintLeft_toLeftOf="parent"
+        app:layout_constraintRight_toRightOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/zxing_viewfinder_view" />
+
+</androidx.constraintlayout.widget.ConstraintLayout>

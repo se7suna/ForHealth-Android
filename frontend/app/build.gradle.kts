@@ -52,7 +52,8 @@ dependencies {
     implementation(libs.androidx.appcompat)
     implementation(libs.androidx.compose.animation.core)
 
-
+    implementation("com.google.zxing:core:3.4.1")
+    implementation("com.journeyapps:zxing-android-embedded:4.3.0")
     implementation("com.github.bumptech.glide:glide:4.15.1")
     kapt("com.github.bumptech.glide:compiler:4.12.0")
     // Kotlin 协程支持（如果使用协程）
@@ -70,7 +71,6 @@ dependencies {
     
     // RecyclerView - 列表视图
     implementation("androidx.recyclerview:recyclerview:1.3.2")
-    implementation("com.journeyapps:zxing-android-embedded:4.2.0")
     // Retrofit - 网络请求库
     implementation("com.squareup.retrofit2:retrofit:2.9.0")
     implementation("com.squareup.retrofit2:converter-gson:2.9.0")

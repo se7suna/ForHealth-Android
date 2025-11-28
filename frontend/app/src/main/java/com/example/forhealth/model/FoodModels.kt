@@ -73,7 +73,8 @@ data class CustomFoodForm(
     val calories: Double,
     val protein: Double,
     val carbohydrates: Double,
-    val fat: Double
+    val fat: Double,
+    val barcode: String? = null  // 添加 barcode 参数
 )
 
 
