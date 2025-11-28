@@ -38,7 +38,7 @@ class Settings(BaseSettings):
     # 图片存储配置
     IMAGE_STORAGE_PATH: str = "uploads"  # 图片存储基础路径（相对于项目根目录），包含 food_images 和 sports_images 等子文件夹
     IMAGE_BASE_URL: str = "/static"  # 图片访问基础URL（相对路径）
-    
+
     def get_full_image_base_url(self) -> str:
         """获取完整的图片访问基础URL（包含协议和主机）"""
         protocol = "https" if self.PORT == 443 else "http"
@@ -46,22 +46,14 @@ class Settings(BaseSettings):
         base_url_path = self.IMAGE_BASE_URL.lstrip("/")
         return f"{protocol}://{self.HOST}:{self.PORT}/{base_url_path}"
 
-    # 初始化数据库默认内容
-    ## 管理员账户用于权限写入
+
+    ## 管理员账户 （现在与普通用户没有任何区别）
     DEFAULT_AUTH_EMAIL: str = "user@example.com"
     DEFAULT_PASSWORD: str = "123456"
     ## 普通账户用于认证登陆
     USER_EMAIL: str = "test@user.com"
     USER_PASSWORD: str = "test1234"
-    ## 默认运动类型，用于记录运动
-    DEFAULT_SPORT_EMAIL: str = "user@example.com"# 表示公用类型，管理员具有写入权限
-    DefaultSports :tuple = (
-        {"sport_type": "跑步", "METs": 8,"describe":"高强度有氧运动，有效提升心肺功能和燃烧卡路里，适合大多数健康成年人","email":DEFAULT_SPORT_EMAIL},
-        {"sport_type": "游泳", "METs": 6,"describe":"低冲击性全身运动，锻炼几乎所有肌肉群，对关节友好，适合各年龄段人群","email":DEFAULT_SPORT_EMAIL},
-        {"sport_type": "骑自行车", "METs": 7,"describe":"中等至高强度有氧运动，主要锻炼下肢肌肉，提升心肺耐力，可调节强度适应不同体能水平","email":DEFAULT_SPORT_EMAIL},
-        {"sport_type": "散步", "METs": 3.5,"describe":"低强度有氧运动，适合初学者或恢复期人群，有助于改善心血管健康和日常活动能力","email":DEFAULT_SPORT_EMAIL},
-    )
-
+    
     @field_validator("ALLOWED_ORIGINS", mode="before")
     @classmethod
     def parse_cors_origins(cls, v):
@@ -74,6 +66,5 @@ class Settings(BaseSettings):
         env_file = ".env"
         case_sensitive = True
         extra="ignore"
-
 
 settings = Settings()
