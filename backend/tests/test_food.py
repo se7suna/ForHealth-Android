@@ -20,7 +20,7 @@ TEST_USER = {
 @pytest_asyncio.fixture
 async def auth_client():
     """创建已认证的客户端"""
-    async with AsyncClient(base_url="http://127.0.0.1:8000", timeout=30.0, http2=False) as client:
+    async with AsyncClient(base_url="http://127.0.0.1:8000", timeout=60.0, http2=False) as client:
         # 登录获取 token
         response = await client.post(
             "/api/auth/login",

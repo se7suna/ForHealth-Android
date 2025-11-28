@@ -133,6 +133,7 @@ test:unit:
       asyncio.run(create_test_users())
       PYTHON_SCRIPT
     - echo "🧪 运行单元测试..."
+    - sleep 120
     - pytest tests/ -v --tb=short --junitxml=test-results.xml
   after_script:
     - cd backend
