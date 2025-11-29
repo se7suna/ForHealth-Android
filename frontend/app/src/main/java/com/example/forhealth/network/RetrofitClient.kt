@@ -27,7 +27,7 @@ object RetrofitClient {
     private val fakeApiService = FakeApiService()
 
     // 后端服务器地址
-    private const val BASE_URL = "http://124.70.161.90:8000"
+    private const val BASE_URL = "http://10.0.2.2:8000"
 
     private var context: Context? = null
 

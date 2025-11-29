@@ -351,18 +351,18 @@ class FoodSelectionActivity : AppCompatActivity() {
 
 
     private fun createCustomFood(form: CustomFoodForm) {
-        // 删除token判断，直接调用
-        // val token = PrefsHelper.getToken(this)
-        // if (token.isBlank()) {
-        //     redirectToLogin()
-        //     return
-        // }
+        // 调入token
+         val token = PrefsHelper.getToken(this)
+         if (token.isBlank()) {
+             redirectToLogin()
+             return
+         }
 
         showLoading(true)
         lifecycleScope.launch {
             try {
-                // 如果接口需要token，可以给个固定字符串或者空字符串
-                val token = "no-token" // 或者 ""
+                // 前端无token测试
+                //val token = "no-token" // 或者 ""
 
                 val response = RetrofitClient.api.createFood(
                     token = "Bearer $token",
@@ -448,18 +448,17 @@ class FoodSelectionActivity : AppCompatActivity() {
             return
         }
 
-        // 删除token判断
-        // val token = PrefsHelper.getToken(this)
-        // if (token.isBlank()) {
-        //     redirectToLogin()
-        //     return
-        // }
+        val token = PrefsHelper.getToken(this)
+        if (token.isBlank()) {
+            redirectToLogin()
+             return
+         }
 
         showLoading(true)
 
         lifecycleScope.launch {
             try {
-                val token = "no-token" // 模拟token
+                //val token = "no-token" // 模拟token
 
                 val response = RetrofitClient.api.searchFoods(
                     token = "Bearer $token",
@@ -587,12 +586,11 @@ class FoodSelectionActivity : AppCompatActivity() {
             return
         }
 
-        // 删除登录判断
-        // val token = PrefsHelper.getToken(this)
-        // if (token.isBlank()) {
-        //     redirectToLogin()
-        //     return
-        // }
+        val token = PrefsHelper.getToken(this)
+        if (token.isBlank()) {
+            redirectToLogin()
+            return
+        }
 
         showLoading(true)
         val sdf = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.US)
@@ -602,7 +600,7 @@ class FoodSelectionActivity : AppCompatActivity() {
             var successCount = 0
             var failCount = 0
 
-            val token = "no-token" // 模拟token
+            //val token = "no-token" // 模拟token
 
             for ((foodId, selectedItem) in selectedFoods) {
                 try {
