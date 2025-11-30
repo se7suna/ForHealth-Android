@@ -1,7 +1,7 @@
 # For Health 前后端 API 协作文档
 
-版本：v2.1.0
-更新时间：2025-11-17
+版本：v2.2.0
+更新时间：2025-11-30
 后端负责人：hayasiakane
 
 ## 目录
@@ -57,7 +57,7 @@ Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 
 ## API 快速索引
 
-### 用户管理 API (9个)
+### 用户管理 API (13个)
 
 | 序号 | 端点 | 方法 | 说明 | 认证 |
 |------|------|------|------|------|
@@ -70,6 +70,10 @@ Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 | 7 | `/api/user/profile` | PUT | 更新用户资料 | ✅ |
 | 8 | `/api/auth/password-reset/send-code` | POST | 发送密码重置验证码 | ❌ |
 | 9 | `/api/auth/password-reset/verify` | POST | 验证码重置密码 | ❌ |
+| 10 | `/api/user/weight-record` | POST | 创建体重记录 | ✅ |
+| 11 | `/api/user/weight-records` | GET | 获取体重记录列表 | ✅ |
+| 12 | `/api/user/weight-record/{record_id}` | PUT | 更新体重记录 | ✅ |
+| 13 | `/api/user/weight-record/{record_id}` | DELETE | 删除体重记录 | ✅ |
 
 ### 食物管理 API (11个)
 
@@ -155,7 +159,7 @@ Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 | 46 | `/api/visualization/time-series-trend` | GET | 获取时间序列趋势分析 | ✅ |
 | 47 | `/api/visualization/export-report` | GET | 导出健康数据报告 | ✅ |
 
-**总计：47个API端点**
+**总计：51个API端点**
 
 ---
 
@@ -550,6 +554,186 @@ Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 ```json
 {
   "detail": "验证码错误或已过期"
+}
+```
+
+---
+
+### 10. 创建体重记录
+
+**端点**: `POST /api/user/weight-record`
+**认证**: ✅ 需要 JWT Token
+**说明**: 记录用户的历史体重数据
+
+**对应 Issue**: #79 - 添加历史体重记录功能
+
+#### 请求参数
+
+```json
+{
+  "weight": 70.5,
+  "recorded_at": "2025-11-24T10:30:00",
+  "notes": "晨起空腹"
+}
+```
+
+| 字段 | 类型 | 必填 | 范围/格式 | 说明 |
+|------|------|------|------|------|
+| weight | float | ✅ | 0-500 | 体重（公斤） |
+| recorded_at | datetime | ✅ | ISO 8601 | 记录时间 |
+| notes | string | ❌ | 最多200字符 | 备注 |
+
+#### 响应示例
+
+**成功 (201)**:
+```json
+{
+  "id": "507f1f77bcf86cd799439011",
+  "weight": 70.5,
+  "recorded_at": "2025-11-24T10:30:00",
+  "notes": "晨起空腹",
+  "created_at": "2025-11-24T10:30:00"
+}
+```
+
+**失败 (422) - 无效体重**:
+```json
+{
+  "detail": [
+    {
+      "loc": ["body", "weight"],
+      "msg": "ensure this value is greater than 0",
+      "type": "value_error.number.not_gt"
+    }
+  ]
+}
+```
+
+---
+
+### 11. 获取体重记录列表
+
+**端点**: `GET /api/user/weight-records`
+**认证**: ✅ 需要 JWT Token
+**说明**: 获取用户的体重记录列表，支持日期范围筛选
+
+#### 请求参数
+
+| 参数 | 类型 | 必填 | 默认值 | 说明 |
+|------|------|------|--------|------|
+| start_date | date | ❌ | - | 开始日期（YYYY-MM-DD） |
+| end_date | date | ❌ | - | 结束日期（YYYY-MM-DD） |
+| limit | integer | ❌ | 100 | 返回数量限制（最大500） |
+
+#### 响应示例
+
+**成功 (200)**:
+```json
+{
+  "total": 15,
+  "records": [
+    {
+      "id": "507f1f77bcf86cd799439011",
+      "weight": 70.5,
+      "recorded_at": "2025-11-24T10:30:00",
+      "notes": "晨起空腹",
+      "created_at": "2025-11-24T10:30:00"
+    },
+    {
+      "id": "507f1f77bcf86cd799439012",
+      "weight": 70.0,
+      "recorded_at": "2025-11-23T10:30:00",
+      "notes": null,
+      "created_at": "2025-11-23T10:30:00"
+    }
+  ]
+}
+```
+
+**说明**：
+- 记录按 `recorded_at` 时间倒序排列（最新的在前）
+- 可以通过 `start_date` 和 `end_date` 筛选特定日期范围
+- 用于体重趋势分析和可视化
+
+---
+
+### 12. 更新体重记录
+
+**端点**: `PUT /api/user/weight-record/{record_id}`
+**认证**: ✅ 需要 JWT Token
+**说明**: 更新已有的体重记录（仅创建者可更新）
+
+#### 路径参数
+
+| 参数 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| record_id | string | ✅ | 体重记录ID |
+
+#### 请求参数
+
+所有字段可选：
+
+```json
+{
+  "weight": 71.0,
+  "recorded_at": "2025-11-25T10:30:00",
+  "notes": "更新后的备注"
+}
+```
+
+| 字段 | 类型 | 必填 | 范围/格式 | 说明 |
+|------|------|------|------|------|
+| weight | float | ❌ | 0-500 | 体重（公斤） |
+| recorded_at | datetime | ❌ | ISO 8601 | 记录时间 |
+| notes | string | ❌ | 最多200字符 | 备注 |
+
+#### 响应示例
+
+**成功 (200)**:
+```json
+{
+  "id": "507f1f77bcf86cd799439011",
+  "weight": 71.0,
+  "recorded_at": "2025-11-25T10:30:00",
+  "notes": "更新后的备注",
+  "created_at": "2025-11-24T10:30:00"
+}
+```
+
+**失败 (404)**:
+```json
+{
+  "detail": "记录不存在或无权更新"
+}
+```
+
+---
+
+### 13. 删除体重记录
+
+**端点**: `DELETE /api/user/weight-record/{record_id}`
+**认证**: ✅ 需要 JWT Token
+**说明**: 删除指定的体重记录（仅创建者可删除）
+
+#### 路径参数
+
+| 参数 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| record_id | string | ✅ | 体重记录ID |
+
+#### 响应示例
+
+**成功 (200)**:
+```json
+{
+  "message": "体重记录删除成功"
+}
+```
+
+**失败 (404)**:
+```json
+{
+  "detail": "记录不存在或无权删除"
 }
 ```
 
@@ -2395,6 +2579,31 @@ interface UserProfile {
 - 后端会根据 `birthdate` 自动计算当前年龄（周岁）
 - 前端在获取用户资料时，可以直接读取已计算好的 `age` 字段
 - 数据库同时存储 `birthdate` 和 `age` 两个字段
+
+#### WeightRecord（体重记录）
+
+```typescript
+interface WeightRecord {
+  id: string;              // 记录ID（MongoDB ObjectId）
+  user_email: string;      // 用户邮箱
+  weight: number;          // 体重（公斤，0-500）
+  recorded_at: string;     // 记录时间（ISO 8601格式）
+  notes?: string;          // 备注（最多200字符）
+  created_at: string;      // 创建时间（ISO 8601格式）
+}
+```
+
+**使用场景**：
+- 记录用户的历史体重数据
+- 支持体重趋势分析和可视化
+- 在可视化报告中展示体重变化曲线
+- 按日期范围查询和统计
+
+**注意**：
+- `recorded_at` 是用户实际测量体重的时间
+- `created_at` 是系统记录的创建时间
+- 记录按 `recorded_at` 时间倒序排列
+- 只能查看、修改、删除自己的体重记录
 
 ---
 
