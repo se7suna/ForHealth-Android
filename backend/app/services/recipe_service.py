@@ -587,10 +587,10 @@ async def get_recipe_records(
     meal_type: Optional[str] = None,
     limit: int = 100,
     offset: int = 0
-) -> tuple[List[Dict[str, Any]], int]:
+) -> tuple[List[Dict[str, Any]], int, Dict[str, float]]:
     """
     批量获取食谱记录（按日期和餐次筛选）
-    
+
     Args:
         user_email: 用户邮箱
         start_date: 开始日期
@@ -598,9 +598,9 @@ async def get_recipe_records(
         meal_type: 餐次类型
         limit: 返回数量限制
         offset: 偏移量
-    
+
     Returns:
-        (批次列表, 总数)
+        (批次列表, 总数, 所有批次总营养)
     """
     from datetime import datetime as dt, time
     
@@ -709,14 +709,39 @@ async def get_recipe_records(
     
     # 按时间倒序排序
     batch_items.sort(key=lambda x: x["recorded_at"], reverse=True)
-    
+
     # 统计总数
     total = len(batch_items)
-    
+
     # 应用分页
     paginated_items = batch_items[offset:offset + limit]
-    
-    return paginated_items, total
+
+    # 计算所有批次的总营养（仅计算分页后的批次）
+    overall_nutrition = {
+        "calories": 0.0,
+        "protein": 0.0,
+        "carbohydrates": 0.0,
+        "fat": 0.0,
+        "fiber": 0.0,
+        "sugar": 0.0,
+        "sodium": 0.0,
+    }
+
+    for batch in paginated_items:
+        nutrition_dict = batch["total_nutrition"].dict() if hasattr(batch["total_nutrition"], 'dict') else batch["total_nutrition"]
+        overall_nutrition["calories"] += nutrition_dict.get("calories", 0) or 0
+        overall_nutrition["protein"] += nutrition_dict.get("protein", 0) or 0
+        overall_nutrition["carbohydrates"] += nutrition_dict.get("carbohydrates", 0) or 0
+        overall_nutrition["fat"] += nutrition_dict.get("fat", 0) or 0
+        overall_nutrition["fiber"] += nutrition_dict.get("fiber", 0) or 0
+        overall_nutrition["sugar"] += nutrition_dict.get("sugar", 0) or 0
+        overall_nutrition["sodium"] += nutrition_dict.get("sodium", 0) or 0
+
+    # 四舍五入
+    for key in overall_nutrition:
+        overall_nutrition[key] = round(overall_nutrition[key], 2)
+
+    return paginated_items, total, overall_nutrition
 
 
 async def update_recipe_record(

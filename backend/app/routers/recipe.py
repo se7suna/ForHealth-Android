@@ -220,7 +220,7 @@ async def get_recipe_records(
     返回当前用户的食谱记录批次列表，按记录时间倒序排列。
     每个批次包含该次食谱记录的汇总信息（食谱名称、总营养等）。
     """
-    batches, total = await recipe_service.get_recipe_records(
+    batches, total, overall_nutrition = await recipe_service.get_recipe_records(
         user_email=current_user,
         start_date=query.start_date,
         end_date=query.end_date,
@@ -228,30 +228,9 @@ async def get_recipe_records(
         limit=query.limit,
         offset=query.offset,
     )
-    
-    # 计算所有批次的总营养
-    overall_nutrition = {
-        "calories": 0.0,
-        "protein": 0.0,
-        "carbohydrates": 0.0,
-        "fat": 0.0,
-        "fiber": 0.0,
-        "sugar": 0.0,
-        "sodium": 0.0,
-    }
-    
+
     batch_responses = []
     for batch in batches:
-        # 提取并累加营养数据
-        nutrition_dict = batch["total_nutrition"].dict() if hasattr(batch["total_nutrition"], 'dict') else batch["total_nutrition"]
-        overall_nutrition["calories"] += nutrition_dict.get("calories", 0) or 0
-        overall_nutrition["protein"] += nutrition_dict.get("protein", 0) or 0
-        overall_nutrition["carbohydrates"] += nutrition_dict.get("carbohydrates", 0) or 0
-        overall_nutrition["fat"] += nutrition_dict.get("fat", 0) or 0
-        overall_nutrition["fiber"] += nutrition_dict.get("fiber", 0) or 0
-        overall_nutrition["sugar"] += nutrition_dict.get("sugar", 0) or 0
-        overall_nutrition["sodium"] += nutrition_dict.get("sodium", 0) or 0
-        
         batch_responses.append(RecipeRecordBatchItem(
             batch_id=batch["batch_id"],
             recipe_name=batch["recipe_name"],
@@ -261,11 +240,7 @@ async def get_recipe_records(
             total_nutrition=batch["total_nutrition"],
             notes=batch["notes"]
         ))
-    
-    # 四舍五入
-    for key in overall_nutrition:
-        overall_nutrition[key] = round(overall_nutrition[key], 2)
-    
+
     from app.models.food import NutritionData
     return RecipeRecordListResponse(
         total=total,
