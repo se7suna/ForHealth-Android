@@ -46,26 +46,15 @@ async def auth_client():
             yield client
 
 
-@pytest_asyncio.fixture(autouse=True)
-async def cleanup_weight_records():
-    """测试后清理体重记录"""
-    # 不在 setup 阶段清理，避免数据库未连接的问题
-    yield
-
-    # 测试后清理
-    try:
-        db = get_database()
-        await db.weight_records.delete_many({"user_email": TEST_USER["email"]})
-    except Exception:
-        # 如果数据库未连接，忽略清理错误
-        pass
-
-
 # ================== 测试：创建体重记录 ==================
 @pytest.mark.asyncio
 async def test_create_weight_record(auth_client):
     """测试创建体重记录"""
     global test_record_id
+
+    # 清理旧数据
+    db = get_database()
+    await db.weight_records.delete_many({"user_email": TEST_USER["email"]})
 
     response = await auth_client.post(
         "/api/user/weight-record",
@@ -115,6 +104,10 @@ async def test_create_weight_record_invalid_data(auth_client):
 @pytest.mark.asyncio
 async def test_get_weight_records(auth_client):
     """测试获取体重记录列表"""
+    # 清理旧数据
+    db = get_database()
+    await db.weight_records.delete_many({"user_email": TEST_USER["email"]})
+
     # 先创建几条记录
     for i in range(3):
         await auth_client.post(
@@ -141,6 +134,10 @@ async def test_get_weight_records(auth_client):
 @pytest.mark.asyncio
 async def test_get_weight_records_with_date_range(auth_client):
     """测试按日期范围查询体重记录"""
+    # 清理旧数据
+    db = get_database()
+    await db.weight_records.delete_many({"user_email": TEST_USER["email"]})
+
     today = datetime.utcnow().date()
 
     # 创建不同日期的记录
@@ -205,6 +202,10 @@ async def test_update_weight_record(auth_client):
 @pytest.mark.asyncio
 async def test_delete_weight_record(auth_client):
     """测试删除体重记录"""
+    # 清理旧数据
+    db = get_database()
+    await db.weight_records.delete_many({"user_email": TEST_USER["email"]})
+
     # 先创建一条记录
     create_response = await auth_client.post(
         "/api/user/weight-record",
@@ -233,7 +234,7 @@ async def test_delete_weight_record(auth_client):
 async def test_unauthorized_access():
     """测试未认证访问"""
     async with AsyncClient(base_url="http://127.0.0.1:8000", timeout=30.0, http2=False) as client:
-        # 测试创建记录
+        # 测试创建记录 (FastAPI 返回 403 Forbidden 而不是 401 Unauthorized)
         response = await client.post(
             "/api/user/weight-record",
             json={
@@ -241,8 +242,8 @@ async def test_unauthorized_access():
                 "recorded_at": datetime.utcnow().isoformat(),
             }
         )
-        assert response.status_code == 401
+        assert response.status_code == 403
 
         # 测试获取记录列表
         response = await client.get("/api/user/weight-records")
-        assert response.status_code == 401
+        assert response.status_code == 403
