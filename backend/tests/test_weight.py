@@ -9,7 +9,6 @@ import pytest_asyncio
 from datetime import datetime, date, timedelta
 from httpx import AsyncClient
 from app.main import app
-from app.database import get_database
 
 # ================== 测试数据准备 ==================
 from app.config import settings
@@ -52,9 +51,12 @@ async def test_create_weight_record(auth_client):
     """测试创建体重记录"""
     global test_record_id
 
-    # 清理旧数据
-    db = get_database()
-    await db.weight_records.delete_many({"user_email": TEST_USER["email"]})
+    # 通过 API 清理旧数据
+    get_response = await auth_client.get("/api/user/weight-records")
+    if get_response.status_code == 200:
+        records = get_response.json().get("records", [])
+        for record in records:
+            await auth_client.delete(f"/api/user/weight-record/{record['id']}")
 
     response = await auth_client.post(
         "/api/user/weight-record",
@@ -104,9 +106,12 @@ async def test_create_weight_record_invalid_data(auth_client):
 @pytest.mark.asyncio
 async def test_get_weight_records(auth_client):
     """测试获取体重记录列表"""
-    # 清理旧数据
-    db = get_database()
-    await db.weight_records.delete_many({"user_email": TEST_USER["email"]})
+    # 通过 API 清理旧数据
+    get_response = await auth_client.get("/api/user/weight-records")
+    if get_response.status_code == 200:
+        records = get_response.json().get("records", [])
+        for record in records:
+            await auth_client.delete(f"/api/user/weight-record/{record['id']}")
 
     # 先创建几条记录
     for i in range(3):
@@ -134,9 +139,12 @@ async def test_get_weight_records(auth_client):
 @pytest.mark.asyncio
 async def test_get_weight_records_with_date_range(auth_client):
     """测试按日期范围查询体重记录"""
-    # 清理旧数据
-    db = get_database()
-    await db.weight_records.delete_many({"user_email": TEST_USER["email"]})
+    # 通过 API 清理旧数据
+    get_response = await auth_client.get("/api/user/weight-records")
+    if get_response.status_code == 200:
+        records = get_response.json().get("records", [])
+        for record in records:
+            await auth_client.delete(f"/api/user/weight-record/{record['id']}")
 
     today = datetime.utcnow().date()
 
@@ -202,9 +210,12 @@ async def test_update_weight_record(auth_client):
 @pytest.mark.asyncio
 async def test_delete_weight_record(auth_client):
     """测试删除体重记录"""
-    # 清理旧数据
-    db = get_database()
-    await db.weight_records.delete_many({"user_email": TEST_USER["email"]})
+    # 通过 API 清理旧数据
+    get_response = await auth_client.get("/api/user/weight-records")
+    if get_response.status_code == 200:
+        records = get_response.json().get("records", [])
+        for record in records:
+            await auth_client.delete(f"/api/user/weight-record/{record['id']}")
 
     # 先创建一条记录
     create_response = await auth_client.post(
