@@ -39,6 +39,10 @@ async def update_body_data(email: str, body_data: BodyDataRequest) -> Optional[d
     """更新用户身体基本数据并计算 BMR"""
     db = get_database()
 
+    # 获取用户当前体重，用于判断是否变化
+    user = await get_user_by_email(email)
+    old_weight = user.get("weight") if user else None
+
     # 根据出生日期计算年龄
     age = calculate_age(body_data.birthdate)
 
@@ -50,7 +54,7 @@ async def update_body_data(email: str, body_data: BodyDataRequest) -> Optional[d
     # 更新数据（同时保存 birthdate 和计算出的 age）
     # 将birthdate从date转换为datetime（MongoDB要求）
     birthdate_datetime = datetime.combine(body_data.birthdate, datetime.min.time())
-    
+
     update_data = {
         "height": body_data.height,
         "weight": body_data.weight,
@@ -66,6 +70,24 @@ async def update_body_data(email: str, body_data: BodyDataRequest) -> Optional[d
         {"$set": update_data},
         return_document=True,
     )
+
+    # 自动同步：如果体重发生变化，创建体重记录
+    if body_data.weight != old_weight and body_data.weight is not None:
+        from app.services.weight_service import create_weight_record
+        from app.schemas.weight import WeightRecordCreateRequest
+
+        try:
+            await create_weight_record(
+                user_email=email,
+                record_data=WeightRecordCreateRequest(
+                    weight=body_data.weight,
+                    recorded_at=datetime.utcnow(),
+                    notes="通过个人资料更新"
+                )
+            )
+        except Exception:
+            # 创建体重记录失败不影响主流程
+            pass
 
     return result
 
@@ -234,11 +256,33 @@ async def update_user_profile(
 
     update_data["updated_at"] = datetime.utcnow()
 
+    # 保存旧体重用于判断是否变化
+    old_weight = user.get("weight")
+    new_weight = update_data.get("weight")
+
     result = await db.users.find_one_and_update(
         {"email": email},
         {"$set": update_data},
         return_document=True,
     )
+
+    # 自动同步：如果体重发生变化，创建体重记录
+    if new_weight is not None and new_weight != old_weight:
+        from app.services.weight_service import create_weight_record
+        from app.schemas.weight import WeightRecordCreateRequest
+
+        try:
+            await create_weight_record(
+                user_email=email,
+                record_data=WeightRecordCreateRequest(
+                    weight=new_weight,
+                    recorded_at=datetime.utcnow(),
+                    notes="通过个人资料更新"
+                )
+            )
+        except Exception:
+            # 创建体重记录失败不影响主流程
+            pass
 
     return result
 

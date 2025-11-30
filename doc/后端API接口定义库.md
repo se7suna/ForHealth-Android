@@ -1,8 +1,47 @@
 # For Health 前后端 API 协作文档
 
-版本：v2.1.0
-更新时间：2025-11-17
+版本：v2.3.0
+更新时间：2025-11-30
 后端负责人：hayasiakane
+
+## 📌 最新更新 (2025-11-30)
+
+### ⚠️ 前端同学必读 - 重要变更
+
+#### 1. **登录接口返回值变更** 🔴 Breaking Change
+- **接口**: `POST /api/auth/login`
+- **变更**: 响应中新增 `refresh_token` 字段
+- **影响**: 前端需要同时保存 `access_token` 和 `refresh_token`
+- **操作指南**: 详见 [Refresh Token 机制](#新增-refresh-token-自动刷新机制)
+
+#### 2. **新增 Token 刷新接口** 🆕
+- **接口**: `POST /api/auth/refresh`
+- **用途**: 使用 refresh_token 获取新的 access_token
+- **必须实现**: 前端需配置 Axios 拦截器自动刷新过期 token
+- **参考文档**: `backend/REFRESH_TOKEN_GUIDE.md`
+
+#### 3. **Token 有效期调整** ⏰
+- **Access Token**: 从 30 分钟改为 **15 分钟**
+- **Refresh Token**: 新增，有效期 **30 天**
+- **影响**: 用户登录一次后 30 天内无需重新登录
+
+#### 4. **体重字段自动同步** 🔄
+- 创建体重记录会自动更新用户当前体重
+- 更新用户体重会自动创建历史记录
+- **注意**: 前端无需额外操作，后端已自动处理
+
+### 快速上手前端改造
+```javascript
+// 1. 保存 tokens（登录成功后）
+localStorage.setItem('refresh_token', refresh_token);  // 长期存储
+sessionStorage.setItem('access_token', access_token);   // 临时存储
+
+// 2. 配置 Axios 拦截器（详见 REFRESH_TOKEN_GUIDE.md）
+// 3. API 请求时使用 access_token
+// 4. 401 错误时自动用 refresh_token 刷新
+```
+
+---
 
 ## 目录
 
@@ -57,19 +96,29 @@ Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 
 ## API 快速索引
 
-### 用户管理 API (9个)
+**图例说明**:
+- 🆕 = 今日新增 (2025-11-30)
+- 🔄 = 今日更新 (2025-11-30)
+- ⚠️ = 重要变更，前端必须适配
 
-| 序号 | 端点 | 方法 | 说明 | 认证 |
-|------|------|------|------|------|
-| 1 | `/api/auth/register` | POST | 用户注册 | ❌ |
-| 2 | `/api/auth/login` | POST | 用户登录 | ❌ |
-| 3 | `/api/user/body-data` | POST | 更新身体基本数据 | ✅ |
-| 4 | `/api/user/activity-level` | POST | 更新活动水平 | ✅ |
-| 5 | `/api/user/health-goal` | POST | 设定健康目标 | ✅ |
-| 6 | `/api/user/profile` | GET | 获取用户资料 | ✅ |
-| 7 | `/api/user/profile` | PUT | 更新用户资料 | ✅ |
-| 8 | `/api/auth/password-reset/send-code` | POST | 发送密码重置验证码 | ❌ |
-| 9 | `/api/auth/password-reset/verify` | POST | 验证码重置密码 | ❌ |
+### 用户管理 API (14个)
+
+| 序号 | 端点 | 方法 | 说明 | 认证 | 状态 |
+|------|------|------|------|------|------|
+| 1 | `/api/auth/register` | POST | 用户注册 | ❌ | |
+| 2 | `/api/auth/login` | POST | 用户登录 | ❌ | 🔄⚠️ |
+| 2.1 | `/api/auth/refresh` | POST | 刷新 Token | ❌ | 🆕⚠️ |
+| 3 | `/api/user/body-data` | POST | 更新身体基本数据 | ✅ | 🔄 |
+| 4 | `/api/user/activity-level` | POST | 更新活动水平 | ✅ | |
+| 5 | `/api/user/health-goal` | POST | 设定健康目标 | ✅ | |
+| 6 | `/api/user/profile` | GET | 获取用户资料 | ✅ | |
+| 7 | `/api/user/profile` | PUT | 更新用户资料 | ✅ | 🔄 |
+| 8 | `/api/auth/password-reset/send-code` | POST | 发送密码重置验证码 | ❌ | |
+| 9 | `/api/auth/password-reset/verify` | POST | 验证码重置密码 | ❌ | |
+| 10 | `/api/user/weight-record` | POST | 创建体重记录 | ✅ | 🔄 |
+| 11 | `/api/user/weight-records` | GET | 获取体重记录列表 | ✅ | |
+| 12 | `/api/user/weight-record/{record_id}` | PUT | 更新体重记录 | ✅ | |
+| 13 | `/api/user/weight-record/{record_id}` | DELETE | 删除体重记录 | ✅ | |
 
 ### 食物管理 API (11个)
 
@@ -155,7 +204,7 @@ Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 | 46 | `/api/visualization/time-series-trend` | GET | 获取时间序列趋势分析 | ✅ |
 | 47 | `/api/visualization/export-report` | GET | 导出健康数据报告 | ✅ |
 
-**总计：47个API端点**
+**总计：51个API端点**
 
 ---
 
@@ -207,11 +256,17 @@ Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 
 ---
 
-### 2. 用户登录
+### 2. 用户登录 🔄⚠️
 
 **端点**: `POST /api/auth/login`
 **认证**: ❌ 不需要
-**说明**: 用户登录获取 JWT Token
+**说明**: 用户登录获取 JWT Token（包含 access token 和 refresh token）
+
+**⚠️ 重要变更 (2025-11-30)**:
+- 响应中新增 `refresh_token` 字段
+- 前端必须同时保存 `access_token` 和 `refresh_token`
+- `access_token` 有效期改为 15 分钟
+- `refresh_token` 有效期 30 天，用于自动刷新 access token
 
 #### 请求参数
 
@@ -228,8 +283,22 @@ Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 ```json
 {
   "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "refresh_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
   "token_type": "bearer"
 }
+```
+
+**字段说明**:
+- `access_token`: 短期访问令牌（15 分钟有效），用于 API 请求
+- `refresh_token`: 长期刷新令牌（30 天有效），用于刷新 access token
+- `token_type`: 令牌类型（固定为 "bearer"）
+
+**前端存储建议**:
+```javascript
+// 临时存储（关闭浏览器后清除）
+sessionStorage.setItem('access_token', access_token);
+// 持久存储（30 天内有效）
+localStorage.setItem('refresh_token', refresh_token);
 ```
 
 **失败 (404/401)**:
@@ -241,11 +310,123 @@ Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 
 ---
 
-### 3. 更新身体基本数据
+### 2.1 刷新 Token 🆕⚠️
+
+**端点**: `POST /api/auth/refresh`
+**认证**: ❌ 不需要（但需要有效的 refresh token）
+**说明**: 使用 refresh token 获取新的 access token 和 refresh token
+
+**对应文档**: `backend/REFRESH_TOKEN_GUIDE.md` - 完整前端集成指南
+
+#### 使用场景
+
+- Access token 过期（15 分钟后）
+- API 返回 401 错误
+- 前端拦截器自动调用此接口刷新 token
+- 无需用户重新登录
+
+#### 请求参数
+
+```json
+{
+  "refresh_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+}
+```
+
+| 字段 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| refresh_token | string | ✅ | 登录时获得的 refresh token |
+
+#### 响应示例
+
+**成功 (200)**:
+```json
+{
+  "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "refresh_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "token_type": "bearer"
+}
+```
+
+**注意**:
+- 每次刷新都会返回**新的** access token 和 refresh token
+- 旧的 tokens 会立即失效
+- 前端需要更新存储的两个 token
+
+**失败 (401)**:
+```json
+{
+  "detail": "无效的 refresh token"
+}
+```
+
+**失败 (404)**:
+```json
+{
+  "detail": "用户不存在"
+}
+```
+
+#### 前端集成示例
+
+使用 Axios 拦截器自动刷新：
+
+```javascript
+// 响应拦截器 - 处理 401 错误
+api.interceptors.response.use(
+  response => response,
+  async error => {
+    const originalRequest = error.config;
+
+    // 如果是 401 错误且没有重试过
+    if (error.response?.status === 401 && !originalRequest._retry) {
+      originalRequest._retry = true;
+
+      const refreshToken = localStorage.getItem('refresh_token');
+
+      try {
+        // 调用刷新接口
+        const response = await axios.post('/api/auth/refresh', {
+          refresh_token: refreshToken
+        });
+
+        const { access_token, refresh_token: newRefreshToken } = response.data;
+
+        // 保存新的 tokens
+        sessionStorage.setItem('access_token', access_token);
+        localStorage.setItem('refresh_token', newRefreshToken);
+
+        // 重试原请求
+        originalRequest.headers['Authorization'] = `Bearer ${access_token}`;
+        return api(originalRequest);
+      } catch (refreshError) {
+        // 刷新失败，跳转登录
+        localStorage.removeItem('refresh_token');
+        sessionStorage.removeItem('access_token');
+        window.location.href = '/login';
+        return Promise.reject(refreshError);
+      }
+    }
+
+    return Promise.reject(error);
+  }
+);
+```
+
+**完整实现指南**: 详见 `backend/REFRESH_TOKEN_GUIDE.md`
+
+---
+
+### 3. 更新身体基本数据 🔄
 
 **端点**: `POST /api/user/body-data`
 **认证**: ✅ 需要 JWT Token
 **说明**: 提交用户身体基本数据，系统会自动根据出生日期计算年龄，并计算 BMR
+
+**🔄 更新说明 (2025-11-30)**:
+- 更新体重时会自动创建体重历史记录
+- 无需手动调用 `POST /api/user/weight-record` 接口
+- 体重记录的 `recorded_at` 时间为当前时间
 
 #### 请求参数
 
@@ -269,6 +450,7 @@ Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 - 出生日期格式必须为 `YYYY-MM-DD`（例如：1998-05-15）
 - 系统会根据出生日期自动计算年龄（周岁）
 - 计算出的年龄必须在 10-120 岁之间
+- **体重字段会自动同步**：更新体重时系统会自动在 `weight_records` 表中创建历史记录
 
 #### 响应示例
 
@@ -424,11 +606,16 @@ Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 
 ---
 
-### 7. 更新用户资料
+### 7. 更新用户资料 🔄
 
 **端点**: `PUT /api/user/profile`
 **认证**: ✅ 需要 JWT Token
 **说明**: 更新用户资料，所有字段可选，系统会自动重新计算相关数值
+
+**🔄 更新说明 (2025-11-30)**:
+- 更新体重时会自动创建体重历史记录
+- 无需手动调用 `POST /api/user/weight-record` 接口
+- 体重记录的 `recorded_at` 时间为当前时间
 
 #### 请求参数
 
@@ -446,7 +633,7 @@ Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 **可更新字段**：
 - `username`: 用户名
 - `height`: 身高
-- `weight`: 体重
+- `weight`: 体重（更新时自动创建历史记录）
 - `birthdate`: 出生日期（格式：YYYY-MM-DD）
 - `gender`: 性别
 - `activity_level`: 活动水平
@@ -457,6 +644,7 @@ Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 **注意**：
 - 如果更新了 `birthdate`，系统会自动重新计算年龄
 - 如果修改了相关字段（身高、体重、出生日期等），系统会自动重新计算 BMR、TDEE 和每日卡路里目标
+- **体重字段会自动同步**：更新体重时系统会自动在 `weight_records` 表中创建历史记录
 
 #### 响应示例
 
@@ -550,6 +738,195 @@ Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 ```json
 {
   "detail": "验证码错误或已过期"
+}
+```
+
+---
+
+### 10. 创建体重记录 🔄
+
+**端点**: `POST /api/user/weight-record`
+**认证**: ✅ 需要 JWT Token
+**说明**: 记录用户的历史体重数据
+
+**对应 Issue**: #79 - 添加历史体重记录功能
+
+**🔄 更新说明 (2025-11-30)**:
+- 创建体重记录时会自动更新用户的当前体重（`users.weight` 字段）
+- 实现了体重数据的双向同步
+- 用户最新的体重始终保持一致
+
+#### 请求参数
+
+```json
+{
+  "weight": 70.5,
+  "recorded_at": "2025-11-24T10:30:00",
+  "notes": "晨起空腹"
+}
+```
+
+| 字段 | 类型 | 必填 | 范围/格式 | 说明 |
+|------|------|------|------|------|
+| weight | float | ✅ | 0-500 | 体重（公斤） |
+| recorded_at | datetime | ✅ | ISO 8601 | 记录时间 |
+| notes | string | ❌ | 最多200字符 | 备注 |
+
+**重要提示**：
+- 创建记录时，系统会自动将该体重值同步到用户资料的 `weight` 字段
+- 前端无需额外调用 `PUT /api/user/profile` 更新用户体重
+
+#### 响应示例
+
+**成功 (201)**:
+```json
+{
+  "id": "507f1f77bcf86cd799439011",
+  "weight": 70.5,
+  "recorded_at": "2025-11-24T10:30:00",
+  "notes": "晨起空腹",
+  "created_at": "2025-11-24T10:30:00"
+}
+```
+
+**失败 (422) - 无效体重**:
+```json
+{
+  "detail": [
+    {
+      "loc": ["body", "weight"],
+      "msg": "ensure this value is greater than 0",
+      "type": "value_error.number.not_gt"
+    }
+  ]
+}
+```
+
+---
+
+### 11. 获取体重记录列表
+
+**端点**: `GET /api/user/weight-records`
+**认证**: ✅ 需要 JWT Token
+**说明**: 获取用户的体重记录列表，支持日期范围筛选
+
+#### 请求参数
+
+| 参数 | 类型 | 必填 | 默认值 | 说明 |
+|------|------|------|--------|------|
+| start_date | date | ❌ | - | 开始日期（YYYY-MM-DD） |
+| end_date | date | ❌ | - | 结束日期（YYYY-MM-DD） |
+| limit | integer | ❌ | 100 | 返回数量限制（最大500） |
+
+#### 响应示例
+
+**成功 (200)**:
+```json
+{
+  "total": 15,
+  "records": [
+    {
+      "id": "507f1f77bcf86cd799439011",
+      "weight": 70.5,
+      "recorded_at": "2025-11-24T10:30:00",
+      "notes": "晨起空腹",
+      "created_at": "2025-11-24T10:30:00"
+    },
+    {
+      "id": "507f1f77bcf86cd799439012",
+      "weight": 70.0,
+      "recorded_at": "2025-11-23T10:30:00",
+      "notes": null,
+      "created_at": "2025-11-23T10:30:00"
+    }
+  ]
+}
+```
+
+**说明**：
+- 记录按 `recorded_at` 时间倒序排列（最新的在前）
+- 可以通过 `start_date` 和 `end_date` 筛选特定日期范围
+- 用于体重趋势分析和可视化
+
+---
+
+### 12. 更新体重记录
+
+**端点**: `PUT /api/user/weight-record/{record_id}`
+**认证**: ✅ 需要 JWT Token
+**说明**: 更新已有的体重记录（仅创建者可更新）
+
+#### 路径参数
+
+| 参数 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| record_id | string | ✅ | 体重记录ID |
+
+#### 请求参数
+
+所有字段可选：
+
+```json
+{
+  "weight": 71.0,
+  "recorded_at": "2025-11-25T10:30:00",
+  "notes": "更新后的备注"
+}
+```
+
+| 字段 | 类型 | 必填 | 范围/格式 | 说明 |
+|------|------|------|------|------|
+| weight | float | ❌ | 0-500 | 体重（公斤） |
+| recorded_at | datetime | ❌ | ISO 8601 | 记录时间 |
+| notes | string | ❌ | 最多200字符 | 备注 |
+
+#### 响应示例
+
+**成功 (200)**:
+```json
+{
+  "id": "507f1f77bcf86cd799439011",
+  "weight": 71.0,
+  "recorded_at": "2025-11-25T10:30:00",
+  "notes": "更新后的备注",
+  "created_at": "2025-11-24T10:30:00"
+}
+```
+
+**失败 (404)**:
+```json
+{
+  "detail": "记录不存在或无权更新"
+}
+```
+
+---
+
+### 13. 删除体重记录
+
+**端点**: `DELETE /api/user/weight-record/{record_id}`
+**认证**: ✅ 需要 JWT Token
+**说明**: 删除指定的体重记录（仅创建者可删除）
+
+#### 路径参数
+
+| 参数 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| record_id | string | ✅ | 体重记录ID |
+
+#### 响应示例
+
+**成功 (200)**:
+```json
+{
+  "message": "体重记录删除成功"
+}
+```
+
+**失败 (404)**:
+```json
+{
+  "detail": "记录不存在或无权删除"
 }
 ```
 
@@ -2395,6 +2772,31 @@ interface UserProfile {
 - 后端会根据 `birthdate` 自动计算当前年龄（周岁）
 - 前端在获取用户资料时，可以直接读取已计算好的 `age` 字段
 - 数据库同时存储 `birthdate` 和 `age` 两个字段
+
+#### WeightRecord（体重记录）
+
+```typescript
+interface WeightRecord {
+  id: string;              // 记录ID（MongoDB ObjectId）
+  user_email: string;      // 用户邮箱
+  weight: number;          // 体重（公斤，0-500）
+  recorded_at: string;     // 记录时间（ISO 8601格式）
+  notes?: string;          // 备注（最多200字符）
+  created_at: string;      // 创建时间（ISO 8601格式）
+}
+```
+
+**使用场景**：
+- 记录用户的历史体重数据
+- 支持体重趋势分析和可视化
+- 在可视化报告中展示体重变化曲线
+- 按日期范围查询和统计
+
+**注意**：
+- `recorded_at` 是用户实际测量体重的时间
+- `created_at` 是系统记录的创建时间
+- 记录按 `recorded_at` 时间倒序排列
+- 只能查看、修改、删除自己的体重记录
 
 ---
 

@@ -1,5 +1,5 @@
 from pydantic import BaseModel, EmailStr, Field, validator
-from typing import Optional
+from typing import Optional, Any, Dict
 from datetime import date
 from app.models.user import ActivityLevel, HealthGoalType, Gender
 
@@ -35,7 +35,13 @@ class UserLoginRequest(BaseModel):
 class TokenResponse(BaseModel):
     """Token 响应"""
     access_token: str
+    refresh_token: str
     token_type: str = "bearer"
+
+
+class RefreshTokenRequest(BaseModel):
+    """刷新 Token 请求"""
+    refresh_token: str
 
 
 # ========== 身体基本数据 ==========
