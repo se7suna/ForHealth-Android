@@ -72,3 +72,6 @@ logs/
 .externalNativeBuild
 .cxx
 local.properties
+
+# 后端下载的文件
+backend/uploads/

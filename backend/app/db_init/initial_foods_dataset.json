@@ -1,0 +1,602 @@
+{
+  "version": "1.1",
+  "description": "常用基础食物初始数据集 - 扩充版",
+  "created_at": "2025-11-19",
+  "updated_at": "2025-11-19",
+  "total_foods": 35,
+  "foods": [
+    {
+      "name": "米饭",
+      "category": "主食",
+      "serving_size": 100,
+      "serving_unit": "克",
+      "nutrition_per_serving": {
+        "calories": 116,
+        "protein": 2.6,
+        "carbohydrates": 25.9,
+        "fat": 0.3,
+        "fiber": 0.3,
+        "sodium": 2.5
+      },
+      "source": "local",
+      "created_by": "all",
+      "image_url": "https://f.boohee.cn/house/upload_food/2022/1/18/slim_mid_photo_url_big_photo_url_f81e8de29f76e6d0c39d4142fe45764f.jpg"
+    },
+    {
+      "name": "馒头",
+      "category": "主食",
+      "serving_size": 100,
+      "serving_unit": "克",
+      "nutrition_per_serving": {
+        "calories": 223,
+        "protein": 7.0,
+        "carbohydrates": 47.0,
+        "fat": 1.1,
+        "fiber": 1.3,
+        "sodium": 165.1
+      },
+      "source": "local",
+      "created_by": "all",
+      "image_url": "https://f.boohee.cn/house/upload_food/2022/1/18/slim_mid_photo_url_1945bc70b243079727cfd0670f1b753b.jpg"
+    },
+    {
+      "name": "全麦面包",
+      "category": "主食",
+      "serving_size": 100,
+      "serving_unit": "克",
+      "nutrition_per_serving": {
+        "calories": 254,
+        "protein": 12.3,
+        "carbohydrates": 43.1,
+        "fat": 3.55,
+        "fiber": 6.0,
+        "sugar": 4.41,
+        "sodium": 449.0
+      },
+      "source": "local",
+      "created_by": "all",
+      "image_url": "https://f.boohee.cn/house/upload_food/2022/1/18/slim_m_big_photo_url_734d51cb0453db04bb275a477a1e5be4.jpg"
+    },
+    {
+      "name": "鲜玉米",
+      "category": "主食",
+      "serving_size": 100,
+      "serving_unit": "克",
+      "nutrition_per_serving": {
+        "calories": 112,
+        "protein": 4.0,
+        "carbohydrates": 22.8,
+        "fat": 1.2,
+        "fiber": 2.9,
+        "sugar": 8.89,
+        "sodium": 1.1
+      },
+      "source": "local",
+      "created_by": "all",
+      "image_url": "https://f.boohee.cn/house/upload_food/2022/1/18/slim_mid_photo_url_c2151343a69cae01925e8599d66bcc8c.jpg"
+    },
+    {
+      "name": "蒸红薯",
+      "category": "主食",
+      "serving_size": 100,
+      "serving_unit": "克",
+      "nutrition_per_serving": {
+        "calories": 65,
+        "protein": 1.18,
+        "carbohydrates": 15.09,
+        "fat": 0.08,
+        "fiber": 2.25,
+        "sugar": 3.03,
+        "sodium": 41.25
+      },
+      "source": "local",
+      "created_by": "all",
+      "image_url": "https://f.boohee.cn/house/upload_food/2022/1/19/slim_mid_photo_url_7a3f684dcd0e0e347f95949be4e4ae95.jpg"
+    },
+    {
+      "name": "鸡蛋",
+      "category": "蛋类",
+      "serving_size": 50,
+      "serving_unit": "克",
+      "nutrition_per_serving": {
+        "calories": 139,
+        "protein": 13.1,
+        "carbohydrates": 2.4,
+        "fat": 8.6,
+        "sodium": 131.5
+      },
+      "source": "local",
+      "created_by": "all",
+      "image_url": "https://f.boohee.cn/house/upload_food/2022/6/14/slim_mid_photo_url_dd7b84029da07f75e45897a0d1df55ba.jpg"
+    },
+    {
+      "name": "煮鸡蛋",
+      "category": "蛋类",
+      "serving_size": 50,
+      "serving_unit": "克",
+      "nutrition_per_serving": {
+        "calories": 144,
+        "protein": 14.0,
+        "carbohydrates": 0.1,
+        "fat": 9.22,
+        "sodium": 124.0
+      },
+      "source": "local",
+      "created_by": "all",
+      "image_url": "https://f.boohee.cn/house/upload_food/2020/5/27/mid_photo_url_a6393ff83f5545f471136ab2335c0a59.jpg"
+    },
+    {
+      "name": "鸡蛋白",
+      "category": "蛋类",
+      "serving_size": 100,
+      "serving_unit": "克",
+      "nutrition_per_serving": {
+        "calories": 60,
+        "protein": 11.6,
+        "carbohydrates": 3.1,
+        "fat": 0.1,
+        "sodium": 79.4
+      },
+      "source": "local",
+      "created_by": "all",
+      "image_url": "https://f.boohee.cn/house/upload_food/2023/1/3/m_2c118b168b806a1b6ba072b17ed32f89.jpg"
+    },
+    {
+      "name": "牛奶",
+      "category": "奶制品",
+      "serving_size": 100,
+      "serving_unit": "毫升",
+      "nutrition_per_serving": {
+        "calories": 66,
+        "protein": 3.0,
+        "carbohydrates": 5.0,
+        "fat": 3.8,
+        "sodium": 65.0
+      },
+      "source": "local",
+      "created_by": "all",
+      "image_url": "https://f.boohee.cn/house/upload_food/2022/1/18/slim_50375497d540439bbb1419b9a1b06525.jpg"
+    },
+    {
+      "name": "豆浆",
+      "category": "豆制品",
+      "serving_size": 100,
+      "serving_unit": "毫升",
+      "nutrition_per_serving": {
+        "calories": 31,
+        "protein": 3.0,
+        "carbohydrates": 1.2,
+        "fat": 1.6,
+        "sugar": 0.58,
+        "sodium": 3.7
+      },
+      "source": "local",
+      "created_by": "all",
+      "image_url": "https://f.boohee.cn/house/upload_food/2022/1/18/slim_mid_photo_url_57a5ff25194ecd20370783b218857b3a.jpg"
+    },
+    {
+      "name": "酸奶",
+      "category": "奶制品",
+      "serving_size": 100,
+      "serving_unit": "克",
+      "nutrition_per_serving": {
+        "calories": 61,
+        "protein": 3.5,
+        "carbohydrates": 4.7,
+        "fat": 3.3,
+        "sodium": 44.0
+      },
+      "source": "local",
+      "created_by": "all",
+      "image_url": "https://f.boohee.cn/house/upload_food/2022/1/18/slim_mid_photo_url_big_photo_url_58d1b90bbc7f30a15fb7efbbefd35ad2.jpg"
+    },
+    {
+      "name": "鸡胸肉",
+      "category": "肉类",
+      "serving_size": 100,
+      "serving_unit": "克",
+      "nutrition_per_serving": {
+        "calories": 118,
+        "protein": 24.6,
+        "carbohydrates": 0.6,
+        "fat": 1.9,
+        "sodium": 44.8
+      },
+      "source": "local",
+      "created_by": "all",
+      "image_url": "https://f.boohee.cn/house/upload_food/2022/1/18/slim_1cfe23ebcba74e6486fda4434c8027fd.jpg"
+    },
+    {
+      "name": "牛肉",
+      "category": "肉类",
+      "serving_size": 100,
+      "serving_unit": "克",
+      "nutrition_per_serving": {
+        "calories": 125,
+        "protein": 19.9,
+        "carbohydrates": 0.0,
+        "fat": 4.2,
+        "sodium": 58.0
+      },
+      "source": "local",
+      "created_by": "all",
+      "image_url": "https://f.boohee.cn/house/upload_food/2020/6/5/mid_photo_url_big_photo_url_7149f4e7393870bc099259bc977ceddd.jpg"
+    },
+    {
+      "name": "猪瘦肉",
+      "category": "肉类",
+      "serving_size": 100,
+      "serving_unit": "克",
+      "nutrition_per_serving": {
+        "calories": 143,
+        "protein": 20.3,
+        "carbohydrates": 1.5,
+        "fat": 6.2,
+        "sodium": 65.0
+      },
+      "source": "local",
+      "created_by": "all",
+      "image_url": "https://f.boohee.cn/house/upload_food/2022/1/19/slim_mid_photo_url_4761f2a52d3f3b16bf424157dfc8a573.jpg"
+    },
+    {
+      "name": "三文鱼",
+      "category": "肉类",
+      "serving_size": 100,
+      "serving_unit": "克",
+      "nutrition_per_serving": {
+        "calories": 139,
+        "protein": 20.0,
+        "carbohydrates": 0.0,
+        "fat": 6.3,
+        "sodium": 59.0
+      },
+      "source": "local",
+      "created_by": "all",
+      "image_url": "https://f.boohee.cn/house/upload_food/2022/1/18/slim_mid_photo_url_5702f2d0c0ef84bcfc3ecf82e7f5be8a.jpg"
+    },
+    {
+      "name": "苹果",
+      "category": "水果",
+      "serving_size": 100,
+      "serving_unit": "克",
+      "nutrition_per_serving": {
+        "calories": 53,
+        "protein": 0.4,
+        "carbohydrates": 13.7,
+        "fat": 0.2,
+        "fiber": 1.7,
+        "sugar": 10.93,
+        "sodium": 1.3
+      },
+      "source": "local",
+      "created_by": "all",
+      "image_url": "https://f.boohee.cn/house/upload_food/2023/7/19/slim_mid_photo_url_823c703cb4fd93eae6d4246406cb5299.jpg"
+    },
+    {
+      "name": "香蕉",
+      "category": "水果",
+      "serving_size": 100,
+      "serving_unit": "克",
+      "nutrition_per_serving": {
+        "calories": 93,
+        "protein": 1.4,
+        "carbohydrates": 22.0,
+        "fat": 0.2,
+        "fiber": 1.2,
+        "sugar": 18.0,
+        "sodium": 0.8
+      },
+      "source": "local",
+      "created_by": "all",
+      "image_url": "https://f.boohee.cn/house/upload_food/2022/1/18/slim_mid_photo_url_25f7ac4089fe2a0ffb091f534f269834.jpg"
+    },
+    {
+      "name": "橘子",
+      "category": "水果",
+      "serving_size": 100,
+      "serving_unit": "克",
+      "nutrition_per_serving": {
+        "calories": 44,
+        "protein": 0.8,
+        "carbohydrates": 10.2,
+        "fat": 0.1,
+        "fiber": 0.5,
+        "sugar": 6.8,
+        "sodium": 0.8
+      },
+      "source": "local",
+      "created_by": "all",
+      "image_url": "https://f.boohee.cn/house/upload_food/2022/1/18/slim_mid_photo_url_big_photo_url_b3c40aee18c7d3bf92ea62cb1ce02076.jpg"
+    },
+    {
+      "name": "柚子",
+      "category": "水果",
+      "serving_size": 100,
+      "serving_unit": "克",
+      "nutrition_per_serving": {
+        "calories": 42,
+        "protein": 0.8,
+        "carbohydrates": 9.5,
+        "fat": 0.2,
+        "fiber": 0.4,
+        "sodium": 3.0
+      },
+      "source": "local",
+      "created_by": "all",
+      "image_url": "https://f.boohee.cn/house/upload_food/2022/1/18/slim_dbf8cf079e704c5897904ee4c0eb5830.jpg"
+    },
+    {
+      "name": "番茄",
+      "category": "蔬菜",
+      "serving_size": 100,
+      "serving_unit": "克",
+      "nutrition_per_serving": {
+        "calories": 15,
+        "protein": 0.9,
+        "carbohydrates": 3.3,
+        "fat": 0.2,
+        "fiber": 1.0,
+        "sugar": 1.74,
+        "sodium": 9.7
+      },
+      "source": "local",
+      "created_by": "all",
+      "image_url": "https://f.boohee.cn/house/upload_food/2022/1/18/slim_mid_photo_url_big_photo_url_c55ff8be5b7a272151ff6abf526c136a.jpg"
+    },
+    {
+      "name": "黄瓜",
+      "category": "蔬菜",
+      "serving_size": 100,
+      "serving_unit": "克",
+      "nutrition_per_serving": {
+        "calories": 16,
+        "protein": 0.8,
+        "carbohydrates": 2.9,
+        "fat": 0.2,
+        "fiber": 0.5,
+        "sugar": 1.67,
+        "sodium": 4.9
+      },
+      "source": "local",
+      "created_by": "all",
+      "image_url": "https://f.boohee.cn/house/upload_food/2022/1/18/slim_mid_photo_url_90b58ebf84c046bd5b16db553fab9cca.jpg"
+    },
+    {
+      "name": "西兰花",
+      "category": "蔬菜",
+      "serving_size": 100,
+      "serving_unit": "克",
+      "nutrition_per_serving": {
+        "calories": 35,
+        "protein": 2.4,
+        "carbohydrates": 7.2,
+        "fat": 0.4,
+        "fiber": 3.3,
+        "sodium": 41.0
+      },
+      "source": "local",
+      "created_by": "all",
+      "image_url": "https://f.boohee.cn/house/upload_food/2022/1/18/slim_ff5f59e8e1e748af99b0df68322bb608.jpg"
+    },
+    {
+      "name": "胡萝卜",
+      "category": "蔬菜",
+      "serving_size": 100,
+      "serving_unit": "克",
+      "nutrition_per_serving": {
+        "calories": 41,
+        "protein": 0.9,
+        "carbohydrates": 9.6,
+        "fat": 0.2,
+        "fiber": 2.8,
+        "sodium": 69.0
+      },
+      "source": "local",
+      "created_by": "all",
+      "image_url": "https://f.boohee.cn/house/upload_food/2022/6/10/slim_mid_photo_url_ecb91a0364f9374201396851dc874cce.jpg"
+    },
+    {
+      "name": "豆腐",
+      "category": "豆制品",
+      "serving_size": 100,
+      "serving_unit": "克",
+      "nutrition_per_serving": {
+        "calories": 81,
+        "protein": 8.1,
+        "carbohydrates": 4.2,
+        "fat": 3.7,
+        "fiber": 0.4,
+        "sodium": 7.0
+      },
+      "source": "local",
+      "created_by": "all",
+      "image_url": "https://f.boohee.cn/house/upload_food/2022/1/18/slim_mid_photo_url_2e7d19b349f5c10e2d429d14b9e4c9dc.jpg"
+    },
+    {
+      "name": "花生",
+      "category": "坚果",
+      "serving_size": 100,
+      "serving_unit": "克",
+      "nutrition_per_serving": {
+        "calories": 567,
+        "protein": 24.8,
+        "carbohydrates": 21.7,
+        "fat": 44.3,
+        "fiber": 8.5,
+        "sodium": 18.0
+      },
+      "source": "local",
+      "created_by": "all",
+      "image_url": "https://f.boohee.cn/house/upload_food/2022/1/18/slim_mid_photo_url_big_photo_url_0e54482eaeb0c864a1da26d0c7bfbc69.jpg"
+    },
+    {
+      "name": "核桃",
+      "category": "坚果",
+      "serving_size": 100,
+      "serving_unit": "克",
+      "nutrition_per_serving": {
+        "calories": 654,
+        "protein": 15.0,
+        "carbohydrates": 13.0,
+        "fat": 65.0,
+        "fiber": 6.7,
+        "sodium": 2.0
+      },
+      "source": "local",
+      "created_by": "all",
+      "image_url": "https://f.boohee.cn/house/upload_food/2022/1/18/slim_mid_photo_url_c49e1d9a2596b9d0197c655cd10e3adf.jpg"
+    },
+    {
+      "name": "杏仁",
+      "category": "坚果",
+      "serving_size": 100,
+      "serving_unit": "克",
+      "nutrition_per_serving": {
+        "calories": 579,
+        "protein": 21.0,
+        "carbohydrates": 22.0,
+        "fat": 50.0,
+        "fiber": 12.0,
+        "sodium": 1.0
+      },
+      "source": "local",
+      "created_by": "all",
+      "image_url": "https://f.boohee.cn/house/upload_food/2022/1/18/slim_mid_photo_url_e5b109a6c769b1a841e22b78d8664a2b.jpg"
+    },
+    {
+      "name": "白面条",
+      "category": "主食",
+      "serving_size": 100,
+      "serving_unit": "克",
+      "nutrition_per_serving": {
+        "calories": 137,
+        "protein": 4.5,
+        "carbohydrates": 28.0,
+        "fat": 0.5,
+        "fiber": 1.2,
+        "sodium": 201.0
+      },
+      "source": "local",
+      "created_by": "all",
+      "image_url": "https://f.boohee.cn/house/upload_food/2016/9/27/mid_photo_url_30ccb803121d4113be1d0973a47c12c9.jpg"
+    },
+    {
+      "name": "土豆",
+      "category": "主食",
+      "serving_size": 100,
+      "serving_unit": "克",
+      "nutrition_per_serving": {
+        "calories": 77,
+        "protein": 2.0,
+        "carbohydrates": 17.0,
+        "fat": 0.1,
+        "fiber": 2.2,
+        "sodium": 6.0
+      },
+      "source": "local",
+      "created_by": "all",
+      "image_url": "https://f.boohee.cn/house/upload_food/2022/1/18/slim_mid_photo_url_8a7ff30a30cec1f7633e98a2388b545d.jpg"
+    },
+    {
+      "name": "白菜",
+      "category": "蔬菜",
+      "serving_size": 100,
+      "serving_unit": "克",
+      "nutrition_per_serving": {
+        "calories": 13,
+        "protein": 1.5,
+        "carbohydrates": 2.2,
+        "fat": 0.1,
+        "fiber": 1.2,
+        "sodium": 57.0
+      },
+      "source": "local",
+      "created_by": "all",
+      "image_url": "https://f.boohee.cn/house/upload_food/2022/1/18/slim_mid_photo_url_fbfd03785436707693996b9b89537bb4.jpg"
+    },
+    {
+      "name": "菠菜",
+      "category": "蔬菜",
+      "serving_size": 100,
+      "serving_unit": "克",
+      "nutrition_per_serving": {
+        "calories": 23,
+        "protein": 2.9,
+        "carbohydrates": 3.6,
+        "fat": 0.4,
+        "fiber": 2.2,
+        "sodium": 79.0
+      },
+      "source": "local",
+      "created_by": "all",
+      "image_url": "https://f.boohee.cn/house/upload_food/2022/1/18/slim_mid_photo_url_225ff330a6553f91fa7dccb958f7c9b3.jpg"
+    },
+    {
+      "name": "生菜",
+      "category": "蔬菜",
+      "serving_size": 100,
+      "serving_unit": "克",
+      "nutrition_per_serving": {
+        "calories": 15,
+        "protein": 1.4,
+        "carbohydrates": 2.9,
+        "fat": 0.2,
+        "fiber": 1.3,
+        "sodium": 28.0
+      },
+      "source": "local",
+      "created_by": "all",
+      "image_url": "https://f.boohee.cn/house/upload_food/2022/1/18/slim_744ba8f5f1f74bb5a959884a1bf280cd.jpg"
+    },
+    {
+      "name": "橙子",
+      "category": "水果",
+      "serving_size": 100,
+      "serving_unit": "克",
+      "nutrition_per_serving": {
+        "calories": 47,
+        "protein": 0.9,
+        "carbohydrates": 12.0,
+        "fat": 0.1,
+        "fiber": 2.4,
+        "sodium": 0.0
+      },
+      "source": "local",
+      "created_by": "all",
+      "image_url": "https://f.boohee.cn/house/upload_food/2022/1/18/slim_mid_photo_url_b6f13a7ffd71f23689dbd960ff4cbd1d.jpg"
+    },
+    {
+      "name": "葡萄",
+      "category": "水果",
+      "serving_size": 100,
+      "serving_unit": "克",
+      "nutrition_per_serving": {
+        "calories": 69,
+        "protein": 0.7,
+        "carbohydrates": 18.0,
+        "fat": 0.2,
+        "fiber": 0.9,
+        "sodium": 2.0
+      },
+      "source": "local",
+      "created_by": "all",
+      "image_url": "https://f.boohee.cn/house/upload_food/2022/1/18/slim_mid_photo_url_fcf1f2a999b2b94f9d13b08d5d07594b.jpg"
+    },
+    {
+      "name": "煎蛋",
+      "category": "蛋类",
+      "serving_size": 100,
+      "serving_unit": "克",
+      "nutrition_per_serving": {
+        "calories": 195,
+        "protein": 13.5,
+        "carbohydrates": 1.4,
+        "fat": 15.0,
+        "sodium": 353.0
+      },
+      "source": "local",
+      "created_by": "all",
+      "image_url": "https://f.boohee.cn/house/upload_food/2022/1/18/slim_mid_photo_url_e1122f4bed0312a354e97094e4e230a3.jpg"
+    }
+  ]
+}
