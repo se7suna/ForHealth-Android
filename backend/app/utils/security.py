@@ -57,3 +57,28 @@ def decode_access_token(token: str) -> Optional[dict]:
         return payload
     except JWTError:
         return None
+
+
+def create_refresh_token(data: dict) -> str:
+    """创建 JWT refresh token (长期有效)"""
+    to_encode = data.copy()
+    expire = datetime.utcnow() + timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS)
+
+    to_encode.update({
+        "exp": expire,
+        "type": "refresh"  # 标记为 refresh token
+    })
+    encoded_jwt = jwt.encode(to_encode, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
+    return encoded_jwt
+
+
+def decode_refresh_token(token: str) -> Optional[dict]:
+    """解码并验证 refresh token"""
+    try:
+        payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
+        # 验证 token 类型
+        if payload.get("type") != "refresh":
+            return None
+        return payload
+    except JWTError:
+        return None

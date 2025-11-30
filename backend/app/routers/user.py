@@ -1,4 +1,6 @@
-from fastapi import APIRouter, HTTPException, status, Depends
+from fastapi import APIRouter, HTTPException, status, Depends, Query
+from typing import Optional
+from datetime import date
 from app.schemas.user import (
     BodyDataRequest,
     ActivityLevelRequest,
@@ -7,7 +9,13 @@ from app.schemas.user import (
     UserProfileUpdate,
     MessageResponse,
 )
-from app.services import user_service
+from app.schemas.weight import (
+    WeightRecordCreateRequest,
+    WeightRecordUpdateRequest,
+    WeightRecordResponse,
+    WeightRecordListResponse,
+)
+from app.services import user_service, weight_service
 from app.routers.auth import get_current_user
 
 router = APIRouter(prefix="/user", tags=["用户管理"])
@@ -181,3 +189,124 @@ async def update_profile(
             user["birthdate"] = user["birthdate"].strftime("%Y-%m-%d")
 
     return UserProfileResponse(**user)
+
+
+# ========== 体重记录管理 ==========
+@router.post("/weight-record", response_model=WeightRecordResponse, status_code=status.HTTP_201_CREATED)
+async def create_weight_record(
+    record_data: WeightRecordCreateRequest,
+    current_user: str = Depends(get_current_user)
+):
+    """
+    记录体重
+
+    - **weight**: 体重（公斤，0-500kg）
+    - **recorded_at**: 记录时间
+    - **notes**: 备注（可选，最多200字符）
+
+    用于记录用户的历史体重数据，支持体重趋势分析
+    """
+    record = await weight_service.create_weight_record(current_user, record_data)
+
+    return WeightRecordResponse(
+        id=record["_id"],
+        weight=record["weight"],
+        recorded_at=record["recorded_at"],
+        notes=record.get("notes"),
+        created_at=record["created_at"]
+    )
+
+
+@router.get("/weight-records", response_model=WeightRecordListResponse)
+async def get_weight_records(
+    start_date: Optional[date] = Query(None, description="开始日期（格式：YYYY-MM-DD）"),
+    end_date: Optional[date] = Query(None, description="结束日期（格式：YYYY-MM-DD）"),
+    limit: int = Query(100, ge=1, le=500, description="返回数量限制"),
+    current_user: str = Depends(get_current_user)
+):
+    """
+    获取体重记录列表
+
+    - **start_date**: 开始日期（可选，格式：YYYY-MM-DD）
+    - **end_date**: 结束日期（可选，格式：YYYY-MM-DD）
+    - **limit**: 返回数量限制（默认100，最大500）
+
+    返回当前用户的体重记录，按记录时间倒序排列
+    """
+    records, total = await weight_service.get_weight_records(
+        user_email=current_user,
+        start_date=start_date,
+        end_date=end_date,
+        limit=limit
+    )
+
+    record_responses = [
+        WeightRecordResponse(
+            id=record["_id"],
+            weight=record["weight"],
+            recorded_at=record["recorded_at"],
+            notes=record.get("notes"),
+            created_at=record["created_at"]
+        )
+        for record in records
+    ]
+
+    return WeightRecordListResponse(total=total, records=record_responses)
+
+
+@router.put("/weight-record/{record_id}", response_model=WeightRecordResponse)
+async def update_weight_record(
+    record_id: str,
+    record_data: WeightRecordUpdateRequest,
+    current_user: str = Depends(get_current_user)
+):
+    """
+    更新体重记录
+
+    - **record_id**: 记录ID
+
+    可更新的字段（所有字段可选）：
+    - **weight**: 体重（公斤，0-500kg）
+    - **recorded_at**: 记录时间
+    - **notes**: 备注
+
+    只能更新自己的记录
+    """
+    record = await weight_service.update_weight_record(record_id, current_user, record_data)
+
+    if not record:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="记录不存在或无权更新"
+        )
+
+    return WeightRecordResponse(
+        id=record["_id"],
+        weight=record["weight"],
+        recorded_at=record["recorded_at"],
+        notes=record.get("notes"),
+        created_at=record["created_at"]
+    )
+
+
+@router.delete("/weight-record/{record_id}", response_model=MessageResponse)
+async def delete_weight_record(
+    record_id: str,
+    current_user: str = Depends(get_current_user)
+):
+    """
+    删除体重记录
+
+    - **record_id**: 记录ID
+
+    只能删除自己的记录
+    """
+    success = await weight_service.delete_weight_record(record_id, current_user)
+
+    if not success:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="记录不存在或无权删除"
+        )
+
+    return MessageResponse(message="体重记录删除成功")
