@@ -447,15 +447,27 @@ async def get_time_series_trend(
         for item in burned_result
     ]
 
-    # 体重趋势（从用户更新记录或专门的体重记录表）
-    # 注意：当前数据库中可能没有历史体重记录，这里返回当前体重作为示例
-    user_doc = await db.users.find_one({"email": current_user})
-    current_weight = user_doc.get("weight", 0)
+    # 体重趋势（从历史体重记录表获取）
+    weight_pipeline = [
+        {
+            "$match": {
+                "user_email": current_user,
+                "recorded_at": {"$gte": start_datetime, "$lte": end_datetime}
+            }
+        },
+        {
+            "$group": {
+                "_id": group_format,
+                "avg_weight": {"$avg": "$weight"}
+            }
+        },
+        {"$sort": {"_id": 1}}
+    ]
 
-    # TODO: 如果有历史体重记录表，从那里获取
-    # 现在简化处理：只返回当前体重
+    weight_result = await db.weight_records.aggregate(weight_pipeline).to_list(length=None)
     weight_trend = [
-        TimeSeriesDataPoint(date=end_date.isoformat(), value=current_weight)
+        TimeSeriesDataPoint(date=item["_id"], value=round(item["avg_weight"], 2))
+        for item in weight_result
     ]
 
     return TimeSeriesTrendResponse(
