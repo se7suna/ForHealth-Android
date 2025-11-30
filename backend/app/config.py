@@ -22,7 +22,8 @@ class Settings(BaseSettings):
     # JWT 配置
     SECRET_KEY: str = "default-secret-key-change-in-production"
     ALGORITHM: str = "HS256"
-    ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 15  # 15分钟 - 短期有效
+    REFRESH_TOKEN_EXPIRE_DAYS: int = 30  # 30天 - 长期有效，用于刷新 access token
 
     # 邮件配置
     SMTP_HOST: str = "smtp.gmail.com"

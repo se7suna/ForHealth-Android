@@ -25,6 +25,56 @@ async def create_weight_record(
     created_record = await db.weight_records.find_one({"_id": result.inserted_id})
     created_record["_id"] = str(created_record["_id"])
 
+    # 自动同步：如果这是最新的体重记录，更新用户的当前体重
+    latest_record = await db.weight_records.find_one(
+        {"user_email": user_email},
+        sort=[("recorded_at", -1)]
+    )
+
+    if latest_record and latest_record["_id"] == result.inserted_id:
+        # 这是最新的记录，更新用户体重
+        await db.users.update_one(
+            {"email": user_email},
+            {
+                "$set": {
+                    "weight": record_data.weight,
+                    "updated_at": datetime.utcnow()
+                }
+            }
+        )
+
+        # 重新计算 BMR 和 TDEE（如果用户已完成基本数据填写）
+        user = await db.users.find_one({"email": user_email})
+        if user and user.get("height") and user.get("age") and user.get("gender"):
+            from app.services.user_service import calculate_bmr, calculate_tdee, calculate_daily_calorie_goal
+
+            bmr = calculate_bmr(
+                weight=record_data.weight,
+                height=user["height"],
+                age=user["age"],
+                gender=user["gender"]
+            )
+
+            update_data = {"bmr": bmr}
+
+            # 如果有活动水平，计算 TDEE
+            if user.get("activity_level"):
+                tdee = calculate_tdee(bmr, user["activity_level"])
+                update_data["tdee"] = tdee
+
+                # 如果有健康目标，计算每日卡路里目标
+                if user.get("health_goal_type"):
+                    daily_calorie_goal = calculate_daily_calorie_goal(
+                        tdee=tdee,
+                        health_goal_type=user["health_goal_type"]
+                    )
+                    update_data["daily_calorie_goal"] = daily_calorie_goal
+
+            await db.users.update_one(
+                {"email": user_email},
+                {"$set": update_data}
+            )
+
     return created_record
 
 
