@@ -457,7 +457,12 @@ async def get_time_series_trend(
         },
         {
             "$group": {
-                "_id": group_format,
+                "_id": {
+                    "$dateToString": {
+                        "format": date_format,
+                        "date": "$recorded_at"
+                    }
+                },
                 "avg_weight": {"$avg": "$weight"}
             }
         },

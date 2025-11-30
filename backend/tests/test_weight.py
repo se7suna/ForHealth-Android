@@ -48,15 +48,17 @@ async def auth_client():
 
 @pytest_asyncio.fixture(autouse=True)
 async def cleanup_weight_records():
-    """测试前后清理体重记录"""
-    # 测试前清理
-    db = get_database()
-    await db.weight_records.delete_many({"user_email": TEST_USER["email"]})
-
+    """测试后清理体重记录"""
+    # 不在 setup 阶段清理，避免数据库未连接的问题
     yield
 
     # 测试后清理
-    await db.weight_records.delete_many({"user_email": TEST_USER["email"]})
+    try:
+        db = get_database()
+        await db.weight_records.delete_many({"user_email": TEST_USER["email"]})
+    except Exception:
+        # 如果数据库未连接，忽略清理错误
+        pass
 
 
 # ================== 测试：创建体重记录 ==================
