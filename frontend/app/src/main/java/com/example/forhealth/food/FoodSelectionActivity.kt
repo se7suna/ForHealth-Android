@@ -533,7 +533,6 @@ class FoodSelectionActivity : AppCompatActivity() {
                 try {
                     val request = CreateFoodRecordRequest(
                         foodId = foodId,
-                        source = "auto",
                         servingAmount = selectedItem.servingAmount,
                         recordedAt = recordedAt,
                         mealType = mealType,
