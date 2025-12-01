@@ -1,9 +1,11 @@
 from typing import Optional, List, Dict, Any
 from datetime import datetime
+from fastapi import UploadFile, HTTPException, status
 from app.database import get_database
 from app.models.recipe import RecipeInDB
 from app.models.food import NutritionData, FullNutritionData
 from app.schemas.recipe import RecipeCreateRequest, RecipeUpdateRequest
+from app.utils.image_storage import save_recipe_image, get_image_url, delete_recipe_image
 from bson import ObjectId
 
 
@@ -191,7 +193,7 @@ async def create_recipe(
         total_nutrition=total_nutrition,
         total_full_nutrition=total_full_nutrition,
         tags=recipe_data.tags,
-        image_url=recipe_data.image_url,
+        image_url=None,  # 图片通过文件上传单独处理，不在创建时设置
         prep_time=recipe_data.prep_time,
         created_by=creator_email,
     )
@@ -201,6 +203,94 @@ async def create_recipe(
     recipe_dict["_id"] = str(result.inserted_id)
     
     return recipe_dict
+
+
+async def create_recipe_with_image(
+    name: str,
+    description: Optional[str],
+    category: Optional[str],
+    foods: List[Dict[str, Any]],
+    tags: Optional[List[str]],
+    prep_time: Optional[int],
+    image: Optional[UploadFile],
+    creator_email: str
+) -> dict:
+    """
+    创建食谱（包含图片上传处理）
+    
+    Args:
+        name: 食谱名称
+        description: 食谱描述
+        category: 分类
+        foods: 食物列表
+        tags: 标签
+        prep_time: 准备时间
+        image: 图片文件（可选）
+        creator_email: 创建者邮箱
+    
+    Returns:
+        创建的食谱信息
+    
+    Raises:
+        ValueError: 如果食谱名称已存在
+        HTTPException: 如果图片处理失败
+    """
+    # 构建RecipeCreateRequest对象
+    from app.models.recipe import RecipeFoodItem
+    recipe_foods = [RecipeFoodItem(**food) for food in foods]
+    
+    recipe_data = RecipeCreateRequest(
+        name=name,
+        description=description,
+        category=category,
+        foods=recipe_foods,
+        tags=tags,
+        image_url=None,  # 图片通过文件上传单独处理
+        prep_time=prep_time,
+    )
+    
+    # 先创建食谱（获取recipe_id）
+    recipe = await create_recipe(recipe_data, creator_email)
+    recipe_id = recipe["_id"]
+    
+    # 如果有图片，保存图片并更新食谱记录
+    if image and image.filename:
+        image_url = None
+        try:
+            # 保存图片文件
+            relative_path = await save_recipe_image(image, recipe_id)
+            # 生成图片URL
+            image_url = get_image_url(relative_path)
+            
+            # 更新食谱记录，添加图片URL
+            await update_recipe_image_url(recipe_id, image_url, creator_email)
+            recipe["image_url"] = image_url
+        except HTTPException:
+            # 如果图片保存失败，删除已创建的食谱记录
+            await delete_recipe(recipe_id, creator_email)
+            raise
+        except ValueError as e:
+            # 如果更新图片URL失败，删除已创建的食谱记录和图片文件
+            await delete_recipe(recipe_id, creator_email)
+            # 删除已保存的图片（如果存在）
+            if image_url:
+                delete_recipe_image(image_url)
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"更新图片URL失败：{str(e)}"
+            )
+        except Exception as e:
+            # 如果图片保存失败，删除已创建的食谱记录和图片文件
+            await delete_recipe(recipe_id, creator_email)
+            # 删除已保存的图片（如果存在）
+            if image_url:
+                delete_recipe_image(image_url)
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"保存图片失败：{str(e)}"
+            )
+    
+    return recipe
 
 
 async def get_recipe_by_id(recipe_id: str) -> Optional[dict]:
@@ -359,8 +449,6 @@ async def update_recipe(
             update_data["total_full_nutrition"] = None
     if recipe_data.tags is not None:
         update_data["tags"] = recipe_data.tags
-    if recipe_data.image_url is not None:
-        update_data["image_url"] = recipe_data.image_url
     if recipe_data.prep_time is not None:
         update_data["prep_time"] = recipe_data.prep_time
     
@@ -382,9 +470,54 @@ async def update_recipe(
     return result
 
 
+async def update_recipe_image_url(recipe_id: str, image_url: str, user_email: str) -> bool:
+    """
+    更新食谱的图片URL
+    
+    Args:
+        recipe_id: 食谱ID
+        image_url: 图片URL
+        user_email: 用户邮箱
+    
+    Returns:
+        是否更新成功
+    
+    Raises:
+        ValueError: 如果食谱不存在或无权更新
+    """
+    db = get_database()
+    try:
+        # 先检查食谱是否存在且有权限
+        recipe = await db.recipes.find_one({"_id": ObjectId(recipe_id)})
+        if not recipe:
+            raise ValueError(f"食谱不存在 (ID: {recipe_id})")
+        
+        if recipe.get("created_by") != user_email:
+            raise ValueError(f"无权更新此食谱的图片 (创建者: {recipe.get('created_by')}, 当前用户: {user_email})")
+        
+        # 执行更新
+        result = await db.recipes.update_one(
+            {"_id": ObjectId(recipe_id), "created_by": user_email},
+            {"$set": {"image_url": image_url, "updated_at": datetime.utcnow()}}
+        )
+        
+        if result.modified_count == 0:
+            raise ValueError("更新失败：未找到匹配的记录")
+        
+        return True
+    except ValueError:
+        # 重新抛出业务异常
+        raise
+    except Exception as e:
+        # 其他异常转换为ValueError
+        raise ValueError(f"更新图片URL时发生错误：{str(e)}")
+
+
 async def delete_recipe(recipe_id: str, user_email: str) -> bool:
     """
-    删除食谱
+    删除食谱（仅创建者可删除）
+    
+    注意：同时会删除关联的图片文件
     
     Args:
         recipe_id: 食谱ID
@@ -395,6 +528,21 @@ async def delete_recipe(recipe_id: str, user_email: str) -> bool:
     """
     db = get_database()
     try:
+        # 先获取食谱信息，以便删除关联的图片
+        recipe = await db.recipes.find_one({
+            "_id": ObjectId(recipe_id),
+            "created_by": user_email
+        })
+        
+        if not recipe:
+            return False
+        
+        # 删除关联的图片文件
+        image_url = recipe.get("image_url")
+        if image_url:
+            delete_recipe_image(image_url)
+        
+        # 删除食谱记录
         result = await db.recipes.delete_one({
             "_id": ObjectId(recipe_id),
             "created_by": user_email
