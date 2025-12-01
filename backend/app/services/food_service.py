@@ -685,8 +685,6 @@ async def update_food(
         update_data["brand"] = food_data.brand
     if food_data.barcode is not None:
         update_data["barcode"] = food_data.barcode
-    if food_data.image_url is not None:
-        update_data["image_url"] = food_data.image_url
     
     if not update_data:
         # 没有要更新的字段
@@ -805,10 +803,6 @@ async def create_food_record(
     Returns:
         创建的记录信息
     """
-    source_option = (record_data.source or "auto").lower()
-    if source_option not in {"local", "auto"}:
-        raise ValueError("source 参数仅支持 local 或 auto")
-
     db = get_database()
 
     local_food = await get_food_by_id(record_data.food_id)

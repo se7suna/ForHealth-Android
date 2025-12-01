@@ -68,7 +68,13 @@ app.include_router(recipe.router, prefix="/api")
 app.include_router(visualization.router)
 
 # 配置静态文件服务（用于访问上传的图片）
-uploads_path = Path(settings.IMAGE_STORAGE_PATH)
+# 基于 backend 目录构建上传路径，确保路径一致性
+backend_dir = Path(__file__).parent.parent  # backend/app -> backend
+base_path = Path(settings.IMAGE_STORAGE_PATH)
+if base_path.is_absolute():
+    uploads_path = base_path
+else:
+    uploads_path = backend_dir / base_path
 uploads_path.mkdir(parents=True, exist_ok=True)
 app.mount(settings.IMAGE_BASE_URL, StaticFiles(directory=str(uploads_path)), name="static")
 

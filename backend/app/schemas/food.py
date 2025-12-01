@@ -121,7 +121,6 @@ class FoodUpdateRequest(BaseModel):
     full_nutrition: Optional[FullNutritionData] = Field(None, description="完整营养信息（与测试脚本格式一致）")
     brand: Optional[str] = Field(None, max_length=100, description="品牌")
     barcode: Optional[str] = Field(None, max_length=50, description="条形码")
-    image_url: Optional[str] = Field(None, description="食物图片URL")
 
     class Config:
         json_schema_extra = {
@@ -491,11 +490,6 @@ class FoodIdSearchResponse(BaseModel):
 class FoodRecordCreateRequest(BaseModel):
     """创建食物记录请求"""
     food_id: str = Field(..., min_length=1, description="食物ID（本地库ObjectId）")
-    source: Optional[str] = Field(
-        default="auto",
-        pattern="^(?i)(local|auto)$",
-        description="数据来源：local（仅本地食物库）或 auto（默认）",
-    )
     serving_amount: float = Field(..., gt=0, description="食用份量数（如：1.5份）")
     recorded_at: datetime = Field(..., description="摄入时间")
     meal_type: Optional[str] = Field(None, description="餐次类型")
@@ -506,7 +500,6 @@ class FoodRecordCreateRequest(BaseModel):
         json_schema_extra={
             "example": {
                 "food_id": "64f1f0c2e13e5f7b12345678",
-                "source": "auto",
                 "serving_amount": 1.5,
                 "recorded_at": "2025-11-03T12:30:00",
                 "meal_type": "午餐",

@@ -1,5 +1,6 @@
-from fastapi import APIRouter, HTTPException, status, Depends, Query
-from typing import Optional, List
+from fastapi import APIRouter, HTTPException, status, Depends, Query, UploadFile, File, Form
+from typing import Optional, List, Dict, Any
+import json
 from app.schemas.recipe import (
     RecipeCreateRequest,
     RecipeUpdateRequest,
@@ -19,34 +20,86 @@ from app.schemas.recipe import (
 )
 from app.services import recipe_service
 from app.routers.auth import get_current_user
+from app.utils.image_storage import save_recipe_image, get_image_url, delete_recipe_image
 
 router = APIRouter(prefix="/recipe", tags=["食谱管理"])
 
 
 @router.post("/", response_model=RecipeResponse, status_code=status.HTTP_201_CREATED)
 async def create_recipe(
-    recipe_data: RecipeCreateRequest,
+    # 基本信息
+    name: str = Form(..., description="食谱名称"),
+    description: Optional[str] = Form(None, description="食谱描述"),
+    category: Optional[str] = Form(None, description="分类"),
+    tags: Optional[str] = Form(None, description="标签（JSON数组字符串，如：[\"午餐\", \"高蛋白\"]）"),
+    prep_time: Optional[int] = Form(None, gt=0, description="准备时间（分钟）"),
+    # 食物列表（JSON字符串）
+    foods: str = Form(..., description="食物列表（JSON数组字符串）"),
+    # 图片文件
+    image: UploadFile = File(None, description="食谱图片文件（可选，支持 jpg/jpeg/png/webp/gif，最大10MB）"),
     current_user: str = Depends(get_current_user)
 ):
     """
-    创建食谱
+    创建食谱（支持图片文件上传）
     
-    - **name**: 食谱名称（必填）
-    - **description**: 食谱描述（可选）
-    - **category**: 分类（可选）
-    - **foods**: 食物列表（必填，至少1个食物）
-    - **tags**: 标签（可选）
-    - **image_url**: 图片URL（可选）
-    - **prep_time**: 准备时间（可选）
+    注意：此接口使用 multipart/form-data 格式
+    
+    **基本信息**（必填）：
+    - **name**: 食谱名称
+    - **foods**: 食物列表（JSON数组字符串，至少1个食物）
+    
+    **基本信息**（可选）：
+    - **description**: 食谱描述
+    - **category**: 分类（如：早餐、午餐、晚餐等）
+    - **tags**: 标签（JSON数组字符串，如：[\"午餐\", \"高蛋白\", \"轻食\"]）
+    - **prep_time**: 准备时间（分钟）
+    
+    **图片**（可选）：
+    - **image**: 食谱图片文件（支持 jpg/jpeg/png/webp/gif，最大10MB）
     
     用户创建的食谱仅创建者自己可见，食谱中的食物必须来自食物库，系统会自动计算总营养
     """
     try:
-        recipe = await recipe_service.create_recipe(recipe_data, current_user)
+        # 解析食物列表JSON
+        try:
+            foods_list = json.loads(foods)
+            if not isinstance(foods_list, list) or len(foods_list) == 0:
+                raise ValueError("食物列表必须是非空数组")
+        except json.JSONDecodeError:
+            raise ValueError("食物列表格式错误，必须是有效的JSON数组")
+        
+        # 解析标签JSON（如果提供）
+        tags_list = None
+        if tags:
+            try:
+                tags_list = json.loads(tags)
+                if not isinstance(tags_list, list):
+                    raise ValueError("标签格式错误，必须是JSON数组")
+            except json.JSONDecodeError:
+                raise ValueError("标签格式错误，必须是有效的JSON数组")
+        
+        # 调用 service 层处理创建食谱（包括图片上传）
+        recipe = await recipe_service.create_recipe_with_image(
+            name=name,
+            description=description,
+            category=category,
+            foods=foods_list,
+            tags=tags_list,
+            prep_time=prep_time,
+            image=image,
+            creator_email=current_user
+        )
     except ValueError as e:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail=str(e)
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"创建食谱失败：{str(e)}"
         )
     
     return RecipeResponse(
@@ -389,11 +442,88 @@ async def update_recipe(
         total_nutrition=recipe["total_nutrition"],
         total_full_nutrition=recipe.get("total_full_nutrition"),
         tags=recipe.get("tags"),
-        image_url=recipe.get("image_url"),
         prep_time=recipe.get("prep_time"),
         created_by=recipe.get("created_by"),
         created_at=recipe["created_at"],
         updated_at=recipe["updated_at"],
+    )
+
+
+@router.put("/{recipe_id}/image", response_model=RecipeResponse)
+async def update_recipe_image(
+    recipe_id: str,
+    image: UploadFile = File(..., description="食谱图片文件（支持 jpg/jpeg/png/webp/gif，最大10MB）"),
+    current_user: str = Depends(get_current_user)
+):
+    """
+    更新食谱图片
+    
+    - **recipe_id**: 食谱ID
+    - **image**: 食谱图片文件（必填，支持 jpg/jpeg/png/webp/gif，最大10MB）
+    
+    只能更新自己创建的食谱的图片
+    """
+    try:
+        # 检查食谱是否存在且有权限
+        recipe = await recipe_service.get_recipe_by_id(recipe_id)
+        if not recipe:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="食谱不存在"
+            )
+        
+        if recipe.get("created_by") != "all" and recipe.get("created_by") != current_user:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="无权更新此食谱的图片"
+            )
+        
+        # 获取旧图片URL（用于删除）
+        old_image_url = recipe.get("image_url")
+        
+        # 保存新图片
+        relative_path = await save_recipe_image(image, recipe_id)
+        new_image_url = get_image_url(relative_path)
+        
+        # 更新图片URL
+        success = await recipe_service.update_recipe_image_url(recipe_id, new_image_url, current_user)
+        if not success:
+            # 如果更新失败，删除已保存的图片
+            delete_recipe_image(new_image_url)
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="更新图片URL失败"
+            )
+        
+        # 删除旧图片
+        if old_image_url:
+            delete_recipe_image(old_image_url)
+        
+        # 重新获取更新后的食谱信息
+        updated_recipe = await recipe_service.get_recipe_by_id(recipe_id)
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"更新图片失败：{str(e)}"
+        )
+    
+    return RecipeResponse(
+        id=updated_recipe["_id"],
+        name=updated_recipe["name"],
+        description=updated_recipe.get("description"),
+        category=updated_recipe.get("category"),
+        foods=updated_recipe["foods"],
+        total_nutrition=updated_recipe["total_nutrition"],
+        total_full_nutrition=updated_recipe.get("total_full_nutrition"),
+        tags=updated_recipe.get("tags"),
+        image_url=updated_recipe.get("image_url"),
+        prep_time=updated_recipe.get("prep_time"),
+        created_by=updated_recipe.get("created_by"),
+        created_at=updated_recipe["created_at"],
+        updated_at=updated_recipe["updated_at"],
     )
 
 
