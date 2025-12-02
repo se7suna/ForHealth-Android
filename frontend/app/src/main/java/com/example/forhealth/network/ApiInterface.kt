@@ -118,7 +118,16 @@ interface ApiInterface {
         @Header("Authorization") token: String,
         @Body request: LogSportsRequest
     ): Response<SimpleSportsResponse>
-    
+
+
+    /**
+     * 添加自定义运动
+     */
+    @POST("sports/custom")
+    suspend fun addCustomSport(
+        @Header("Authorization") authHeader: String,
+        @Body customSport: AddCustomSportRequest
+    ): Response<SimpleSportsResponse>
     /**
      * 搜索运动记录
      * POST /api/sports/search-sports-records

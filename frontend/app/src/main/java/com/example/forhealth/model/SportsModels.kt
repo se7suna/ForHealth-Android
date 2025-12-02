@@ -49,3 +49,12 @@ data class SimpleSportsResponse(
     val message: String
 )
 
+/**
+ * 自定义运动添加请求
+ */
+data class AddCustomSportRequest(
+    @SerializedName("sport_type") val sportType: String,
+    @SerializedName("METs") val mets: Double,
+    val describe: String?,
+    @SerializedName("image_url") val imageUrl: String? = null
+)

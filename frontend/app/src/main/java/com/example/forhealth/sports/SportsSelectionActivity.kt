@@ -14,6 +14,7 @@ import com.example.forhealth.R
 import com.example.forhealth.model.LogSportsRequest
 import com.example.forhealth.model.SearchSportsResponse
 import com.example.forhealth.network.RetrofitClient
+import com.example.forhealth.model.AddCustomSportRequest
 import com.example.forhealth.utils.PrefsHelper
 import com.example.forhealth.auth.LoginActivity
 import android.content.Intent
@@ -29,6 +30,7 @@ class SportsSelectionActivity : AppCompatActivity() {
     private lateinit var rvSports: RecyclerView
     private lateinit var progressBar: ProgressBar
     private lateinit var tvEmpty: TextView
+    private lateinit var btnAddCustomSport: Button  // 新增按钮
 
     private lateinit var sportsAdapter: SportsAdapter
     private var allSports = listOf<SearchSportsResponse>()
@@ -38,14 +40,15 @@ class SportsSelectionActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         try {
             setContentView(R.layout.activity_sports_selection)
-            
+
             supportActionBar?.setDisplayHomeAsUpEnabled(true)
             supportActionBar?.title = "选择运动类型"
-            
+
             initViews()
             setupRecyclerView()
             setupSearch()
             loadSportsTypes()
+            setupAddCustomSportButton()  // 设置自定义运动按钮
         } catch (e: Exception) {
             e.printStackTrace()
             Toast.makeText(this, "页面加载失败: ${e.message}", Toast.LENGTH_LONG).show()
@@ -63,6 +66,7 @@ class SportsSelectionActivity : AppCompatActivity() {
         rvSports = findViewById(R.id.rvSports)
         progressBar = findViewById(R.id.progressBar)
         tvEmpty = findViewById(R.id.tvEmpty)
+        btnAddCustomSport = findViewById(R.id.tabSport)  // 获取自定义运动按钮
     }
 
     private fun setupRecyclerView() {
@@ -109,13 +113,13 @@ class SportsSelectionActivity : AppCompatActivity() {
                         sportsAdapter.submitList(allSports)
                     }
                 } else {
-                    Toast.makeText(this@SportsSelectionActivity, 
+                    Toast.makeText(this@SportsSelectionActivity,
                         "加载失败: ${response.code()}", Toast.LENGTH_SHORT).show()
                     showEmpty(true)
                 }
             } catch (e: Exception) {
                 e.printStackTrace()
-                Toast.makeText(this@SportsSelectionActivity, 
+                Toast.makeText(this@SportsSelectionActivity,
                     "加载失败: ${e.message}", Toast.LENGTH_SHORT).show()
                 showEmpty(true)
             } finally {
@@ -129,9 +133,9 @@ class SportsSelectionActivity : AppCompatActivity() {
             sportsAdapter.submitList(allSports)
             showEmpty(allSports.isEmpty())
         } else {
-            val filtered = allSports.filter { 
+            val filtered = allSports.filter {
                 it.sportType?.contains(keyword, ignoreCase = true) == true ||
-                it.describe?.contains(keyword, ignoreCase = true) == true
+                        it.describe?.contains(keyword, ignoreCase = true) == true
             }
             sportsAdapter.submitList(filtered)
             showEmpty(filtered.isEmpty())
@@ -183,20 +187,76 @@ class SportsSelectionActivity : AppCompatActivity() {
 
                 val response = RetrofitClient.api.logSports("Bearer $token", request)
                 if (response.isSuccessful && response.body() != null) {
-                    Toast.makeText(this@SportsSelectionActivity, 
+                    Toast.makeText(this@SportsSelectionActivity,
                         "运动记录成功！", Toast.LENGTH_SHORT).show()
                     finish()
                 } else {
-                    Toast.makeText(this@SportsSelectionActivity, 
+                    Toast.makeText(this@SportsSelectionActivity,
                         "记录失败: ${response.code()}", Toast.LENGTH_SHORT).show()
                 }
             } catch (e: Exception) {
                 e.printStackTrace()
-                Toast.makeText(this@SportsSelectionActivity, 
+                Toast.makeText(this@SportsSelectionActivity,
                     "记录失败: ${e.message}", Toast.LENGTH_SHORT).show()
             }
         }
     }
+
+    // 新增自定义运动功能
+    private fun setupAddCustomSportButton() {
+        btnAddCustomSport.setOnClickListener {
+            val dialogView = layoutInflater.inflate(R.layout.dialog_add_custom_sport, null)
+            val etSportName = dialogView.findViewById<EditText>(R.id.etSportName)
+            val etMets = dialogView.findViewById<EditText>(R.id.etMets)
+
+            AlertDialog.Builder(this)
+                .setTitle("添加自定义运动")
+                .setView(dialogView)
+                .setPositiveButton("确定") { _, _ ->
+                    val sportName = etSportName.text.toString()
+                    val mets = etMets.text.toString().toDoubleOrNull()
+
+                    if (sportName.isBlank() || mets == null || mets <= 0) {
+                        Toast.makeText(this, "请输入有效的运动名称和MET值", Toast.LENGTH_SHORT).show()
+                        return@setPositiveButton
+                    }
+
+                    addCustomSport(sportName, mets)
+                }
+                .setNegativeButton("取消", null)
+                .show()
+        }
+    }
+
+    private fun addCustomSport(sportName: String, mets: Double) {
+        val token = PrefsHelper.getToken(this) ?: return
+
+        lifecycleScope.launch {
+            try {
+                val customSport = AddCustomSportRequest(
+                    sportType = sportName,
+                    mets = mets,
+                    describe = "",
+                    imageUrl = "" // 或者 null，根据需求
+                )
+
+                val response = RetrofitClient.api.addCustomSport("Bearer $token", customSport)
+                if (response.isSuccessful && response.body() != null) {
+                    Toast.makeText(this@SportsSelectionActivity,
+                        "自定义运动添加成功！", Toast.LENGTH_SHORT).show()
+                    loadSportsTypes()  // 刷新运动列表
+                } else {
+                    Toast.makeText(this@SportsSelectionActivity,
+                        "添加失败: ${response.code()}", Toast.LENGTH_SHORT).show()
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+                Toast.makeText(this@SportsSelectionActivity,
+                    "添加失败: ${e.message}", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+
 
     private fun showLoading(show: Boolean) {
         progressBar.visibility = if (show) View.VISIBLE else View.GONE
@@ -216,4 +276,5 @@ class SportsSelectionActivity : AppCompatActivity() {
         finish()
     }
 }
+
 
