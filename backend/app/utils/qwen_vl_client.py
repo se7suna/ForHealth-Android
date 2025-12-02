@@ -2,6 +2,8 @@
 Qwen 多模态模型调用封装
 
 参考根目录下的 `qwen_bailian_api.py`，在后端环境中提供统一的调用接口。
+
+默认使用 qwen3-vl-flash 模型（最新的轻量级多模态模型，响应更快）。
 """
 
 from __future__ import annotations
@@ -49,7 +51,7 @@ def call_qwen_vl_with_url(
     image_url: Optional[str],
     prompt: str,
     api_key: Optional[str] = None,
-    model: str = "qwen-vl-plus",
+    model: str = "qwen3-vl-flash",
 ) -> str:
     """
     使用图片 URL 调用 Qwen-VL 模型，返回模型文本回答。
@@ -94,7 +96,7 @@ def call_qwen_vl_with_local_file(
     image_path: str,
     prompt: str,
     api_key: Optional[str] = None,
-    model: str = "qwen-vl-plus",
+    model: str = "qwen3-vl-flash",
 ) -> str:
     """
     使用本地图片文件调用 Qwen-VL 模型。
