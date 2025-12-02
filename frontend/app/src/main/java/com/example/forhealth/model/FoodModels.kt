@@ -122,7 +122,6 @@ data class FoodRecord(
  */
 data class CreateFoodRecordRequest(
     @SerializedName("food_id") val foodId: String,
-    val source: String = "auto",
     @SerializedName("serving_amount") val servingAmount: Double,
     @SerializedName("recorded_at") val recordedAt: String,
     @SerializedName("meal_type") val mealType: String?,
