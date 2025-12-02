@@ -75,7 +75,7 @@ async def _call_ai_for_foods(image_path: Path) -> List[Dict[str, Any]]:
     raw = call_qwen_vl_with_local_file(
         image_path=str(image_path),
         prompt=prompt,
-        model="qwen-vl-plus",
+        model="qwen3-vl-flash",
         api_key=None,
     )
 
@@ -710,11 +710,52 @@ async def generate_meal_plan(
         f"1. 严格符合营养学原则，宏量营养素配比合理。\n"
         f"2. 食谱具体可执行，包含菜名、烹饪方法、份量（克）。\n"
         f"3. 输出格式必须为合法的 JSON，不要包含 markdown 标记或其他文字。\n"
-        f"4. JSON 结构符合 MealPlanResponse 定义，主要包含 daily_plans 列表。\n"
-        f"   每日计划包含：date (YYYY-MM-DD), meals (字典，key为早餐/午餐/晚餐等), daily_nutrition, daily_calories, macro_ratio, daily_cost (可选)。\n"
-        f"   每餐包含食物列表，每个食物包含：food_name, serving_size, serving_unit, cooking_method, nutrition (估算), estimated_cost (可选)。\n"
-        f"   dates 从 {date.today()} 开始。\n"
-        f"5. nutrition_summary 包含平均数据。\n"
+        f"4. JSON 结构必须严格遵循以下格式：\n"
+        f'{{\n'
+        f'  "daily_plans": [\n'
+        f'    {{\n'
+        f'      "date": "YYYY-MM-DD",\n'
+        f'      "meals": {{\n'
+        f'        "早餐": [\n'
+        f'          {{\n'
+        f'            "food_name": "食物名称",\n'
+        f'            "serving_size": 100,\n'
+        f'            "serving_unit": "克",\n'
+        f'            "cooking_method": "烹饪方法",\n'
+        f'            "nutrition": {{\n'
+        f'              "calories": 200,\n'
+        f'              "protein": 10,\n'
+        f'              "carbohydrates": 30,\n'
+        f'              "fat": 5,\n'
+        f'              "fiber": 2,\n'
+        f'              "sugar": 5,\n'
+        f'              "sodium": 100\n'
+        f'            }},\n'
+        f'            "estimated_cost": 5.0\n'
+        f'          }}\n'
+        f'        ],\n'
+        f'        "午餐": [...],\n'
+        f'        "晚餐": [...]\n'
+        f'      }},\n'
+        f'      "daily_nutrition": {{\n'
+        f'        "calories": 1800,\n'
+        f'        "protein": 80,\n'
+        f'        "carbohydrates": 200,\n'
+        f'        "fat": 60,\n'
+        f'        "fiber": 25,\n'
+        f'        "sugar": 50,\n'
+        f'        "sodium": 2000\n'
+        f'      }},\n'
+        f'      "daily_calories": 1800,\n'
+        f'      "macro_ratio": {{"protein": 0.2, "carbohydrates": 0.5, "fat": 0.3}},\n'
+        f'      "daily_cost": 50.0\n'
+        f'    }}\n'
+        f'  ],\n'
+        f'  "nutrition_summary": {{"avg_calories": 1800, "avg_protein": 80, "avg_carbohydrates": 200, "avg_fat": 60}},\n'
+        f'  "suggestions": ["建议1", "建议2"]\n'
+        f'}}\n'
+        f"5. 重要：营养字段必须使用 carbohydrates（不是 carbs），这是必填字段。\n"
+        f"6. dates 从 {date.today()} 开始，连续 {plan_days} 天。\n"
     )
 
     try:
@@ -722,7 +763,7 @@ async def generate_meal_plan(
         raw_response = call_qwen_vl_with_url(
             image_url=None,
             prompt=prompt,
-            model="qwen-vl-plus"
+            model="qwen3-vl-flash"
         )
         
         # 3. 解析 JSON
@@ -869,11 +910,11 @@ async def _answer_nutrition_question_internal(
     )
     
     try:
-        # 2. 调用 LLM (使用 qwen-vl-plus，纯文本输入)
+        # 2. 调用 LLM (使用 qwen3-vl-flash，纯文本输入)
         raw_response = call_qwen_vl_with_url(
             image_url=None,
             prompt=prompt,
-            model="qwen-vl-plus"
+            model="qwen3-vl-flash"
         )
         
         # 3. 过滤敏感信息
@@ -1092,11 +1133,11 @@ async def _answer_sports_question_internal(
     )
     
     try:
-        # 2. 调用 LLM (使用 qwen-vl-plus，纯文本输入)
+        # 2. 调用 LLM (使用 qwen3-vl-flash，纯文本输入)
         raw_response = call_qwen_vl_with_url(
             image_url=None,
             prompt=prompt,
-            model="qwen-vl-plus"
+            model="qwen3-vl-flash"
         )
         
         # 3. 过滤敏感信息
@@ -1515,7 +1556,7 @@ async def get_daily_feedback(
         raw_response = call_qwen_vl_with_url(
             image_url=None,
             prompt=prompt,
-            model="qwen-vl-plus"
+            model="qwen3-vl-flash"
         )
         
         clean_json = raw_response.replace("```json", "").replace("```", "").strip()
