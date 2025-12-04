@@ -1,5 +1,5 @@
 from pydantic import BaseModel, EmailStr, Field, validator
-from typing import Optional, Any, Dict, List
+from typing import Optional, Any, Dict, List, List
 from datetime import date
 from app.models.user import ActivityLevel, HealthGoalType, Gender
 

@@ -6,9 +6,12 @@ from pathlib import Path
 from contextlib import asynccontextmanager
 from app.config import settings
 from app.database import (connect_to_mongo, close_mongo_connection)
-from app.db_init.init_dataset import (initialize_foods_table,
-                          initialize_sports_table,initialize_default_user)
-from app.routers import auth, user, sports, food, recipe, visualization
+from app.db_init.init_dataset import (
+    initialize_foods_table,
+    initialize_sports_table,
+    initialize_default_user,
+)
+from app.routers import auth, user, sports, food, recipe, visualization, ai_assistant
 
 
 @asynccontextmanager
