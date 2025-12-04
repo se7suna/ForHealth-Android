@@ -39,3 +39,12 @@ EXTERNAL_API_TIMEOUT = 10
 
 # 是否启用外部API（用于测试时关闭）
 EXTERNAL_API_ENABLED = True
+
+
+# ============================================================
+# 百炼 / 通义千问 多模态 API 配置
+# ============================================================
+
+# 请在本地开发环境中把 QWEN_API_KEY 修改为你的真实密钥，
+# 或者通过环境变量 DASHSCOPE_API_KEY / QWEN_API_KEY 来配置。
+QWEN_API_KEY = "sk-83b57c8f1845479599839bca6aee0431" #请一定记得修改为你的真实密钥 密钥网址https://bailian.console.aliyun.com/?tab=model&spm=0.0.0.i4#/api-key

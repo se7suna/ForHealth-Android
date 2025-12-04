@@ -1,5 +1,5 @@
 from datetime import datetime, date
-from typing import Optional
+from typing import Optional, List
 from pydantic import BaseModel, EmailStr, Field
 from enum import Enum
 
@@ -61,6 +61,21 @@ class UserInDB(BaseModel):
     bmr: Optional[float] = None  # 基础代谢率
     tdee: Optional[float] = None  # 每日总能量消耗
     daily_calorie_goal: Optional[float] = None  # 每日卡路里目标
+
+    # 食物偏好
+    liked_foods: Optional[List[str]] = None  # 喜欢的食物列表
+    disliked_foods: Optional[List[str]] = None  # 不吃的食物列表
+    allergies: Optional[List[str]] = None  # 过敏食物列表
+    dietary_restrictions: Optional[List[str]] = None  # 饮食限制（如：素食、无麸质、低钠等）
+    preferred_tastes: Optional[List[str]] = None  # 偏好的口味（如：清淡、辛辣、甜味等）
+    cooking_skills: Optional[str] = None  # 烹饪技能水平（如：初级、中级、高级）
+
+    # 预算信息
+    budget_per_day: Optional[float] = None  # 每日预算（元）
+    include_budget: bool = False  # 是否在生成计划时考虑预算
+
+    # 提醒设置
+    reminder_settings: Optional[dict] = None  # 提醒设置（存储 ReminderSettings 的字典形式）
 
     # 元数据
     created_at: datetime = Field(default_factory=datetime.utcnow)
