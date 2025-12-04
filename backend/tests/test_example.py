@@ -42,10 +42,6 @@ async def auth_client():
 @pytest.mark.parametrize("sport_data,expected_status,expected_success", [
     # 正常情况
     ({"sport_name": "自定义跑步3", "describe": "户外跑步", "METs": 8.0}, 200, True),
-    # 边界情况：缺少必填字段
-    #({"sport_name": "", "describe": "户外跑步", "METs": 8.0}, 422, False),
-    # 边界情况：METs为负数
-    #({"sport_name": "自定义游泳1", "describe": "室内游泳", "METs": -5.0}, 422, False),
 ])
 async def test_create_sports(auth_client,sport_data, expected_status, expected_success):
     """测试创建自定义运动类型 - 正常情况和边界条件"""
