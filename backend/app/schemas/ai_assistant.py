@@ -1,4 +1,6 @@
-from pydantic import BaseModel, Field, field_validator, ConfigDict
+from __future__ import annotations
+
+from pydantic import BaseModel, Field, field_validator, ConfigDict, ValidationInfo
 from typing import Optional, List, Dict, Any
 from datetime import datetime, date
 from app.models.food import NutritionData, FullNutritionData
@@ -171,24 +173,66 @@ class FoodRecognitionConfirmRequest(BaseModel):
     )
 
 
+class ProcessedFoodItem(BaseModel):
+    """处理后的食物信息"""
+    food_id: str = Field(..., description="食物ID（用于创建饮食记录）")
+    food_name: str = Field(..., description="食物名称")
+    serving_amount: float = Field(..., ge=0, description="建议的食用份量数（基于识别结果计算）")
+    serving_size: float = Field(..., ge=0, description="识别到的份量大小")
+    serving_unit: str = Field(..., description="份量单位")
+    nutrition_per_serving: NutritionData = Field(..., description="每份基础营养数据")
+    source: str = Field(..., description="数据来源：ai（AI识别）或 database（数据库匹配）")
+
+
 class FoodRecognitionConfirmResponse(BaseModel):
     """确认识别结果响应"""
-    success: bool = Field(..., description="是否成功添加")
+    success: bool = Field(..., description="是否成功处理")
     message: str = Field(..., description="响应消息")
-    created_records: List[str] = Field(..., description="创建的食物记录ID列表")
-    total_records: int = Field(..., ge=0, description="成功创建的记录数量")
+    processed_foods: List[ProcessedFoodItem] = Field(..., description="处理后的食物信息列表（包含 food_id 和 serving_amount 建议）")
+    total_foods: int = Field(..., ge=0, description="成功处理的食物数量")
 
     class Config:
         json_schema_extra = {
             "example": {
                 "success": True,
-                "message": "成功添加3条食物记录到饮食日志",
-                "created_records": [
-                    "64f1f0c2e13e5f7b12345678",
-                    "64f1f0c2e13e5f7b12345679",
-                    "64f1f0c2e13e5f7b12345680"
+                "message": "成功处理3种食物，请调用 /api/food/record 创建饮食记录",
+                "processed_foods": [
+                    {
+                        "food_id": "64f1f0c2e13e5f7b12345678",
+                        "food_name": "苹果",
+                        "serving_amount": 1.5,
+                        "serving_size": 150,
+                        "serving_unit": "克",
+                        "nutrition_per_serving": {
+                            "calories": 81,
+                            "protein": 0.45,
+                            "carbohydrates": 20.25,
+                            "fat": 0.3,
+                            "fiber": 3.6,
+                            "sugar": 15.3,
+                            "sodium": 1.5
+                        },
+                        "source": "database"
+                    },
+                    {
+                        "food_id": "64f1f0c2e13e5f7b12345679",
+                        "food_name": "香蕉",
+                        "serving_amount": 1.2,
+                        "serving_size": 120,
+                        "serving_unit": "克",
+                        "nutrition_per_serving": {
+                            "calories": 105,
+                            "protein": 1.3,
+                            "carbohydrates": 27,
+                            "fat": 0.3,
+                            "fiber": 3.1,
+                            "sugar": 14.4,
+                            "sodium": 1
+                        },
+                        "source": "ai"
+                    }
                 ],
-                "total_records": 3
+                "total_foods": 2
             }
         }
 
@@ -235,8 +279,9 @@ class MealPlanRequest(BaseModel):
 
     @field_validator("plan_days")
     @classmethod
-    def validate_plan_days(cls, v, values):
-        plan_duration = values.data.get("plan_duration") if hasattr(values, "data") else None
+    def validate_plan_days(cls, v, info: ValidationInfo):
+        # Pydantic V2: 使用 ValidationInfo 获取同级字段数据
+        plan_duration = info.data.get("plan_duration")
         if plan_duration == "day" and v is None:
             raise ValueError("当计划时间为day时，必须指定plan_days")
         return v
@@ -434,11 +479,14 @@ class MealPlanResponse(BaseModel):
         }
 
 
-# ========== 营养知识问答 ==========
-class NutritionQuestionRequest(BaseModel):
-    """营养知识问答请求"""
+# ========== 统一知识问答（营养和运动） ==========
+class QuestionRequest(BaseModel):
+    """知识问答请求（统一接口，支持营养和运动）"""
     question: str = Field(..., min_length=1, max_length=500, description="用户问题（自然语言）")
-    context: Optional[Dict[str, Any]] = Field(None, description="上下文信息（可选，如用户当前的健康数据）")
+    context: Optional[Dict[str, Any]] = Field(
+        None, 
+        description="上下文信息（可选）。如果未提供，系统会自动从用户档案中读取相关信息（如体重、活动水平、健康目标等）。如果提供，则优先使用请求中的值。支持的字段：user_goal（用户目标）、activity_level（活动水平）、weight（体重）、height（身高）、age（年龄）"
+    )
 
     model_config = ConfigDict(
         extra="forbid",
@@ -454,13 +502,13 @@ class NutritionQuestionRequest(BaseModel):
     )
 
 
-class NutritionQuestionResponse(BaseModel):
-    """营养知识问答响应"""
+class QuestionResponse(BaseModel):
+    """知识问答响应（统一接口，支持营养和运动）"""
     success: bool = Field(..., description="是否回答成功")
     question: str = Field(..., description="用户问题")
     answer: str = Field(..., description="AI回答内容")
     related_topics: Optional[List[str]] = Field(None, description="相关话题建议")
-    sources: Optional[List[str]] = Field(None, description="参考来源（如：营养学指南、研究论文等）")
+    sources: Optional[List[str]] = Field(None, description="参考来源（如：营养学指南、运动科学指南、研究论文等）")
     confidence: Optional[float] = Field(None, ge=0, le=1, description="回答置信度（0-1）")
 
     class Config:
@@ -481,6 +529,27 @@ class NutritionQuestionResponse(BaseModel):
                 "confidence": 0.95
             }
         }
+
+
+# ========== 保留旧接口的 schema（向后兼容） ==========
+class NutritionQuestionRequest(QuestionRequest):
+    """营养知识问答请求（已废弃，请使用统一接口 /api/ai/ask/{question_type}）"""
+    pass
+
+
+class NutritionQuestionResponse(QuestionResponse):
+    """营养知识问答响应（已废弃，请使用统一接口 /api/ai/ask/{question_type}）"""
+    pass
+
+
+class SportsQuestionRequest(QuestionRequest):
+    """运动知识问答请求（已废弃，请使用统一接口 /api/ai/ask/{question_type}）"""
+    pass
+
+
+class SportsQuestionResponse(QuestionResponse):
+    """运动知识问答响应（已废弃，请使用统一接口 /api/ai/ask/{question_type}）"""
+    pass
 
 
 # ========== 智能提醒与反馈 ==========
@@ -603,12 +672,19 @@ class NotificationListResponse(BaseModel):
 
 
 class FeedbackDataResponse(BaseModel):
-    """反馈数据"""
-    date: date = Field(..., description="日期")
+    """反馈数据
+
+    注意：为避免 Pydantic v2 在生成 schema 时与嵌套模型产生兼容性问题，
+    这里将日期与营养摘要简化为基础类型，便于前后端解耦。
+    """
+
+    # 使用字符串表示日期（YYYY-MM-DD），避免 datetime.date 在某些环境下的 schema 问题
+    date: str = Field(..., description="日期（YYYY-MM-DD）")
     daily_calories: float = Field(..., ge=0, description="当日摄入热量")
     target_calories: float = Field(..., gt=0, description="目标热量")
     calories_progress: float = Field(..., ge=0, le=1, description="热量完成进度（0-1）")
-    nutrition_summary: NutritionData = Field(..., description="营养摘要")
+    # 使用 dict 表示营养摘要，结构与 NutritionData 一致，由调用方自行约定字段含义
+    nutrition_summary: Dict[str, Any] = Field(..., description="营养摘要（结构与 NutritionData 相同）")
     meal_count: int = Field(..., ge=0, description="进食次数")
     goal_status: str = Field(..., description="目标状态：on_track（正常）、exceeded（超标）、below（不足）")
     suggestions: List[str] = Field(..., description="个性化建议")
