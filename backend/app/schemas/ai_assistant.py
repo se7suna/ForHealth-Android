@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from pydantic import BaseModel, Field, field_validator, ConfigDict
+from pydantic import BaseModel, Field, ConfigDict
 from typing import Optional, List, Dict, Any
 from datetime import datetime
 from app.models.food import NutritionData, FullNutritionData
@@ -60,117 +60,6 @@ class RecognizedFoodItemResponse(BaseModel):
                 "image_url": None
             }
         }
-
-
-class FoodImageRecognitionResponse(BaseModel):
-    """食物图片识别响应"""
-    success: bool = Field(..., description="是否识别成功")
-    message: str = Field(..., description="响应消息")
-    recognized_foods: List[RecognizedFoodItemResponse] = Field(..., description="识别到的食物列表")
-    total_calories: float = Field(..., ge=0, description="总热量（所有识别食物的总和）")
-    total_nutrition: Optional[NutritionData] = Field(None, description="总营养数据（所有识别食物的总和）")
-    image_url: Optional[str] = Field(None, description="上传的图片URL（如果保存）")
-
-    class Config:
-        json_schema_extra = {
-            "example": {
-                "success": True,
-                "message": "成功识别到3种食物",
-                "recognized_foods": [
-                    {
-                        "food_name": "苹果",
-                        "serving_size": 150,
-                        "serving_unit": "克",
-                        "nutrition_per_serving": {
-                            "calories": 81,
-                            "protein": 0.45,
-                            "carbohydrates": 20.25,
-                            "fat": 0.3,
-                            "fiber": 3.6,
-                            "sugar": 15.3,
-                            "sodium": 1.5
-                        },
-                        "confidence": 0.92,
-                        "food_id": "64f1f0c2e13e5f7b12345678",
-                        "source": "database",
-                        "category": "水果"
-                    },
-                    {
-                        "food_name": "白米饭",
-                        "serving_size": 200,
-                        "serving_unit": "克",
-                        "nutrition_per_serving": {
-                            "calories": 260,
-                            "protein": 5.2,
-                            "carbohydrates": 58,
-                            "fat": 0.6,
-                            "fiber": 0.6,
-                            "sugar": 0,
-                            "sodium": 2
-                        },
-                        "confidence": 0.88,
-                        "food_id": None,
-                        "source": "ai",
-                        "category": "主食"
-                    }
-                ],
-                "total_calories": 341,
-                "total_nutrition": {
-                    "calories": 341,
-                    "protein": 5.65,
-                    "carbohydrates": 78.25,
-                    "fat": 0.9,
-                    "fiber": 4.2,
-                    "sugar": 15.3,
-                    "sodium": 3.5
-                },
-                "image_url": "https://example.com/uploads/food_image_20251103.jpg"
-            }
-        }
-
-
-class FoodRecognitionConfirmRequest(BaseModel):
-    """确认识别结果并添加到饮食日志的请求"""
-    recognized_foods: List[RecognizedFoodItemResponse] = Field(..., min_length=1, description="确认后的食物列表（用户可编辑）")
-    recorded_at: datetime = Field(..., description="摄入时间")
-    meal_type: Optional[str] = Field(None, description="餐次类型")
-    notes: Optional[str] = Field(None, max_length=500, description="备注")
-
-    @field_validator("meal_type")
-    @classmethod
-    def validate_meal_type(cls, v):
-        if v and v not in ["早餐", "午餐", "晚餐", "加餐", "breakfast", "lunch", "dinner", "snack"]:
-            raise ValueError("餐次类型必须是：早餐、午餐、晚餐、加餐 之一")
-        return v
-
-    model_config = ConfigDict(
-        extra="forbid",
-        json_schema_extra={
-            "example": {
-                "recognized_foods": [
-                    {
-                        "food_name": "苹果",
-                        "serving_size": 150,
-                        "serving_unit": "克",
-                        "nutrition_per_serving": {
-                            "calories": 81,
-                            "protein": 0.45,
-                            "carbohydrates": 20.25,
-                            "fat": 0.3,
-                            "fiber": 3.6,
-                            "sugar": 15.3,
-                            "sodium": 1.5
-                        },
-                        "food_id": "64f1f0c2e13e5f7b12345678",
-                        "source": "database"
-                    }
-                ],
-                "recorded_at": "2025-11-03T12:30:00",
-                "meal_type": "午餐",
-                "notes": "AI识别后确认"
-            }
-        }
-    )
 
 
 class ProcessedFoodItem(BaseModel):
