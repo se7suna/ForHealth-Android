@@ -1,0 +1,100 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.cardview.widget.CardView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_marginBottom="@dimen/spacing_12"
+    app:cardCornerRadius="@dimen/card_radius_small"
+    app:cardElevation="@dimen/card_elevation"
+    app:cardBackgroundColor="@color/white">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:padding="@dimen/spacing_12"
+        android:gravity="center_vertical">
+
+        <!-- Food Image -->
+        <ImageView
+            android:id="@+id/ivFoodImage"
+            android:layout_width="56dp"
+            android:layout_height="56dp"
+            android:layout_marginEnd="@dimen/spacing_16"
+            android:scaleType="centerCrop"
+            android:background="@color/slate_100"
+            android:contentDescription="Food image" />
+
+        <!-- Food Info -->
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:orientation="vertical">
+
+            <TextView
+                android:id="@+id/tvFoodName"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textColor="@color/text_primary"
+                android:textSize="@dimen/text_size_base"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/tvFoodInfo"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/spacing_4"
+                android:textColor="@color/text_secondary"
+                android:textSize="@dimen/text_size_xs" />
+        </LinearLayout>
+
+        <!-- Add Button / Count Display -->
+        <FrameLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content">
+
+            <com.google.android.material.floatingactionbutton.FloatingActionButton
+                android:id="@+id/fabAdd"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:src="@drawable/ic_plus"
+                app:backgroundTint="@color/slate_100"
+                app:tint="@color/text_secondary"
+                app:fabSize="mini" />
+
+            <LinearLayout
+                android:id="@+id/layoutCount"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:visibility="gone">
+
+                <TextView
+                    android:id="@+id/tvCount"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginEnd="@dimen/spacing_8"
+                    android:paddingStart="@dimen/spacing_8"
+                    android:paddingEnd="@dimen/spacing_8"
+                    android:paddingTop="@dimen/spacing_4"
+                    android:paddingBottom="@dimen/spacing_4"
+                    android:textColor="@color/emerald_600"
+                android:textSize="@dimen/text_size_xs"
+                android:textStyle="bold"
+                android:background="@drawable/bg_emerald_50" />
+
+                <com.google.android.material.floatingactionbutton.FloatingActionButton
+                    android:id="@+id/fabAddMore"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:src="@drawable/ic_plus"
+                    app:backgroundTint="@color/emerald_600"
+                    app:tint="@color/white"
+                    app:fabSize="mini" />
+            </LinearLayout>
+        </FrameLayout>
+    </LinearLayout>
+</androidx.cardview.widget.CardView>
+

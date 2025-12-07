@@ -1,0 +1,237 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.coordinatorlayout.widget.CoordinatorLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/background_primary">
+
+    <androidx.core.widget.NestedScrollView
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:fillViewport="true">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="@dimen/spacing_32"
+            android:gravity="center">
+
+            <!-- Top Spacer -->
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="40dp" />
+
+            <!-- Title -->
+            <TextView
+                android:id="@+id/tvTitle"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/register_title"
+                android:textSize="@dimen/text_size_3xl"
+                android:textColor="@color/text_primary"
+                android:layout_marginBottom="@dimen/spacing_8" />
+
+            <!-- App Name -->
+            <TextView
+                android:id="@+id/tvSubtitle"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/app_name_display"
+                android:textSize="@dimen/text_size_4xl"
+                android:textStyle="bold"
+                android:textColor="@color/emerald_600"
+                android:layout_marginBottom="@dimen/spacing_32" />
+
+            <!-- Username Input -->
+            <com.google.android.material.textfield.TextInputLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="@dimen/spacing_16"
+                android:hint="@string/hint_username"
+                app:boxCornerRadiusTopStart="@dimen/card_radius_small"
+                app:boxCornerRadiusTopEnd="@dimen/card_radius_small"
+                app:boxCornerRadiusBottomStart="@dimen/card_radius_small"
+                app:boxCornerRadiusBottomEnd="@dimen/card_radius_small"
+                app:boxBackgroundMode="filled"
+                app:boxBackgroundColor="@color/white"
+                app:hintTextColor="@color/text_secondary"
+                app:boxStrokeColor="@color/emerald_600"
+                app:boxStrokeWidth="0dp"
+                app:boxStrokeWidthFocused="2dp">
+
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/etUsername"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:inputType="text"
+                    android:textSize="@dimen/text_size_base"
+                    android:textColor="@color/text_primary"
+                    android:padding="@dimen/spacing_16" />
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <!-- Email Input -->
+            <com.google.android.material.textfield.TextInputLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="@dimen/spacing_16"
+                android:hint="@string/hint_email"
+                app:boxCornerRadiusTopStart="@dimen/card_radius_small"
+                app:boxCornerRadiusTopEnd="@dimen/card_radius_small"
+                app:boxCornerRadiusBottomStart="@dimen/card_radius_small"
+                app:boxCornerRadiusBottomEnd="@dimen/card_radius_small"
+                app:boxBackgroundMode="filled"
+                app:boxBackgroundColor="@color/white"
+                app:hintTextColor="@color/text_secondary"
+                app:boxStrokeColor="@color/emerald_600"
+                app:boxStrokeWidth="0dp"
+                app:boxStrokeWidthFocused="2dp">
+
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/etEmail"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:inputType="textEmailAddress"
+                    android:textSize="@dimen/text_size_base"
+                    android:textColor="@color/text_primary"
+                    android:padding="@dimen/spacing_16" />
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <!-- Verification Code Input -->
+            <com.google.android.material.textfield.TextInputLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="@dimen/spacing_16"
+                android:hint="@string/hint_verification_code"
+                app:boxCornerRadiusTopStart="@dimen/card_radius_small"
+                app:boxCornerRadiusTopEnd="@dimen/card_radius_small"
+                app:boxCornerRadiusBottomStart="@dimen/card_radius_small"
+                app:boxCornerRadiusBottomEnd="@dimen/card_radius_small"
+                app:boxBackgroundMode="filled"
+                app:boxBackgroundColor="@color/white"
+                app:hintTextColor="@color/text_secondary"
+                app:boxStrokeColor="@color/emerald_600"
+                app:boxStrokeWidth="0dp"
+                app:boxStrokeWidthFocused="2dp"
+                app:endIconMode="custom"
+                app:endIconDrawable="@drawable/ic_send">
+
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/etVerificationCode"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:inputType="number"
+                    android:textSize="@dimen/text_size_base"
+                    android:textColor="@color/text_primary"
+                    android:padding="@dimen/spacing_16" />
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <!-- Send Verification Code Button -->
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnSendCode"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/send_verification_code"
+                android:textColor="@color/emerald_600"
+                android:textSize="@dimen/text_size_base"
+                android:textStyle="bold"
+                android:paddingTop="@dimen/spacing_12"
+                android:paddingBottom="@dimen/spacing_12"
+                app:backgroundTint="@color/emerald_50"
+                app:cornerRadius="@dimen/card_radius_small"
+                app:rippleColor="@android:color/transparent"
+                android:stateListAnimator="@null"
+                android:layout_marginBottom="@dimen/spacing_16" />
+
+            <!-- Password Input -->
+            <com.google.android.material.textfield.TextInputLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="@dimen/spacing_16"
+                android:hint="@string/hint_password"
+                app:boxCornerRadiusTopStart="@dimen/card_radius_small"
+                app:boxCornerRadiusTopEnd="@dimen/card_radius_small"
+                app:boxCornerRadiusBottomStart="@dimen/card_radius_small"
+                app:boxCornerRadiusBottomEnd="@dimen/card_radius_small"
+                app:boxBackgroundMode="filled"
+                app:boxBackgroundColor="@color/white"
+                app:hintTextColor="@color/text_secondary"
+                app:boxStrokeColor="@color/emerald_600"
+                app:boxStrokeWidth="0dp"
+                app:boxStrokeWidthFocused="2dp"
+                app:endIconMode="password_toggle">
+
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/etPassword"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:inputType="textPassword"
+                    android:textSize="@dimen/text_size_base"
+                    android:textColor="@color/text_primary"
+                    android:padding="@dimen/spacing_16" />
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <!-- Password Confirm Input -->
+            <com.google.android.material.textfield.TextInputLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="@dimen/spacing_32"
+                android:hint="@string/hint_password_confirm"
+                app:boxCornerRadiusTopStart="@dimen/card_radius_small"
+                app:boxCornerRadiusTopEnd="@dimen/card_radius_small"
+                app:boxCornerRadiusBottomStart="@dimen/card_radius_small"
+                app:boxCornerRadiusBottomEnd="@dimen/card_radius_small"
+                app:boxBackgroundMode="filled"
+                app:boxBackgroundColor="@color/white"
+                app:hintTextColor="@color/text_secondary"
+                app:boxStrokeColor="@color/emerald_600"
+                app:boxStrokeWidth="0dp"
+                app:boxStrokeWidthFocused="2dp"
+                app:endIconMode="password_toggle">
+
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/etPasswordConfirm"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:inputType="textPassword"
+                    android:textSize="@dimen/text_size_base"
+                    android:textColor="@color/text_primary"
+                    android:padding="@dimen/spacing_16" />
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <!-- Register Button -->
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnRegister"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/btn_register"
+                android:textColor="@color/white"
+                android:textSize="@dimen/text_size_lg"
+                android:textStyle="bold"
+                android:paddingTop="@dimen/spacing_16"
+                android:paddingBottom="@dimen/spacing_16"
+                app:backgroundTint="@color/emerald_600"
+                app:cornerRadius="@dimen/card_radius_small"
+                app:rippleColor="@android:color/transparent"
+                android:stateListAnimator="@null"
+                android:layout_marginBottom="@dimen/spacing_16" />
+
+            <!-- Back to Login Button -->
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnBackToLogin"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/btn_back_to_login"
+                android:textColor="@color/emerald_600"
+                android:textSize="@dimen/text_size_base"
+                android:textStyle="bold"
+                android:paddingTop="@dimen/spacing_12"
+                android:paddingBottom="@dimen/spacing_12"
+                app:backgroundTint="@color/emerald_50"
+                app:cornerRadius="@dimen/card_radius_small"
+                app:rippleColor="@android:color/transparent"
+                android:stateListAnimator="@null" />
+        </LinearLayout>
+    </androidx.core.widget.NestedScrollView>
+</androidx.coordinatorlayout.widget.CoordinatorLayout>
+
