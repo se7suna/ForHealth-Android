@@ -210,14 +210,32 @@ class MainViewModel : ViewModel() {
     fun updateMealGroup(mealGroup: MealGroup) {
         val currentMeals = _meals.value ?: emptyList()
         
-        // 删除旧的所有meals（通过time和type匹配，确保同一顿饭的记录都被删除）
-        val updatedMeals = currentMeals.filterNot { meal ->
-            meal.time == mealGroup.time && meal.type == mealGroup.type
-        }
+        // 通过 MealGroup 的 id 找到对应的原始 meal
+        // MealGroup 的 id 是第一个 meal 的 id，所以通过 id 找到对应的 meal
+        val targetMeal = currentMeals.find { it.id == mealGroup.id }
         
-        // 添加新的meals
-        val finalMeals = mealGroup.meals + updatedMeals
-        _meals.value = finalMeals
+        if (targetMeal != null) {
+            // 找到原始 meal，删除所有相同 time 和 type 的 meals（确保删除整个 meal group）
+            val updatedMeals = currentMeals.filterNot { meal ->
+                meal.time == targetMeal.time && meal.type == targetMeal.type
+            }
+            
+            // 添加新的 meals（使用原始 time，保持时间一致性）
+            val newMeals = mealGroup.meals.map { meal ->
+                meal.copy(time = targetMeal.time) // 保持原始时间
+            }
+            val finalMeals = newMeals + updatedMeals
+            _meals.value = finalMeals
+        } else {
+            // 如果找不到原始 meal（可能是新添加的），则按 time 和 type 删除
+            val updatedMeals = currentMeals.filterNot { meal ->
+                meal.time == mealGroup.time && meal.type == mealGroup.type
+            }
+            
+            // 添加新的 meals
+            val finalMeals = mealGroup.meals + updatedMeals
+            _meals.value = finalMeals
+        }
         
         // 重新计算统计数据
         recalculateStats()
