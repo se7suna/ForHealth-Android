@@ -10,10 +10,8 @@ import com.example.forhealth.R
 import com.example.forhealth.databinding.ActivityEditAccountBinding
 import com.example.forhealth.network.ApiResult
 import com.example.forhealth.network.RetrofitClient
-import com.example.forhealth.network.dto.user.UserProfileResponse
 import com.example.forhealth.network.dto.user.UserProfileUpdate
 import com.example.forhealth.network.safeApiCall
-import com.example.forhealth.utils.ProfileManager
 import kotlinx.coroutines.launch
 
 class EditAccountActivity : AppCompatActivity() {
@@ -95,49 +93,41 @@ class EditAccountActivity : AppCompatActivity() {
         val loadingToast = Toast.makeText(this, "正在保存...", Toast.LENGTH_SHORT)
         loadingToast.show()
 
-        // 先保存到本地（用于无后端测试）
-        val existingProfile = ProfileManager.getProfile(this)
-        val updatedProfile = existingProfile?.copy(
-            username = username
-        ) ?: UserProfileResponse(
-            email = "test@example.com",
-            username = username,
-            height = null,
-            weight = null,
-            age = null,
-            gender = null,
-            birthdate = null,
-            activity_level = null,
-            health_goal_type = null,
-            target_weight = null,
-            goal_period_weeks = null
-        )
-        ProfileManager.saveProfile(this, updatedProfile)
-
-        // 尝试保存到后端（如果后端可用）
         lifecycleScope.launch {
             try {
                 val updateRequest = UserProfileUpdate(username = username)
                 val result = safeApiCall {
                     RetrofitClient.apiService.updateProfile(updateRequest)
                 }
-                // 无论后端成功与否，本地已保存
-                loadingToast.cancel()
-                Toast.makeText(this@EditAccountActivity, "账号信息保存成功", Toast.LENGTH_SHORT).show()
                 
-                // 如果修改了密码，需要重新登录
-                if (newPassword.isNotEmpty()) {
-                    // TODO: 调用修改密码API（如果后端提供）
-                    Toast.makeText(this@EditAccountActivity, "密码修改功能待实现", Toast.LENGTH_SHORT).show()
+                loadingToast.cancel()
+                
+                when (result) {
+                    is ApiResult.Success -> {
+                        Toast.makeText(this@EditAccountActivity, "账号信息保存成功", Toast.LENGTH_SHORT).show()
+                        
+                        // 如果修改了密码，需要重新登录
+                        if (newPassword.isNotEmpty()) {
+                            // TODO: 调用修改密码API（如果后端提供）
+                            Toast.makeText(this@EditAccountActivity, "密码修改功能待实现", Toast.LENGTH_SHORT).show()
+                        }
+                        
+                        finish()
+                    }
+                    is ApiResult.Error -> {
+                        Toast.makeText(
+                            this@EditAccountActivity,
+                            "保存失败: ${result.message}",
+                            Toast.LENGTH_SHORT
+                        ).show()
+                    }
+                    is ApiResult.Loading -> {
+                        // Loading state
+                    }
                 }
-                
-                finish()
             } catch (e: Exception) {
-                // 网络错误，但本地已保存
                 loadingToast.cancel()
-                Toast.makeText(this@EditAccountActivity, "账号信息已保存到本地", Toast.LENGTH_SHORT).show()
-                android.util.Log.w("EditAccountActivity", "后端保存失败，已保存到本地", e)
-                finish()
+                Toast.makeText(this@EditAccountActivity, "保存失败: ${e.message}", Toast.LENGTH_SHORT).show()
             }
         }
     }

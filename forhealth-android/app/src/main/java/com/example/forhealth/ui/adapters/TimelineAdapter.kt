@@ -65,8 +65,12 @@ class TimelineAdapter(
             itemView.findViewById<TextView>(R.id.tvMealTime)?.text = mealGroup.time
             itemView.findViewById<TextView>(R.id.tvTotalCalories)?.text = "${mealGroup.totalCalories.toInt()}"
             
+            // 确保使用 MealGroupFoodAdapter 和 item_meal_group_food.xml
             val rvMealItems = itemView.findViewById<RecyclerView>(R.id.rvMealItems)
             rvMealItems?.let {
+                // 清除之前的 adapter（如果有）
+                it.adapter = null
+                // 使用正确的 adapter：MealGroupFoodAdapter（使用 item_meal_group_food.xml）
                 val adapter = MealGroupFoodAdapter(mealGroup.meals)
                 it.layoutManager = LinearLayoutManager(itemView.context)
                 it.adapter = adapter
@@ -82,8 +86,12 @@ class TimelineAdapter(
             itemView.findViewById<TextView>(R.id.tvWorkoutTime)?.text = workoutGroup.time
             itemView.findViewById<TextView>(R.id.tvTotalCalories)?.text = "${workoutGroup.totalCaloriesBurned.toInt()}"
             
+            // 确保使用 WorkoutGroupExerciseAdapter 和 item_workout_group_exercise.xml
             val rvWorkoutItems = itemView.findViewById<RecyclerView>(R.id.rvWorkoutItems)
             rvWorkoutItems?.let {
+                // 清除之前的 adapter（如果有）
+                it.adapter = null
+                // 使用正确的 adapter：WorkoutGroupExerciseAdapter（使用 item_workout_group_exercise.xml）
                 val adapter = WorkoutGroupExerciseAdapter(workoutGroup.activities)
                 it.layoutManager = LinearLayoutManager(itemView.context)
                 it.adapter = adapter

@@ -19,11 +19,12 @@ object TokenManager {
     
     /**
      * 保存访问令牌和刷新令牌
+     * refreshToken 可以为空（如果后端不提供）
      */
-    fun saveTokens(context: Context, accessToken: String, refreshToken: String) {
+    fun saveTokens(context: Context, accessToken: String, refreshToken: String?) {
         getSharedPreferences(context).edit()
             .putString(KEY_ACCESS_TOKEN, accessToken)
-            .putString(KEY_REFRESH_TOKEN, refreshToken)
+            .putString(KEY_REFRESH_TOKEN, refreshToken ?: "")
             .apply()
     }
     

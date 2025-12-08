@@ -142,7 +142,7 @@
                         android:orientation="horizontal"
                         android:layout_marginBottom="@dimen/spacing_16">
 
-                        <!-- Age -->
+                        <!-- Birthdate -->
                         <LinearLayout
                             android:layout_width="0dp"
                             android:layout_height="wrap_content"
@@ -153,7 +153,7 @@
                             <TextView
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
-                                android:text="@string/age"
+                                android:text="@string/birthdate"
                                 android:textColor="@color/text_primary"
                                 android:textSize="@dimen/text_size_base"
                                 android:textStyle="bold"
@@ -173,13 +173,15 @@
                                 app:boxStrokeColor="@color/emerald_500">
 
                                 <com.google.android.material.textfield.TextInputEditText
-                                    android:id="@+id/etAge"
+                                    android:id="@+id/etBirthdate"
                                     android:layout_width="match_parent"
                                     android:layout_height="wrap_content"
-                                    android:inputType="number"
+                                    android:inputType="date"
                                     android:textSize="@dimen/text_size_lg"
                                     android:textStyle="bold"
-                                    android:padding="@dimen/spacing_16" />
+                                    android:padding="@dimen/spacing_16"
+                                    android:focusable="false"
+                                    android:clickable="true" />
                             </com.google.android.material.textfield.TextInputLayout>
                         </LinearLayout>
 
@@ -280,7 +282,7 @@
                     <com.google.android.material.textfield.TextInputLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_marginBottom="@dimen/spacing_24"
+                        android:layout_marginBottom="@dimen/spacing_16"
                         app:boxBackgroundMode="filled"
                         app:boxBackgroundColor="@color/slate_50"
                         app:boxCornerRadiusTopStart="@dimen/card_radius"
@@ -302,6 +304,100 @@
                             android:focusable="false"
                             android:clickable="true" />
                     </com.google.android.material.textfield.TextInputLayout>
+
+                    <!-- Target Weight and Goal Period Grid -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:layout_marginBottom="@dimen/spacing_24">
+
+                        <!-- Target Weight -->
+                        <LinearLayout
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:layout_marginEnd="@dimen/spacing_8"
+                            android:orientation="vertical">
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="@string/target_weight"
+                                android:textColor="@color/text_primary"
+                                android:textSize="@dimen/text_size_base"
+                                android:textStyle="bold"
+                                android:layout_marginBottom="@dimen/spacing_8" />
+
+                            <com.google.android.material.textfield.TextInputLayout
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                app:boxBackgroundMode="filled"
+                                app:boxBackgroundColor="@color/slate_50"
+                                app:boxCornerRadiusTopStart="@dimen/card_radius"
+                                app:boxCornerRadiusTopEnd="@dimen/card_radius"
+                                app:boxCornerRadiusBottomStart="@dimen/card_radius"
+                                app:boxCornerRadiusBottomEnd="@dimen/card_radius"
+                                app:boxStrokeWidth="0dp"
+                                app:boxStrokeWidthFocused="2dp"
+                                app:boxStrokeColor="@color/emerald_500">
+
+                                <com.google.android.material.textfield.TextInputEditText
+                                    android:id="@+id/etTargetWeight"
+                                    android:layout_width="match_parent"
+                                    android:layout_height="wrap_content"
+                                    android:inputType="none"
+                                    android:textSize="@dimen/text_size_lg"
+                                    android:textStyle="bold"
+                                    android:padding="@dimen/spacing_16"
+                                    android:focusable="false"
+                                    android:clickable="true" />
+                            </com.google.android.material.textfield.TextInputLayout>
+                        </LinearLayout>
+
+                        <!-- Goal Period -->
+                        <LinearLayout
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:layout_marginStart="@dimen/spacing_8"
+                            android:orientation="vertical">
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="@string/goal_period_weeks"
+                                android:textColor="@color/text_primary"
+                                android:textSize="@dimen/text_size_base"
+                                android:textStyle="bold"
+                                android:layout_marginBottom="@dimen/spacing_8" />
+
+                            <com.google.android.material.textfield.TextInputLayout
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                app:boxBackgroundMode="filled"
+                                app:boxBackgroundColor="@color/slate_50"
+                                app:boxCornerRadiusTopStart="@dimen/card_radius"
+                                app:boxCornerRadiusTopEnd="@dimen/card_radius"
+                                app:boxCornerRadiusBottomStart="@dimen/card_radius"
+                                app:boxCornerRadiusBottomEnd="@dimen/card_radius"
+                                app:boxStrokeWidth="0dp"
+                                app:boxStrokeWidthFocused="2dp"
+                                app:boxStrokeColor="@color/emerald_500">
+
+                                <com.google.android.material.textfield.TextInputEditText
+                                    android:id="@+id/etGoalPeriod"
+                                    android:layout_width="match_parent"
+                                    android:layout_height="wrap_content"
+                                    android:inputType="none"
+                                    android:textSize="@dimen/text_size_lg"
+                                    android:textStyle="bold"
+                                    android:padding="@dimen/spacing_16"
+                                    android:focusable="false"
+                                    android:clickable="true" />
+                            </com.google.android.material.textfield.TextInputLayout>
+                        </LinearLayout>
+                    </LinearLayout>
                 </LinearLayout>
             </LinearLayout>
         </LinearLayout>

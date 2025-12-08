@@ -19,8 +19,6 @@ import com.example.forhealth.network.safeApiCall
 import com.example.forhealth.ui.activities.EditAccountActivity
 import com.example.forhealth.ui.activities.EditDataActivity
 import com.example.forhealth.ui.activities.LoginActivity
-import com.example.forhealth.utils.DataMapper
-import com.example.forhealth.utils.ProfileManager
 import com.example.forhealth.utils.TokenManager
 import com.example.forhealth.viewmodels.MainViewModel
 import kotlinx.coroutines.launch
@@ -80,13 +78,36 @@ class ProfileFragment : DialogFragment() {
     }
 
     fun refreshProfile() {
-        // 刷新Profile数据
-        observeData()
+        // 刷新Profile数据（从API重新获取）
+        // 使用lifecycleScope确保在正确的生命周期中执行
+        lifecycleScope.launch {
+            val result = safeApiCall {
+                RetrofitClient.apiService.getProfile()
+            }
+            when (result) {
+                is ApiResult.Success -> {
+                    val profile = result.data
+                    updateProfileUI(profile)
+                }
+                is ApiResult.Error -> {
+                    // API获取失败，显示错误提示
+                    Toast.makeText(
+                        requireContext(),
+                        "刷新失败: ${result.message}",
+                        Toast.LENGTH_SHORT
+                    ).show()
+                }
+                is ApiResult.Loading -> {
+                    // Loading state
+                }
+            }
+        }
     }
 
     private fun openEditProfileDialog() {
         val dialog = EditProfileFragment()
         dialog.show(parentFragmentManager, "EditProfileDialog")
+        // EditProfileFragment 会在保存成功后自动调用 refreshProfile()
     }
 
     private fun setupAvatar() {
@@ -144,88 +165,8 @@ class ProfileFragment : DialogFragment() {
     }
 
     private fun openWeightTrackerDialog() {
-        val localProfile = ProfileManager.getProfile(requireContext())
-        val dialog = WeightTrackerFragment().apply {
-            localProfile?.weight?.let { setCurrentWeight(it) }
-            localProfile?.height?.toInt()?.let { setHeight(it) }
-            // TODO: 从数据库或API获取体重历史记录
-            setWeightHistory(emptyList())
-            setOnSaveListener { newWeight ->
-                // TODO: 保存体重记录到数据库或API
-                // 这里可以更新本地profile或发送到后端
-            }
-        }
-        dialog.show(parentFragmentManager, "WeightTrackerDialog")
-    }
-
-    private fun openEditDataActivity(isRecordChanges: Boolean = false) {
-        // 先从本地获取数据
-        val localProfile = ProfileManager.getProfile(requireContext())
-        val intent = Intent(requireContext(), EditDataActivity::class.java)
-        intent.putExtra("isRecordChanges", isRecordChanges)
-        
-        if (localProfile != null) {
-            // 传递现有数据
-            localProfile.height?.toInt()?.let { intent.putExtra("height", it) }
-            localProfile.weight?.toInt()?.let { intent.putExtra("weight", it) }
-            localProfile.gender?.let { 
-                intent.putExtra("gender", DataMapper.genderFromBackend(it))
-            }
-            DataMapper.birthDateFromBackend(localProfile.birthdate)?.let { (year, month, day) ->
-                intent.putExtra("birthYear", year)
-                intent.putExtra("birthMonth", month)
-                intent.putExtra("birthDay", day)
-            }
-            localProfile.activity_level?.let {
-                intent.putExtra("activityLevel", DataMapper.activityLevelFromBackend(it))
-            }
-            localProfile.health_goal_type?.let {
-                intent.putExtra("goalType", DataMapper.goalTypeFromBackend(it))
-            }
-            localProfile.target_weight?.toInt()?.let { intent.putExtra("goalWeight", it) }
-            localProfile.goal_period_weeks?.let { intent.putExtra("goalWeeks", it) }
-        }
-        
-        startActivity(intent)
-        
-        // 尝试从API获取（如果后端可用）
-        lifecycleScope.launch {
-            val result = safeApiCall {
-                RetrofitClient.apiService.getProfile()
-            }
-            when (result) {
-                is ApiResult.Success -> {
-                    ProfileManager.saveProfile(requireContext(), result.data)
-                }
-                is ApiResult.Error -> {
-                    // 使用本地数据，不显示错误
-                }
-                is ApiResult.Loading -> {
-                    // Loading state
-                }
-            }
-        }
-    }
-
-    private fun observeData() {
-        // 先从本地获取用户资料数据
-        val localProfile = ProfileManager.getProfile(requireContext())
-        if (localProfile != null) {
-            // 更新用户信息
-            binding.tvUserName.text = localProfile.username
-            localProfile.height?.toInt()?.let { binding.tvHeight.text = it.toString() }
-            localProfile.weight?.toInt()?.let { binding.tvWeight.text = it.toString() }
-            localProfile.age?.let { binding.tvAge.text = it.toString() }
-            
-            // 更新健康目标
-            updateHealthGoals(
-                activityLevel = localProfile.activity_level,
-                targetWeight = localProfile.target_weight,
-                goalPeriodWeeks = localProfile.goal_period_weeks
-            )
-        }
-        
-        // 尝试从API获取用户资料数据并显示（如果后端可用）
+        // TODO: 对接API获取体重数据
+        // 从API获取当前用户的体重和身高
         lifecycleScope.launch {
             val result = safeApiCall {
                 RetrofitClient.apiService.getProfile()
@@ -233,35 +174,142 @@ class ProfileFragment : DialogFragment() {
             when (result) {
                 is ApiResult.Success -> {
                     val profile = result.data
-                    // 保存到本地
-                    ProfileManager.saveProfile(requireContext(), profile)
-                    // 更新用户信息
-                    binding.tvUserName.text = profile.username
-                    profile.height?.toInt()?.let { binding.tvHeight.text = it.toString() }
-                    profile.weight?.toInt()?.let { binding.tvWeight.text = it.toString() }
-                    profile.age?.let { binding.tvAge.text = it.toString() }
+                    val currentUserWeight = profile.weight ?: 72.0 // 如果没有体重，使用默认值72.0（在有效范围内）
+                    val currentUserHeight = profile.height?.toInt() ?: 170
                     
-                    // 更新健康目标
-                    updateHealthGoals(
-                        activityLevel = profile.activity_level,
-                        targetWeight = profile.target_weight,
-                        goalPeriodWeeks = profile.goal_period_weeks
-                    )
+                    val dialog = WeightTrackerFragment().apply {
+                        setCurrentWeight(currentUserWeight)
+                        setHeight(currentUserHeight)
+                        setWeightHistory(emptyList())
+                        setOnSaveListener { newWeight ->
+                            // TODO: 对接API保存体重记录
+                        }
+                    }
+                    dialog.show(parentFragmentManager, "WeightTrackerDialog")
                 }
                 is ApiResult.Error -> {
-                    // 如果获取失败，使用本地数据或默认值
-                    if (localProfile == null) {
-                        updateHealthGoals(
-                            activityLevel = "moderately_active",
-                            targetWeight = 70.0,
-                            goalPeriodWeeks = 12
-                        )
+                    // 如果获取失败，使用默认值
+                    val dialog = WeightTrackerFragment().apply {
+                        setCurrentWeight(72.0)
+                        setHeight(170)
+                        setWeightHistory(emptyList())
+                        setOnSaveListener { newWeight ->
+                            // TODO: 对接API保存体重记录
+                        }
                     }
+                    dialog.show(parentFragmentManager, "WeightTrackerDialog")
                 }
                 is ApiResult.Loading -> {
                     // Loading state
                 }
             }
+        }
+    }
+
+    private fun openEditDataActivity(isRecordChanges: Boolean = false) {
+        // TODO: 对接API获取用户数据
+        val intent = Intent(requireContext(), EditDataActivity::class.java)
+        intent.putExtra("isRecordChanges", isRecordChanges)
+        startActivity(intent)
+    }
+
+    private fun observeData() {
+        // 从API获取用户资料数据
+        lifecycleScope.launch {
+            val result = safeApiCall {
+                RetrofitClient.apiService.getProfile()
+            }
+            when (result) {
+                is ApiResult.Success -> {
+                    val profile = result.data
+                    // 更新UI显示所有数据
+                    updateProfileUI(profile)
+                }
+                is ApiResult.Error -> {
+                    // API获取失败，显示默认值
+                    Toast.makeText(
+                        requireContext(),
+                        "获取用户信息失败: ${result.message}",
+                        Toast.LENGTH_SHORT
+                    ).show()
+                    // 显示默认值
+                    binding.tvUserName.text = "--"
+                    binding.tvHeight.text = "--"
+                    binding.tvWeight.text = "--"
+                    binding.tvAge.text = "--"
+                    updateHealthGoals(
+                        activityLevel = null,
+                        targetWeight = null,
+                        goalPeriodWeeks = null
+                    )
+                }
+                is ApiResult.Loading -> {
+                    // Loading state - 可以在这里显示加载指示器
+                }
+            }
+        }
+    }
+    
+    /**
+     * 更新Profile UI显示
+     */
+    private fun updateProfileUI(profile: com.example.forhealth.network.dto.user.UserProfileResponse) {
+        // 更新用户基本信息
+        binding.tvUserName.text = profile.username
+        profile.height?.toInt()?.let { 
+            binding.tvHeight.text = it.toString() 
+        } ?: run { 
+            binding.tvHeight.text = "--" 
+        }
+        profile.weight?.toInt()?.let { 
+            binding.tvWeight.text = it.toString() 
+        } ?: run { 
+            binding.tvWeight.text = "--" 
+        }
+        
+        // 根据birthdate实时计算年龄
+        val age = calculateAgeFromBirthdate(profile.birthdate)
+        if (age != null) {
+            binding.tvAge.text = age.toString()
+        } else {
+            // 如果没有birthdate，尝试使用profile.age（后端返回的）
+            profile.age?.let {
+                binding.tvAge.text = it.toString()
+            } ?: run {
+                binding.tvAge.text = "--"
+            }
+        }
+        
+        // 更新健康目标
+        updateHealthGoals(
+            activityLevel = profile.activity_level,
+            targetWeight = profile.target_weight,
+            goalPeriodWeeks = profile.goal_period_weeks
+        )
+    }
+    
+    /**
+     * 根据birthdate计算年龄
+     */
+    private fun calculateAgeFromBirthdate(birthdate: String?): Int? {
+        if (birthdate == null) return null
+        
+        return try {
+            val dateFormat = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.getDefault())
+            val birthDate = dateFormat.parse(birthdate)
+            if (birthDate != null) {
+                val today = java.util.Calendar.getInstance()
+                val birth = java.util.Calendar.getInstance()
+                birth.time = birthDate
+                var age = today.get(java.util.Calendar.YEAR) - birth.get(java.util.Calendar.YEAR)
+                // 检查是否还没过生日
+                if (today.get(java.util.Calendar.DAY_OF_YEAR) < birth.get(java.util.Calendar.DAY_OF_YEAR)) {
+                    age--
+                }
+                age
+            } else null
+        } catch (e: Exception) {
+            null
         }
     }
 

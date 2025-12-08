@@ -90,7 +90,19 @@ object ProfileManager {
             activity_level = prefs.getString(KEY_ACTIVITY_LEVEL, null),
             health_goal_type = prefs.getString(KEY_HEALTH_GOAL_TYPE, null),
             target_weight = if (prefs.contains(KEY_TARGET_WEIGHT)) prefs.getFloat(KEY_TARGET_WEIGHT, 0f).toDouble() else null,
-            goal_period_weeks = if (prefs.contains(KEY_GOAL_PERIOD_WEEKS)) prefs.getInt(KEY_GOAL_PERIOD_WEEKS, 0) else null
+            goal_period_weeks = if (prefs.contains(KEY_GOAL_PERIOD_WEEKS)) prefs.getInt(KEY_GOAL_PERIOD_WEEKS, 0) else null,
+            // 新字段使用默认值（本地缓存不存储这些字段）
+            bmr = null,
+            tdee = null,
+            daily_calorie_goal = null,
+            liked_foods = null,
+            disliked_foods = null,
+            allergies = null,
+            dietary_restrictions = null,
+            preferred_tastes = null,
+            cooking_skills = null,
+            budget_per_day = null,
+            include_budget = false
         )
     }
     

@@ -1,7 +1,7 @@
 package com.example.forhealth.models
 
 data class MealItem(
-    val id: String,
+    val id: String, // record id
     val name: String,
     val calories: Double,
     val protein: Double,
@@ -9,7 +9,8 @@ data class MealItem(
     val fat: Double,
     val time: String,
     val type: MealType,
-    val image: String? = null
+    val image: String? = null,
+    val foodId: String? = null // food_id from FoodRecordResponse
 ) {
     val itemType: ItemType = ItemType.MEAL
 }

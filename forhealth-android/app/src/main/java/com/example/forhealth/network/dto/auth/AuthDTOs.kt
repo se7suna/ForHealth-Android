@@ -26,7 +26,7 @@ data class UserLoginRequest(
 // Token 响应
 data class TokenResponse(
     val access_token: String,
-    val refresh_token: String,
+    val refresh_token: String? = null,  // 后端可能不返回 refresh_token
     val token_type: String = "bearer"
 )
 
@@ -52,5 +52,10 @@ data class PasswordResetVerify(
 data class MessageResponse(
     val message: String,
     val data: Any? = null
+)
+
+// FastAPI 错误响应格式
+data class ErrorResponse(
+    val detail: String
 )
 

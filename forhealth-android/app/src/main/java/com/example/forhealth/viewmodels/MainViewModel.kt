@@ -133,6 +133,30 @@ class MainViewModel : ViewModel() {
         updateTimeline()
     }
     
+    /**
+     * 直接设置meals数据（从API加载时使用，替换而不是合并）
+     */
+    fun setMeals(meals: List<MealItem>) {
+        _meals.value = meals
+        recalculateStats()
+        updateTimeline()
+    }
+    
+    /**
+     * 直接设置exercises数据（从API加载时使用，替换而不是合并）
+     */
+    fun setExercises(exercises: List<ActivityItem>) {
+        _exercises.value = exercises
+        
+        // 更新统计数据
+        val totalBurned = exercises.sumOf { it.caloriesBurned }
+        val currentStats = _dailyStats.value ?: DailyStats.getInitial()
+        _dailyStats.value = currentStats.copy(burned = totalBurned)
+        
+        // 更新时间线
+        updateTimeline()
+    }
+    
     private fun updateStatsAfterMeals(newMeals: List<MealItem>) {
         val currentStats = _dailyStats.value ?: DailyStats.getInitial()
         
@@ -154,15 +178,16 @@ class MainViewModel : ViewModel() {
         val meals = _meals.value ?: emptyList()
         val exercises = _exercises.value ?: emptyList()
         
-        // 按餐分组：相同时间和类型的meal归为一组
-        val mealGroups = meals.groupBy { "${it.time}_${it.type}" }
-            .map { (_, mealList) ->
-                val firstMeal = mealList.first()
+        // 按餐分组：相同meal_type的meal归为一组（根据后端API的meal_type字段）
+        val mealGroups = meals.groupBy { it.type }
+            .map { (mealType, mealList) ->
+                // 使用该meal_type中最早的时间作为显示时间
+                val earliestTime = mealList.minByOrNull { it.time }?.time ?: DateUtils.getCurrentTime()
                 MealGroup(
-                    id = firstMeal.id, // 使用第一个meal的id作为group id
+                    id = mealList.firstOrNull()?.id ?: "", // 使用第一个meal的id作为group id
                     meals = mealList,
-                    time = firstMeal.time,
-                    type = firstMeal.type
+                    time = earliestTime,
+                    type = mealType
                 )
             }
         

@@ -124,18 +124,9 @@
                             android:paddingHorizontal="@dimen/spacing_8"
                             android:paddingVertical="@dimen/spacing_4">
 
-                            <ImageView
-                                android:layout_width="10dp"
-                                android:layout_height="10dp"
-                                android:src="@drawable/ic_weight"
-                                android:background="@drawable/bg_emerald_500"
-                                app:tint="@color/white"
-                                android:contentDescription="Weight" />
-
                             <TextView
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
-                                android:layout_marginStart="@dimen/spacing_4"
                                 android:text="@string/kg"
                                 android:background="@drawable/bg_emerald_500"
                                 android:textColor="@color/white"
@@ -180,18 +171,9 @@
                             android:paddingHorizontal="@dimen/spacing_8"
                             android:paddingVertical="@dimen/spacing_4">
 
-                            <ImageView
-                                android:layout_width="10dp"
-                                android:layout_height="10dp"
-                                android:src="@drawable/ic_ruler"
-                                android:background="@drawable/bg_emerald_500"
-                                app:tint="@color/white"
-                                android:contentDescription="Height" />
-
                             <TextView
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
-                                android:layout_marginStart="@dimen/spacing_4"
                                 android:text="@string/cm"
                                 android:background="@drawable/bg_emerald_500"
                                 android:textColor="@color/white"

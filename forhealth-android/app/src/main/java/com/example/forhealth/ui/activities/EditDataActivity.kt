@@ -9,12 +9,8 @@ import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import com.example.forhealth.R
-import com.example.forhealth.network.ApiResult
-import com.example.forhealth.network.RetrofitClient
-import com.example.forhealth.network.dto.user.*
-import com.example.forhealth.network.safeApiCall
+// TODO: 重新对接API
 import com.example.forhealth.utils.DataMapper
-import com.example.forhealth.utils.ProfileManager
 import kotlinx.coroutines.launch
 import java.util.*
 
@@ -276,101 +272,16 @@ class EditDataActivity : AppCompatActivity() {
         val loadingToast = Toast.makeText(this, "正在保存...", Toast.LENGTH_SHORT)
         loadingToast.show()
 
-        // 先保存到本地（用于无后端测试）
-        val existingProfile = ProfileManager.getProfile(this)
-        
-        // 如果是Record Changes模式，保留原有的性别和出生日期
-        val genderBackend = if (isRecordChanges && existingProfile?.gender != null) {
-            existingProfile.gender
-        } else {
-            DataMapper.genderToBackend(gender)
-        }
-        
-        val birthdate = if (isRecordChanges && existingProfile?.birthdate != null) {
-            existingProfile.birthdate
-        } else {
-            DataMapper.birthDateToBackend(birthYear, birthMonth, birthDay)
-        }
-        
+        // TODO: 对接API保存数据
+        val genderBackend = DataMapper.genderToBackend(gender)
+        val birthdate = DataMapper.birthDateToBackend(birthYear, birthMonth, birthDay)
         val activityLevelBackend = DataMapper.activityLevelToBackend(activityLevel)
         val goalTypeBackend = DataMapper.goalTypeToBackend(goalType)
         
-        // 获取现有资料或创建新的
-        val updatedProfile = existingProfile?.copy(
-            height = height.toDouble(),
-            weight = weight.toDouble(),
-            gender = genderBackend,
-            birthdate = birthdate,
-            activity_level = activityLevelBackend,
-            health_goal_type = goalTypeBackend,
-            target_weight = goalWeight.toDouble(),
-            goal_period_weeks = goalWeeks
-        ) ?: UserProfileResponse(
-            email = "test@example.com",
-            username = "Test User",
-            height = height.toDouble(),
-            weight = weight.toDouble(),
-            gender = genderBackend,
-            birthdate = birthdate,
-            activity_level = activityLevelBackend,
-            health_goal_type = goalTypeBackend,
-            target_weight = goalWeight.toDouble(),
-            goal_period_weeks = goalWeeks
-        )
-        
-        ProfileManager.saveProfile(this, updatedProfile)
-        
-        // 尝试保存到后端（如果后端可用）
-        lifecycleScope.launch {
-            try {
-                // 1. 保存身体数据
-                val bodyDataRequest = BodyDataRequest(
-                    height = height.toDouble(),
-                    weight = weight.toDouble(),
-                    birthdate = birthdate,
-                    gender = genderBackend
-                )
-                val bodyDataResult = safeApiCall {
-                    RetrofitClient.apiService.updateBodyData(bodyDataRequest)
-                }
-                if (bodyDataResult is ApiResult.Error) {
-                    // 后端失败，但本地已保存，继续
-                    android.util.Log.w("EditDataActivity", "后端保存身体数据失败，已保存到本地: ${bodyDataResult.message}")
-                }
-
-                // 2. 保存活动水平
-                val activityLevelRequest = ActivityLevelRequest(
-                    activity_level = activityLevelBackend
-                )
-                val activityResult = safeApiCall {
-                    RetrofitClient.apiService.updateActivityLevel(activityLevelRequest)
-                }
-                if (activityResult is ApiResult.Error) {
-                    // 后端失败，但本地已保存，继续
-                    android.util.Log.w("EditDataActivity", "后端保存活动水平失败，已保存到本地: ${activityResult.message}")
-                }
-
-                // 3. 保存健康目标
-                val healthGoalRequest = HealthGoalRequest(
-                    health_goal_type = goalTypeBackend,
-                    target_weight = goalWeight.toDouble(),
-                    goal_period_weeks = goalWeeks
-                )
-                val goalResult = safeApiCall {
-                    RetrofitClient.apiService.updateHealthGoal(healthGoalRequest)
-                }
-                // 无论后端成功与否，本地已保存
-                loadingToast.cancel()
-                Toast.makeText(this@EditDataActivity, "信息保存成功", Toast.LENGTH_SHORT).show()
-                finish()
-            } catch (e: Exception) {
-                // 网络错误，但本地已保存
-                loadingToast.cancel()
-                Toast.makeText(this@EditDataActivity, "信息已保存到本地", Toast.LENGTH_SHORT).show()
-                android.util.Log.w("EditDataActivity", "后端保存失败，已保存到本地", e)
-                finish()
-            }
-        }
+        // TODO: 对接API保存数据
+        loadingToast.cancel()
+        Toast.makeText(this, "保存功能待对接API", Toast.LENGTH_SHORT).show()
+        finish()
     }
 }
 

@@ -75,7 +75,7 @@ class LoginActivity : AppCompatActivity() {
                         tokenResponse.access_token,
                         tokenResponse.refresh_token
                     )
-                    // 更新RetrofitClient的token提供者
+                    // 初始化RetrofitClient的TokenProvider
                     RetrofitClient.setTokenProvider {
                         TokenManager.getAccessToken(this@LoginActivity)
                     }

@@ -1,8 +1,9 @@
 package com.example.forhealth.network
 
-import com.example.forhealth.network.dto.ErrorResponse
+import com.example.forhealth.network.dto.auth.ErrorResponse
 import com.google.gson.Gson
 import com.google.gson.JsonSyntaxException
+import okhttp3.ResponseBody
 import retrofit2.Response
 
 /**
@@ -17,7 +18,6 @@ sealed class ApiResult<out T> {
 
 /**
  * 扩展函数：将Retrofit Response转换为ApiResult
- * 改进的错误处理：尝试解析响应体中的错误详情
  */
 suspend fun <T> safeApiCall(apiCall: suspend () -> Response<T>): ApiResult<T> {
     return try {
@@ -31,7 +31,10 @@ suspend fun <T> safeApiCall(apiCall: suspend () -> Response<T>): ApiResult<T> {
             }
         } else {
             // 尝试解析错误响应体
-            val errorMessage = parseErrorResponse(response) ?: response.message() ?: "Unknown error"
+            val errorMessage = parseErrorResponse(response.errorBody())
+                ?: response.message()
+                ?: "Unknown error (${response.code()})"
+            
             ApiResult.Error(
                 message = errorMessage,
                 code = response.code()
@@ -46,21 +49,24 @@ suspend fun <T> safeApiCall(apiCall: suspend () -> Response<T>): ApiResult<T> {
 }
 
 /**
- * 解析错误响应体，提取 detail 或 message 字段
+ * 解析错误响应体
+ * 支持 FastAPI 标准错误格式: {"detail": "错误信息"}
  */
-private fun <T> parseErrorResponse(response: Response<T>): String? {
+private fun parseErrorResponse(errorBody: ResponseBody?): String? {
+    if (errorBody == null) return null
+    
     return try {
-        val errorBody = response.errorBody()?.string()
-        if (errorBody != null) {
-            val gson = Gson()
-            val errorResponse = gson.fromJson(errorBody, ErrorResponse::class.java)
-            errorResponse.getErrorMessage()
-        } else {
-            null
+        val errorString = errorBody.string()
+        val gson = Gson()
+        
+        // 尝试解析为 ErrorResponse 格式 {"detail": "..."}
+        try {
+            val errorResponse = gson.fromJson(errorString, ErrorResponse::class.java)
+            errorResponse.detail
+        } catch (e: JsonSyntaxException) {
+            // 如果不是 JSON 格式，返回原始字符串
+            errorString.takeIf { it.isNotBlank() }
         }
-    } catch (e: JsonSyntaxException) {
-        // 如果解析失败，返回 null，使用默认错误消息
-        null
     } catch (e: Exception) {
         null
     }

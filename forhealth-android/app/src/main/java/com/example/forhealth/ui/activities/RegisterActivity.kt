@@ -12,7 +12,6 @@ import com.example.forhealth.network.RetrofitClient
 import com.example.forhealth.network.dto.auth.SendRegistrationCodeRequest
 import com.example.forhealth.network.dto.auth.UserRegisterRequest
 import com.example.forhealth.network.safeApiCall
-import com.example.forhealth.utils.TokenManager
 import kotlinx.coroutines.launch
 
 class RegisterActivity : AppCompatActivity() {
@@ -157,4 +156,5 @@ class RegisterActivity : AppCompatActivity() {
         }
     }
 }
+
 

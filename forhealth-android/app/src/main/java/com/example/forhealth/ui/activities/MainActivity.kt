@@ -9,7 +9,6 @@ import com.example.forhealth.R
 import com.example.forhealth.network.ApiResult
 import com.example.forhealth.network.RetrofitClient
 import com.example.forhealth.network.safeApiCall
-import com.example.forhealth.utils.ProfileManager
 import com.example.forhealth.utils.TokenManager
 import kotlinx.coroutines.launch
 
@@ -25,7 +24,8 @@ class MainActivity : AppCompatActivity() {
             return
         }
         
-        // 初始化RetrofitClient的TokenProvider
+        // 初始化RetrofitClient
+        RetrofitClient.setApplicationContext(this)
         RetrofitClient.setTokenProvider {
             TokenManager.getAccessToken(this)
         }
@@ -35,61 +35,8 @@ class MainActivity : AppCompatActivity() {
         
         setContentView(R.layout.activity_main)
         
-        // 检查用户是否首次登录（数据是否完整）
-        checkFirstTimeLogin()
-    }
-    
-    private fun checkFirstTimeLogin() {
-        // 先从本地检查
-        val localProfile = ProfileManager.getProfile(this)
-        val isLocalDataComplete = localProfile?.let { profile ->
-            profile.height != null && 
-            profile.weight != null && 
-            profile.gender != null && 
-            profile.birthdate != null &&
-            profile.activity_level != null &&
-            profile.health_goal_type != null
-        } ?: false
-        
-        if (!isLocalDataComplete) {
-            // 本地数据不完整，跳转到编辑数据页面
-            val intent = Intent(this, EditDataActivity::class.java)
-            startActivity(intent)
-            return
-        }
-        
-        // 尝试从API获取（如果后端可用）
-        lifecycleScope.launch {
-            val result = safeApiCall {
-                RetrofitClient.apiService.getProfile()
-            }
-            when (result) {
-                is ApiResult.Success -> {
-                    val profile = result.data
-                    // 保存到本地
-                    ProfileManager.saveProfile(this@MainActivity, profile)
-                    // 检查关键数据是否完整
-                    val isDataComplete = profile.height != null && 
-                                        profile.weight != null && 
-                                        profile.gender != null && 
-                                        profile.birthdate != null &&
-                                        profile.activity_level != null &&
-                                        profile.health_goal_type != null
-                    
-                    if (!isDataComplete) {
-                        // 数据不完整，跳转到编辑数据页面
-                        val intent = Intent(this@MainActivity, EditDataActivity::class.java)
-                        startActivity(intent)
-                    }
-                }
-                is ApiResult.Error -> {
-                    // 如果获取失败，使用本地数据（已在上面检查）
-                }
-                is ApiResult.Loading -> {
-                    // Loading state
-                }
-            }
-        }
+        // 不再自动检查首次登录，用户需要主动操作才会打开编辑页面
+        // 首次注册后的数据填写应该在注册流程中完成，而不是每次启动都检查
     }
 }
 

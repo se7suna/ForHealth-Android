@@ -81,9 +81,9 @@
                     android:paddingTop="@dimen/spacing_4"
                     android:paddingBottom="@dimen/spacing_4"
                     android:textColor="@color/emerald_600"
-                android:textSize="@dimen/text_size_xs"
-                android:textStyle="bold"
-                android:background="@drawable/bg_emerald_50" />
+                    android:textSize="@dimen/text_size_xs"
+                    android:textStyle="bold"
+                    android:background="@drawable/bg_emerald_50" />
 
                 <com.google.android.material.floatingactionbutton.FloatingActionButton
                     android:id="@+id/fabAddMore"

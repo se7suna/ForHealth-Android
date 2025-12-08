@@ -24,7 +24,7 @@ data class HealthGoalRequest(
     val goal_period_weeks: Int? = null
 )
 
-// 用户资料响应
+// 用户资料响应（根据 OpenAPI 规范，包含所有字段）
 data class UserProfileResponse(
     val email: String,
     val username: String,
@@ -32,14 +32,24 @@ data class UserProfileResponse(
     val weight: Double? = null,
     val age: Int? = null,
     val gender: String? = null, // "male" or "female"
-    val birthdate: String? = null,
+    val birthdate: String? = null, // YYYY-MM-DD
     val activity_level: String? = null,
     val health_goal_type: String? = null,
     val target_weight: Double? = null,
     val goal_period_weeks: Int? = null,
     val bmr: Double? = null, // 基础代谢率
     val tdee: Double? = null, // 每日总能量消耗
-    val daily_calorie_goal: Double? = null // 每日卡路里目标
+    val daily_calorie_goal: Double? = null, // 每日卡路里目标
+    // 食物偏好
+    val liked_foods: List<String>? = null,
+    val disliked_foods: List<String>? = null,
+    val allergies: List<String>? = null,
+    val dietary_restrictions: List<String>? = null,
+    val preferred_tastes: List<String>? = null,
+    val cooking_skills: String? = null,
+    // 预算信息
+    val budget_per_day: Double? = null,
+    val include_budget: Boolean = false
 )
 
 // 更新用户资料请求
@@ -61,32 +71,6 @@ data class UserProfileUpdate(
     val cooking_skills: String? = null,
     val budget_per_day: Double? = null,
     val include_budget: Boolean? = null
-)
-
-// 用户资料响应（完整版）
-data class UserProfileResponseFull(
-    val email: String,
-    val username: String,
-    val height: Double? = null,
-    val weight: Double? = null,
-    val age: Int? = null,
-    val gender: String? = null,
-    val birthdate: String? = null,
-    val activity_level: String? = null,
-    val health_goal_type: String? = null,
-    val target_weight: Double? = null,
-    val goal_period_weeks: Int? = null,
-    val bmr: Double? = null,
-    val tdee: Double? = null,
-    val daily_calorie_goal: Double? = null,
-    val liked_foods: List<String>? = null,
-    val disliked_foods: List<String>? = null,
-    val allergies: List<String>? = null,
-    val dietary_restrictions: List<String>? = null,
-    val preferred_tastes: List<String>? = null,
-    val cooking_skills: String? = null,
-    val budget_per_day: Double? = null,
-    val include_budget: Boolean = false
 )
 
 // 创建体重记录请求

@@ -177,29 +177,40 @@ class AddMealFragment : DialogFragment() {
     ) { result ->
         if (result.resultCode == Activity.RESULT_OK) {
             val data = result.data
-            val mode = data?.getStringExtra("mode")
+            val foodItemsJson = data?.getStringExtra("food_items_json")
+            val foodCount = data?.getIntExtra("food_count", 0) ?: 0
             
-            when (mode) {
-                "scan" -> {
-                    val barcode = data?.getStringExtra("barcode")
-                    if (barcode != null) {
-                        // 处理扫码结果，可以搜索对应的食物
-                        binding.etSearch.setText(barcode)
-                        filterFood(barcode)
+            if (foodItemsJson != null && foodCount > 0) {
+                try {
+                    // 使用 Gson 反序列化食物列表
+                    val gson = com.google.gson.Gson()
+                    val type = object : com.google.gson.reflect.TypeToken<List<com.example.forhealth.models.FoodItem>>() {}.type
+                    val foodItems: List<com.example.forhealth.models.FoodItem> = gson.fromJson(foodItemsJson, type)
+                    
+                    // 将识别到的食物加入购物车
+                    foodItems.forEach { foodItem ->
+                        addToCart(foodItem)
                     }
+                    
+                    android.widget.Toast.makeText(
+                        requireContext(),
+                        "已添加 $foodCount 个食物到购物车",
+                        android.widget.Toast.LENGTH_SHORT
+                    ).show()
+                } catch (e: Exception) {
+                    android.widget.Toast.makeText(
+                        requireContext(),
+                        "处理食物数据失败: ${e.message}",
+                        android.widget.Toast.LENGTH_SHORT
+                    ).show()
                 }
-                "photo" -> {
-                    val photoUri = data?.getStringExtra("photo_uri")
-                    if (photoUri != null) {
-                        // 处理拍照结果，可以用于AI识别食物
-                        // TODO: 实现AI识别食物的功能
-                        android.widget.Toast.makeText(
-                            requireContext(),
-                            "Photo captured: $photoUri",
-                            android.widget.Toast.LENGTH_SHORT
-                        ).show()
-                    }
-                }
+            } else {
+                // 如果没有返回食物，可能是识别失败
+                android.widget.Toast.makeText(
+                    requireContext(),
+                    "未识别到食物",
+                    android.widget.Toast.LENGTH_SHORT
+                ).show()
             }
         }
     }

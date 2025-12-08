@@ -1,5 +1,6 @@
 package com.example.forhealth.network
 
+import android.content.Context
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
@@ -12,7 +13,7 @@ import java.util.concurrent.TimeUnit
 object RetrofitClient {
     
     // TODO: 从配置文件或环境变量读取
-    private const val BASE_URL = "http://124.70.161.90:8000/api/"
+    private const val BASE_URL = "http://10.0.2.2:8000/api/"
     
     // Token提供者（从SharedPreferences或其他存储中获取）
     private var tokenProvider: (() -> String?)? = null
@@ -21,12 +22,26 @@ object RetrofitClient {
         level = HttpLoggingInterceptor.Level.BODY // 开发环境使用，生产环境改为NONE
     }
     
+    private var applicationContext: Context? = null
+    
+    /**
+     * 设置应用上下文（用于token刷新）
+     */
+    fun setApplicationContext(context: Context) {
+        applicationContext = context.applicationContext
+    }
+    
     private fun createOkHttpClient(): OkHttpClient {
         val builder = OkHttpClient.Builder()
             .addInterceptor(loggingInterceptor)
             .connectTimeout(30, TimeUnit.SECONDS)
             .readTimeout(30, TimeUnit.SECONDS)
             .writeTimeout(30, TimeUnit.SECONDS)
+        
+        // 添加token刷新拦截器（在认证拦截器之前）
+        applicationContext?.let { context ->
+            builder.addInterceptor(TokenRefreshInterceptor(context, BASE_URL))
+        }
         
         // 添加认证拦截器
         tokenProvider?.let {
