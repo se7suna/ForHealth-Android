@@ -60,6 +60,7 @@ dependencies {
     
     // Image Loading - Coil (轻量级，Kotlin友好)
     implementation("io.coil-kt:coil:2.5.0")
+    implementation("io.coil-kt:coil-svg:2.5.0")
     
     // Network - Retrofit
     implementation("com.squareup.retrofit2:retrofit:2.9.0")
