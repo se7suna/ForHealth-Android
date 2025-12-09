@@ -146,7 +146,6 @@ data class FoodIdSearchResponse(
 // 创建食物记录请求
 data class FoodRecordCreateRequest(
     val food_id: String,
-    val source: String = "auto", // "local" or "auto"
     val serving_amount: Double, // 份量数
     val recorded_at: String, // ISO 8601 date-time
     val meal_type: String? = null, // "早餐", "午餐", "晚餐", "加餐"

@@ -7,11 +7,17 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.Toast
 import androidx.fragment.app.DialogFragment
+import androidx.lifecycle.lifecycleScope
 import com.example.forhealth.R
 import com.example.forhealth.databinding.FragmentWeightTrackerBinding
 import com.example.forhealth.models.WeightRecord
+import com.example.forhealth.network.ApiResult
+import com.example.forhealth.network.dto.user.WeightRecordCreateRequest
+import com.example.forhealth.repositories.UserRepository
 import com.example.forhealth.utils.DateUtils
+import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -22,8 +28,12 @@ class WeightTrackerFragment : DialogFragment() {
     
     private var currentWeight: Double = 72.0
     private var height: Int = 170 // in cm
+    private var targetWeight: Double? = null
     private var weightHistory: List<WeightRecord> = emptyList()
     private var onSaveListener: ((Double) -> Unit)? = null
+    
+    // 用户数据仓库
+    private val userRepository = UserRepository()
     
     private var activeTab: Tab = Tab.OVERVIEW
     
@@ -67,8 +77,91 @@ class WeightTrackerFragment : DialogFragment() {
         
         setupTabs()
         setupClickListeners()
-        updateOverviewTab()
-        updateLogTab()
+        loadWeightData()
+    }
+    
+    /**
+     * 从后端加载体重记录和用户资料
+     */
+    private fun loadWeightData() {
+        lifecycleScope.launch {
+            // 1. 获取用户资料（获取目标体重和身高）
+            val profileResult = userRepository.getProfile()
+            when (profileResult) {
+                is ApiResult.Success -> {
+                    val profile = profileResult.data
+                    targetWeight = profile.target_weight
+                    profile.height?.toInt()?.let { height = it }
+                }
+                is ApiResult.Error -> {
+                    Toast.makeText(requireContext(), "获取用户信息失败: ${profileResult.message}", Toast.LENGTH_SHORT).show()
+                }
+                is ApiResult.Loading -> {}
+            }
+            
+            // 2. 获取体重记录
+            val recordsResult = userRepository.getWeightRecords(limit = 500)
+            when (recordsResult) {
+                is ApiResult.Success -> {
+                    val records = recordsResult.data.records
+                    // 后端返回的数据是按时间倒序排列的（最新的在前）
+                    // 转换为WeightRecord模型，保留完整时间戳用于排序
+                    val isoDateFormat = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.getDefault())
+                    val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
+                    
+                    // 先按完整时间戳排序（升序：最旧的在前，最新的在后）
+                    val sortedRecords = records.sortedBy { record ->
+                        try {
+                            isoDateFormat.parse(record.recorded_at)?.time ?: 0L
+                        } catch (e: Exception) {
+                            // 如果解析失败，尝试只解析日期部分
+                            try {
+                                dateFormat.parse(record.recorded_at.split("T")[0])?.time ?: 0L
+                            } catch (e2: Exception) {
+                                0L
+                            }
+                        }
+                    }
+                    
+                    // 转换为WeightRecord模型（只保留日期部分用于显示）
+                    weightHistory = sortedRecords.map { record ->
+                        WeightRecord(
+                            date = record.recorded_at.split("T")[0], // 提取日期部分用于显示
+                            weight = record.weight
+                        )
+                    }
+                    
+                    // 设置当前体重为最近期的记录（最后一条，因为已经按时间升序排序）
+                    if (weightHistory.isNotEmpty()) {
+                        currentWeight = weightHistory.last().weight
+                    }
+                    
+                    // 初始化日期范围
+                    if (weightHistory.isNotEmpty()) {
+                        val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
+                        chartStartDate = dateFormat.parse(weightHistory.first().date) ?: Date()
+                        chartEndDate = Date() // 默认结束日期为今天
+                    } else {
+                        // 如果没有历史记录，使用默认日期范围（最近30天）
+                        val calendar = Calendar.getInstance()
+                        chartEndDate = Date()
+                        calendar.add(Calendar.DAY_OF_YEAR, -30)
+                        chartStartDate = calendar.time
+                    }
+                    
+                    // 更新UI
+                    updateOverviewTab()
+                    updateLogTab()
+                }
+                is ApiResult.Error -> {
+                    Toast.makeText(requireContext(), "获取体重记录失败: ${recordsResult.message}", Toast.LENGTH_SHORT).show()
+                    // 即使失败也更新UI（使用默认值）
+                    updateOverviewTab()
+                    updateLogTab()
+                }
+                is ApiResult.Loading -> {}
+            }
+        }
     }
     
     private fun setupTabs() {
@@ -155,43 +248,40 @@ class WeightTrackerFragment : DialogFragment() {
     private var chartEndDate: Date? = null
     
     private fun updateOverviewTab() {
-        // 生成模拟数据用于测试
-        val mockHistory = generateMockWeightHistory()
+        // 确保使用最新的currentWeight（从weightHistory中获取）
+        if (weightHistory.isNotEmpty()) {
+            currentWeight = weightHistory.last().weight
+        }
         
-        // 更新当前体重
-        binding.tvCurrentWeight.text = String.format(Locale.getDefault(), "%.1f", currentWeight)
+        // 更新当前体重（最近期的记录，即最后一条）
+        val latestWeight = weightHistory.lastOrNull()?.weight ?: currentWeight
+        binding.tvCurrentWeight.text = String.format(Locale.getDefault(), "%.1f", latestWeight)
         
-        // 计算体重变化
-        val startWeight = mockHistory.firstOrNull()?.weight ?: currentWeight
-        val weightChange = currentWeight - startWeight
+        // 计算体重变化（从起始体重到当前体重）
+        // 起始体重：最早期的一条记录（第一条）
+        val startWeight = weightHistory.firstOrNull()?.weight ?: currentWeight
+        val weightChange = latestWeight - startWeight
         val isGain = weightChange > 0
         
-        binding.tvWeightChange.text = "${if (isGain) "+" else "-"}${String.format(Locale.getDefault(), "%.1f", Math.abs(weightChange))} kg"
+        binding.tvWeightChange.text = "${if (isGain) "+" else ""}${String.format(Locale.getDefault(), "%.1f", weightChange)} kg"
         binding.tvWeightChange.setTextColor(resources.getColor(if (isGain) R.color.rose_300 else R.color.emerald_300, null))
         
         // 更新起始体重和目标体重
         binding.tvStartWeight.text = String.format(Locale.getDefault(), "%.1f kg", startWeight)
-        binding.tvGoalWeight.text = "68.0 kg" // 可以从用户资料获取
+        binding.tvGoalWeight.text = targetWeight?.let { 
+            String.format(Locale.getDefault(), "%.1f kg", it) 
+        } ?: "--"
         
-        // 计算BMI
-        val bmi = calculateBMI(currentWeight)
+        // 计算BMI（使用当前体重）
+        val bmi = calculateBMI(latestWeight)
         binding.tvBMI.text = String.format(Locale.getDefault(), "%.1f", bmi)
         
         // 根据BMI健康范围（18.5-24.9）设置颜色：健康为绿色，否则为红色
         val isHealthyBMI = bmi >= 18.5 && bmi < 25.0
         binding.tvBMI.setTextColor(resources.getColor(if (isHealthyBMI) R.color.emerald_600 else R.color.rose_500, null))
         
-        // 初始化日期范围
-        if (chartStartDate == null && mockHistory.isNotEmpty()) {
-            val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
-            chartStartDate = dateFormat.parse(mockHistory.first().date)
-        }
-        if (chartEndDate == null) {
-            chartEndDate = Date()
-        }
-        
         // 绘制体重趋势图（根据日期范围过滤和采样数据）
-        val filteredData = filterAndSampleData(mockHistory)
+        val filteredData = filterAndSampleData(weightHistory)
         drawWeightChart(filteredData)
         
         // 更新图表日期显示
@@ -265,8 +355,7 @@ class WeightTrackerFragment : DialogFragment() {
             
             updateChartDateDisplay()
             // 重新绘制图表（根据日期范围过滤和采样数据）
-            val filteredData = filterAndSampleData(weightHistory)
-            drawWeightChart(filteredData)
+            refreshChart()
         }
         
         dialog.show(parentFragmentManager, "DatePickerDialog")
@@ -385,21 +474,12 @@ class WeightTrackerFragment : DialogFragment() {
         return sampled
     }
     
-    private fun generateMockWeightHistory(): List<WeightRecord> {
-        // 生成过去30天的模拟体重数据
-        val calendar = Calendar.getInstance()
-        val mockData = mutableListOf<WeightRecord>()
-        
-        for (i in 29 downTo 0) {
-            calendar.time = Date()
-            calendar.add(Calendar.DAY_OF_YEAR, -i)
-            val date = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(calendar.time)
-            // 生成一个从75.0逐渐下降到72.0的体重趋势
-            val weight = 75.0 - (i * 0.1) + (Math.random() * 0.5 - 0.25) // 添加一些随机波动
-            mockData.add(WeightRecord(date = date, weight = weight))
-        }
-        
-        return mockData
+    /**
+     * 刷新图表（根据当前日期范围）
+     */
+    private fun refreshChart() {
+        val filteredData = filterAndSampleData(weightHistory)
+        drawWeightChart(filteredData)
     }
     
     private fun updateLogTab() {
@@ -472,32 +552,43 @@ class WeightTrackerFragment : DialogFragment() {
     private fun saveWeight() {
         val newWeight = binding.sliderWeight.value.toDouble()
         
-        // 更新当前体重
-        currentWeight = newWeight
-        
-        // 添加到历史记录
-        val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
-        val today = dateFormat.format(Date())
-        val newRecord = WeightRecord(date = today, weight = newWeight)
-        weightHistory = weightHistory + newRecord
-        
-        // 调用保存监听器
-        onSaveListener?.invoke(newWeight)
-        
-        // 切换到Overview标签页
-        activeTab = Tab.OVERVIEW
-        updateTabButtons()
-        switchTab()
-        
-        // 更新Overview显示
-        updateOverviewTab()
-        
-        // 显示成功提示
-        android.widget.Toast.makeText(
-            requireContext(),
-            getString(R.string.weight_added_successfully),
-            android.widget.Toast.LENGTH_SHORT
-        ).show()
+        lifecycleScope.launch {
+            // 保存到后端
+            val dateFormat = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.getDefault())
+            val saveResult = userRepository.createWeightRecord(
+                WeightRecordCreateRequest(
+                    weight = newWeight,
+                    recorded_at = dateFormat.format(Date())
+                )
+            )
+            
+            when (saveResult) {
+                is ApiResult.Success -> {
+                    // 保存成功后重新加载数据
+                    loadWeightData()
+                    
+                    // 显示成功提示
+                    Toast.makeText(
+                        requireContext(),
+                        getString(R.string.weight_added_successfully),
+                        Toast.LENGTH_SHORT
+                    ).show()
+                    
+                    // 切换到Overview标签页
+                    activeTab = Tab.OVERVIEW
+                    updateTabButtons()
+                    switchTab()
+                }
+                is ApiResult.Error -> {
+                    Toast.makeText(
+                        requireContext(),
+                        "保存失败: ${saveResult.message}",
+                        Toast.LENGTH_SHORT
+                    ).show()
+                }
+                is ApiResult.Loading -> {}
+            }
+        }
     }
     
     override fun onDestroyView() {

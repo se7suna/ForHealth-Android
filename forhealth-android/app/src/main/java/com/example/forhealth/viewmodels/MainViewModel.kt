@@ -3,16 +3,26 @@ package com.example.forhealth.viewmodels
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import com.example.forhealth.models.ActivityItem
 import com.example.forhealth.models.DailyStats
 import com.example.forhealth.models.MealGroup
 import com.example.forhealth.models.MealItem
 import com.example.forhealth.models.MealGroupTimelineItem
+import com.example.forhealth.models.MealType
 import com.example.forhealth.models.TimelineItem
 import com.example.forhealth.models.UserProfile
 import com.example.forhealth.models.WorkoutGroup
 import com.example.forhealth.models.WorkoutGroupTimelineItem
+import com.example.forhealth.network.ApiResult
+import com.example.forhealth.network.dto.food.FoodRecordCreateRequest
+import com.example.forhealth.network.dto.food.FoodRecordResponse
+import com.example.forhealth.network.dto.food.FoodRecordUpdateRequest
+import com.example.forhealth.repositories.MealRepository
 import com.example.forhealth.utils.DateUtils
+import kotlinx.coroutines.launch
+import java.text.SimpleDateFormat
+import java.util.*
 
 class MainViewModel : ViewModel() {
     
@@ -319,6 +329,160 @@ class MainViewModel : ViewModel() {
             fat = currentStats.fat.copy(current = totalFat),
             burned = currentStats.burned
         )
+    }
+    
+    // ==================== DTO ↔ Model 转换方法 ====================
+    
+    /**
+     * 将后端DTO转换为前端Model
+     */
+    private fun foodRecordResponseToMealItem(dto: FoodRecordResponse): MealItem {
+        return MealItem(
+            id = dto.id,
+            name = dto.food_name,
+            calories = dto.nutrition_data.calories,
+            protein = dto.nutrition_data.protein,
+            carbs = dto.nutrition_data.carbohydrates,
+            fat = dto.nutrition_data.fat,
+            time = dto.recorded_at,
+            type = mealTypeStringToEnum(dto.meal_type),
+            image = null, // FoodRecordResponse没有image字段
+            foodId = dto.food_id
+        )
+    }
+    
+    /**
+     * 将前端Model转换为后端DTO（用于创建）
+     */
+    private fun mealItemToFoodRecordCreateRequest(meal: MealItem): FoodRecordCreateRequest {
+        return FoodRecordCreateRequest(
+            food_id = meal.foodId ?: "",
+            serving_amount = 1.0, // TODO: 需要从meal中获取份量信息
+            recorded_at = meal.time,
+            meal_type = mealTypeEnumToString(meal.type),
+            notes = null
+        )
+    }
+    
+    /**
+     * 将前端Model转换为后端DTO（用于更新）
+     */
+    private fun mealItemToFoodRecordUpdateRequest(meal: MealItem): FoodRecordUpdateRequest {
+        return FoodRecordUpdateRequest(
+            food_name = meal.name,
+            serving_amount = 1.0, // TODO: 需要从meal中获取份量信息
+            recorded_at = meal.time,
+            meal_type = mealTypeEnumToString(meal.type),
+            notes = null,
+            nutrition_data = com.example.forhealth.network.dto.food.NutritionData(
+                calories = meal.calories,
+                protein = meal.protein,
+                carbohydrates = meal.carbs,
+                fat = meal.fat
+            )
+        )
+    }
+    
+    /**
+     * 后端meal_type字符串转换为前端MealType枚举
+     */
+    private fun mealTypeStringToEnum(mealType: String?): MealType {
+        return when (mealType) {
+            "早餐" -> MealType.BREAKFAST
+            "午餐" -> MealType.LUNCH
+            "晚餐" -> MealType.DINNER
+            "加餐" -> MealType.SNACK
+            else -> MealType.BREAKFAST // 默认值
+        }
+    }
+    
+    /**
+     * 前端MealType枚举转换为后端meal_type字符串
+     */
+    private fun mealTypeEnumToString(mealType: MealType): String {
+        return when (mealType) {
+            MealType.BREAKFAST -> "早餐"
+            MealType.LUNCH -> "午餐"
+            MealType.DINNER -> "晚餐"
+            MealType.SNACK -> "加餐"
+        }
+    }
+    
+    // ==================== 从Repository加载数据的方法 ====================
+    
+    private val mealRepository = MealRepository()
+    
+    /**
+     * 从后端加载今日餐食数据
+     */
+    fun loadTodayMeals() {
+        viewModelScope.launch {
+            when (val result = mealRepository.getTodayMeals()) {
+                is ApiResult.Success -> {
+                    val mealItems = result.data.records.map { foodRecordResponseToMealItem(it) }
+                    setMeals(mealItems)
+                }
+                is ApiResult.Error -> {
+                    // 处理错误，可以显示错误消息
+                }
+                is ApiResult.Loading -> {}
+            }
+        }
+    }
+    
+    /**
+     * 创建食物记录（添加餐食）
+     */
+    fun createMealRecord(meal: MealItem, onResult: (ApiResult<MealItem>) -> Unit) {
+        viewModelScope.launch {
+            val request = mealItemToFoodRecordCreateRequest(meal)
+            when (val result = mealRepository.createFoodRecord(request)) {
+                is ApiResult.Success -> {
+                    val mealItem = foodRecordResponseToMealItem(result.data)
+                    addMeals(listOf(mealItem))
+                    onResult(ApiResult.Success(mealItem))
+                }
+                is ApiResult.Error -> onResult(result)
+                is ApiResult.Loading -> onResult(result)
+            }
+        }
+    }
+    
+    /**
+     * 更新食物记录
+     */
+    fun updateMealRecord(recordId: String, meal: MealItem, onResult: (ApiResult<MealItem>) -> Unit) {
+        viewModelScope.launch {
+            val request = mealItemToFoodRecordUpdateRequest(meal)
+            when (val result = mealRepository.updateFoodRecord(recordId, request)) {
+                is ApiResult.Success -> {
+                    val mealItem = foodRecordResponseToMealItem(result.data)
+                    // 更新本地meals列表
+                    val currentMeals = _meals.value ?: emptyList()
+                    val updatedMeals = currentMeals.map { if (it.id == recordId) mealItem else it }
+                    setMeals(updatedMeals)
+                    onResult(ApiResult.Success(mealItem))
+                }
+                is ApiResult.Error -> onResult(result)
+                is ApiResult.Loading -> onResult(result)
+            }
+        }
+    }
+    
+    /**
+     * 删除食物记录
+     */
+    fun deleteMealRecord(recordId: String, onResult: (ApiResult<Boolean>) -> Unit) {
+        viewModelScope.launch {
+            when (val result = mealRepository.deleteFoodRecord(recordId)) {
+                is ApiResult.Success -> {
+                    deleteMealGroup(recordId) // 使用现有的删除方法
+                    onResult(ApiResult.Success(true))
+                }
+                is ApiResult.Error -> onResult(ApiResult.Error(result.message))
+                is ApiResult.Loading -> onResult(result)
+            }
+        }
     }
 }
 

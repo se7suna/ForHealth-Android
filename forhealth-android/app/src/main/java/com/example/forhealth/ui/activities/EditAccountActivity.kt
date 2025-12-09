@@ -9,14 +9,16 @@ import coil.transform.CircleCropTransformation
 import com.example.forhealth.R
 import com.example.forhealth.databinding.ActivityEditAccountBinding
 import com.example.forhealth.network.ApiResult
-import com.example.forhealth.network.RetrofitClient
 import com.example.forhealth.network.dto.user.UserProfileUpdate
-import com.example.forhealth.network.safeApiCall
+import com.example.forhealth.repositories.UserRepository
 import kotlinx.coroutines.launch
 
 class EditAccountActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityEditAccountBinding
+    
+    // 用户数据仓库
+    private val userRepository = UserRepository()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -96,9 +98,7 @@ class EditAccountActivity : AppCompatActivity() {
         lifecycleScope.launch {
             try {
                 val updateRequest = UserProfileUpdate(username = username)
-                val result = safeApiCall {
-                    RetrofitClient.apiService.updateProfile(updateRequest)
-                }
+                val result = userRepository.updateProfile(updateRequest)
                 
                 loadingToast.cancel()
                 

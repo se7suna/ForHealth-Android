@@ -105,12 +105,33 @@ class CustomFoodFragment : DialogFragment() {
                 binding.btnSaveCustomFood.isEnabled = false
                 binding.btnSaveCustomFood.text = "保存中..."
                 
-                val result = foodRepository.createCustomFood(tempFood)
+                // 调用Repository的createFood方法，需要传递多个参数
+                val result = foodRepository.createFood(
+                    name = tempFood.name,
+                    servingSize = tempFood.gramsPerUnit,
+                    calories = tempFood.calories,
+                    protein = tempFood.protein,
+                    carbohydrates = tempFood.carbs,
+                    fat = tempFood.fat,
+                    servingUnit = tempFood.unit,
+                    imageUri = null
+                )
                 
                 when (result) {
                     is ApiResult.Success -> {
-                        // API成功，使用服务器返回的数据
-                        val savedFood = result.data
+                        // API成功，将FoodResponse转换为FoodItem
+                        val foodResponse = result.data
+                        val savedFood = FoodItem(
+                            id = foodResponse.id,
+                            name = foodResponse.name,
+                            calories = foodResponse.nutrition_per_serving.calories,
+                            protein = foodResponse.nutrition_per_serving.protein,
+                            carbs = foodResponse.nutrition_per_serving.carbohydrates,
+                            fat = foodResponse.nutrition_per_serving.fat,
+                            unit = foodResponse.serving_unit,
+                            gramsPerUnit = foodResponse.serving_size,
+                            image = foodResponse.image_url ?: tempFood.image
+                        )
                         onCustomFoodCreatedListener?.invoke(savedFood)
                         dismiss()
                     }

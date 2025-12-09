@@ -14,10 +14,9 @@ import coil.transform.CircleCropTransformation
 import com.example.forhealth.R
 import com.example.forhealth.databinding.FragmentEditProfileBinding
 import com.example.forhealth.network.ApiResult
-import com.example.forhealth.network.RetrofitClient
 import com.example.forhealth.network.dto.user.UserProfileResponse
 import com.example.forhealth.network.dto.user.UserProfileUpdate
-import com.example.forhealth.network.safeApiCall
+import com.example.forhealth.repositories.UserRepository
 import com.example.forhealth.utils.DataMapper
 import com.example.forhealth.utils.ProfileManager
 import kotlinx.coroutines.launch
@@ -36,6 +35,9 @@ class EditProfileFragment : DialogFragment() {
     private var selectedBirthdate: String? = null
     private var selectedTargetWeight: Double? = null
     private var selectedGoalPeriod: Int? = null
+    
+    // 用户数据仓库
+    private val userRepository = UserRepository()
 
     private val activityLevels = arrayOf(
         "Sedentary",
@@ -269,9 +271,7 @@ class EditProfileFragment : DialogFragment() {
 
         // 尝试从API获取最新数据
         lifecycleScope.launch {
-            val result = safeApiCall {
-                RetrofitClient.apiService.getProfile()
-            }
+            val result = userRepository.getProfile()
             when (result) {
                 is ApiResult.Success -> {
                     currentProfile = result.data
@@ -403,9 +403,7 @@ class EditProfileFragment : DialogFragment() {
             val loadingToast = Toast.makeText(requireContext(), "正在保存...", Toast.LENGTH_SHORT)
             loadingToast.show()
 
-            val result = safeApiCall {
-                RetrofitClient.apiService.updateProfile(updateRequest)
-            }
+            val result = userRepository.updateProfile(updateRequest)
 
             loadingToast.cancel()
 

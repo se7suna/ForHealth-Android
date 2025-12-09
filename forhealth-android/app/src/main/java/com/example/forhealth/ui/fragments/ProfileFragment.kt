@@ -14,8 +14,7 @@ import coil.transform.CircleCropTransformation
 import com.example.forhealth.R
 import com.example.forhealth.databinding.FragmentProfileBinding
 import com.example.forhealth.network.ApiResult
-import com.example.forhealth.network.RetrofitClient
-import com.example.forhealth.network.safeApiCall
+import com.example.forhealth.repositories.UserRepository
 import com.example.forhealth.ui.activities.EditAccountActivity
 import com.example.forhealth.ui.activities.EditDataActivity
 import com.example.forhealth.ui.activities.LoginActivity
@@ -30,6 +29,9 @@ class ProfileFragment : DialogFragment() {
 
     // 使用 activityViewModels 以共享同一个 ViewModel 实例
     private val viewModel: MainViewModel by activityViewModels()
+    
+    // 用户数据仓库
+    private val userRepository = UserRepository()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -81,9 +83,7 @@ class ProfileFragment : DialogFragment() {
         // 刷新Profile数据（从API重新获取）
         // 使用lifecycleScope确保在正确的生命周期中执行
         lifecycleScope.launch {
-            val result = safeApiCall {
-                RetrofitClient.apiService.getProfile()
-            }
+            val result = userRepository.getProfile()
             when (result) {
                 is ApiResult.Success -> {
                     val profile = result.data
@@ -128,9 +128,7 @@ class ProfileFragment : DialogFragment() {
         binding.btnEditAccount.setOnClickListener {
             lifecycleScope.launch {
                 // 获取当前用户信息
-                val result = safeApiCall {
-                    RetrofitClient.apiService.getProfile()
-                }
+                val result = userRepository.getProfile()
                 when (result) {
                     is ApiResult.Success -> {
                         val intent = Intent(requireContext(), EditAccountActivity::class.java)
@@ -146,8 +144,6 @@ class ProfileFragment : DialogFragment() {
                 }
             }
         }
-
-        // Edit Data - 已删除，现在通过点击Header打开EditProfile
 
         // Weight Tracker - 打开体重追踪界面
         binding.btnWeightTracker.setOnClickListener {
@@ -165,45 +161,9 @@ class ProfileFragment : DialogFragment() {
     }
 
     private fun openWeightTrackerDialog() {
-        // TODO: 对接API获取体重数据
-        // 从API获取当前用户的体重和身高
-        lifecycleScope.launch {
-            val result = safeApiCall {
-                RetrofitClient.apiService.getProfile()
-            }
-            when (result) {
-                is ApiResult.Success -> {
-                    val profile = result.data
-                    val currentUserWeight = profile.weight ?: 72.0 // 如果没有体重，使用默认值72.0（在有效范围内）
-                    val currentUserHeight = profile.height?.toInt() ?: 170
-                    
-                    val dialog = WeightTrackerFragment().apply {
-                        setCurrentWeight(currentUserWeight)
-                        setHeight(currentUserHeight)
-                        setWeightHistory(emptyList())
-                        setOnSaveListener { newWeight ->
-                            // TODO: 对接API保存体重记录
-                        }
-                    }
-                    dialog.show(parentFragmentManager, "WeightTrackerDialog")
-                }
-                is ApiResult.Error -> {
-                    // 如果获取失败，使用默认值
-                    val dialog = WeightTrackerFragment().apply {
-                        setCurrentWeight(72.0)
-                        setHeight(170)
-                        setWeightHistory(emptyList())
-                        setOnSaveListener { newWeight ->
-                            // TODO: 对接API保存体重记录
-                        }
-                    }
-                    dialog.show(parentFragmentManager, "WeightTrackerDialog")
-                }
-                is ApiResult.Loading -> {
-                    // Loading state
-                }
-            }
-        }
+        // WeightTrackerFragment现在会自己从后端加载数据
+        val dialog = WeightTrackerFragment()
+        dialog.show(parentFragmentManager, "WeightTrackerDialog")
     }
 
     private fun openEditDataActivity(isRecordChanges: Boolean = false) {
@@ -216,9 +176,7 @@ class ProfileFragment : DialogFragment() {
     private fun observeData() {
         // 从API获取用户资料数据
         lifecycleScope.launch {
-            val result = safeApiCall {
-                RetrofitClient.apiService.getProfile()
-            }
+            val result = userRepository.getProfile()
             when (result) {
                 is ApiResult.Success -> {
                     val profile = result.data

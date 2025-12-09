@@ -9,7 +9,11 @@ import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import com.example.forhealth.R
-// TODO: 重新对接API
+import com.example.forhealth.network.ApiResult
+import com.example.forhealth.network.dto.user.ActivityLevelRequest
+import com.example.forhealth.network.dto.user.BodyDataRequest
+import com.example.forhealth.network.dto.user.HealthGoalRequest
+import com.example.forhealth.repositories.UserRepository
 import com.example.forhealth.utils.DataMapper
 import kotlinx.coroutines.launch
 import java.util.*
@@ -36,6 +40,9 @@ class EditDataActivity : AppCompatActivity() {
     private var goalType = "维持体重"
     private var goalWeight = 55
     private var goalWeeks = 10
+    
+    // 用户数据仓库
+    private val userRepository = UserRepository()
 
     private val activityLevels = arrayOf(
         "久坐",       // PAL = 1.2
@@ -272,16 +279,81 @@ class EditDataActivity : AppCompatActivity() {
         val loadingToast = Toast.makeText(this, "正在保存...", Toast.LENGTH_SHORT)
         loadingToast.show()
 
-        // TODO: 对接API保存数据
-        val genderBackend = DataMapper.genderToBackend(gender)
-        val birthdate = DataMapper.birthDateToBackend(birthYear, birthMonth, birthDay)
-        val activityLevelBackend = DataMapper.activityLevelToBackend(activityLevel)
-        val goalTypeBackend = DataMapper.goalTypeToBackend(goalType)
-        
-        // TODO: 对接API保存数据
-        loadingToast.cancel()
-        Toast.makeText(this, "保存功能待对接API", Toast.LENGTH_SHORT).show()
-        finish()
+        lifecycleScope.launch {
+            try {
+                // 转换数据格式
+                val genderBackend = DataMapper.genderToBackend(gender)
+                val birthdate = DataMapper.birthDateToBackend(birthYear, birthMonth, birthDay)
+                val activityLevelBackend = DataMapper.activityLevelToBackend(activityLevel)
+                val goalTypeBackend = DataMapper.goalTypeToBackend(goalType)
+                
+                // 1. 更新身体数据（如果不在Record Changes模式，需要更新性别和出生日期）
+                if (!isRecordChanges) {
+                    val bodyDataResult = userRepository.updateBodyData(
+                        BodyDataRequest(
+                            height = height.toDouble(),
+                            weight = weight.toDouble(),
+                            birthdate = birthdate,
+                            gender = genderBackend
+                        )
+                    )
+                    if (bodyDataResult is ApiResult.Error) {
+                        loadingToast.cancel()
+                        Toast.makeText(this@EditDataActivity, "保存身体数据失败: ${bodyDataResult.message}", Toast.LENGTH_SHORT).show()
+                        return@launch
+                    }
+                } else {
+                    // Record Changes模式只更新身高和体重，使用UserProfileUpdate
+                    // 这里简化处理，直接使用updateProfile
+                    val profileResult = userRepository.getProfile()
+                    if (profileResult is ApiResult.Success) {
+                        val currentProfile = profileResult.data
+                        val updateResult = userRepository.updateProfile(
+                            com.example.forhealth.network.dto.user.UserProfileUpdate(
+                                height = height.toDouble(),
+                                weight = weight.toDouble()
+                            )
+                        )
+                        if (updateResult is ApiResult.Error) {
+                            loadingToast.cancel()
+                            Toast.makeText(this@EditDataActivity, "保存数据失败: ${updateResult.message}", Toast.LENGTH_SHORT).show()
+                            return@launch
+                        }
+                    }
+                }
+                
+                // 2. 更新活动水平
+                val activityLevelResult = userRepository.updateActivityLevel(
+                    ActivityLevelRequest(activity_level = activityLevelBackend)
+                )
+                if (activityLevelResult is ApiResult.Error) {
+                    loadingToast.cancel()
+                    Toast.makeText(this@EditDataActivity, "保存活动水平失败: ${activityLevelResult.message}", Toast.LENGTH_SHORT).show()
+                    return@launch
+                }
+                
+                // 3. 设定健康目标
+                val healthGoalResult = userRepository.updateHealthGoal(
+                    HealthGoalRequest(
+                        health_goal_type = goalTypeBackend,
+                        target_weight = if (goalTypeBackend != "maintain_weight") goalWeight.toDouble() else null,
+                        goal_period_weeks = if (goalTypeBackend != "maintain_weight") goalWeeks else null
+                    )
+                )
+                if (healthGoalResult is ApiResult.Error) {
+                    loadingToast.cancel()
+                    Toast.makeText(this@EditDataActivity, "保存健康目标失败: ${healthGoalResult.message}", Toast.LENGTH_SHORT).show()
+                    return@launch
+                }
+                
+                loadingToast.cancel()
+                Toast.makeText(this@EditDataActivity, "保存成功", Toast.LENGTH_SHORT).show()
+                finish()
+            } catch (e: Exception) {
+                loadingToast.cancel()
+                Toast.makeText(this@EditDataActivity, "保存失败: ${e.message}", Toast.LENGTH_SHORT).show()
+            }
+        }
     }
 }
 
