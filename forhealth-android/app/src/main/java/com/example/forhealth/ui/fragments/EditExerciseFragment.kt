@@ -7,14 +7,19 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import androidx.fragment.app.DialogFragment
+import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.example.forhealth.R
 import com.example.forhealth.databinding.FragmentAddExerciseBinding
 import com.example.forhealth.models.*
+import com.example.forhealth.network.ApiResult
 import com.example.forhealth.ui.adapters.CartExerciseAdapter
 import com.example.forhealth.ui.adapters.ExerciseListAdapter
 import com.example.forhealth.utils.DateUtils
+import com.example.forhealth.viewmodels.MainViewModel
 import com.google.android.material.button.MaterialButton
+import kotlinx.coroutines.launch
 import java.util.*
 
 class EditExerciseFragment : DialogFragment() {
@@ -23,6 +28,7 @@ class EditExerciseFragment : DialogFragment() {
     private val binding get() = _binding!!
     
     private var onExerciseUpdatedListener: ((ActivityItem) -> Unit)? = null
+    private var onExerciseDeletedListener: ((String) -> Unit)? = null
     
     private val selectedItems = mutableListOf<SelectedExerciseItem>()
     private var selectedCategory: ExerciseType = ExerciseType.CARDIO
@@ -33,6 +39,7 @@ class EditExerciseFragment : DialogFragment() {
     
     private lateinit var exerciseAdapter: ExerciseListAdapter
     private lateinit var cartAdapter: CartExerciseAdapter
+    private lateinit var mainViewModel: MainViewModel
     
     fun setExerciseLibrary(exercises: List<ExerciseItem>) {
         allExercises = exercises
@@ -44,6 +51,10 @@ class EditExerciseFragment : DialogFragment() {
     
     fun setOnExerciseUpdatedListener(listener: (ActivityItem) -> Unit) {
         onExerciseUpdatedListener = listener
+    }
+    
+    fun setOnExerciseDeletedListener(listener: (String) -> Unit) {
+        onExerciseDeletedListener = listener
     }
     
     fun setActivity(activity: ActivityItem) {
@@ -89,6 +100,13 @@ class EditExerciseFragment : DialogFragment() {
         // 更新标题
         val titleView = binding.root.findViewById<android.widget.TextView>(R.id.tvTitle)
         titleView?.text = "Edit Exercise"
+        
+        // 复用父Fragment的MainViewModel（若失败则退回Activity作用域）
+        mainViewModel = try {
+            ViewModelProvider(requireParentFragment())[MainViewModel::class.java]
+        } catch (e: Exception) {
+            ViewModelProvider(requireActivity())[MainViewModel::class.java]
+        }
         
         setupCloseButton()
         setupSearchBar()
@@ -229,6 +247,29 @@ class EditExerciseFragment : DialogFragment() {
             saveExercise()
         }
         
+        binding.btnDeleteRecord.setOnClickListener {
+            originalActivity?.id?.let { recordId ->
+                // 通过ViewModel删除（会调用API）
+                lifecycleScope.launch {
+                    mainViewModel.deleteExerciseRecord(recordId) { result ->
+                        when (result) {
+                            is ApiResult.Success -> {
+                                onExerciseDeletedListener?.invoke(recordId)
+                                dismiss()
+                            }
+                            is ApiResult.Error -> {
+                                android.widget.Toast.makeText(requireContext(), result.message, android.widget.Toast.LENGTH_SHORT).show()
+                            }
+                            is ApiResult.Loading -> {}
+                        }
+                    }
+                }
+            } ?: run {
+                // 如果没有recordId，直接关闭
+                dismiss()
+            }
+        }
+        
         cartAdapter = CartExerciseAdapter(
             items = selectedItems,
             onDurationChange = { exerciseId, delta -> updateDuration(exerciseId, delta) },
@@ -315,9 +356,18 @@ class EditExerciseFragment : DialogFragment() {
     
     private fun updateCart() {
         if (selectedItems.isEmpty()) {
+            // 隐藏购物车
             binding.layoutCart.visibility = View.GONE
+            // 如果是编辑模式且购物车为空，显示独立的删除按钮
+            if (originalActivity != null) {
+                binding.layoutDeleteButton.visibility = View.VISIBLE
+            } else {
+                binding.layoutDeleteButton.visibility = View.GONE
+            }
         } else {
+            // 显示购物车，隐藏删除按钮
             binding.layoutCart.visibility = View.VISIBLE
+            binding.layoutDeleteButton.visibility = View.GONE
             
             val totalBurn = selectedItems.sumOf { it.exerciseItem.caloriesPerUnit * it.count }
             binding.tvCartTotalCalories.text = "${totalBurn.toInt()} kcal"
@@ -332,7 +382,32 @@ class EditExerciseFragment : DialogFragment() {
     }
     
     private fun saveExercise() {
-        if (selectedItems.isEmpty()) return
+        // 如果购物车为空，删除整个运动记录
+        if (selectedItems.isEmpty()) {
+            // 检查是否有有效的recordId（不能为空字符串）
+            val recordId = originalActivity?.id?.takeIf { it.isNotBlank() }
+            if (recordId != null) {
+                // 通过ViewModel删除
+                lifecycleScope.launch {
+                    mainViewModel.deleteExerciseRecord(recordId) { result ->
+                        when (result) {
+                            is ApiResult.Success -> {
+                                onExerciseDeletedListener?.invoke(recordId)
+                                dismiss()
+                            }
+                            is ApiResult.Error -> {
+                                android.widget.Toast.makeText(requireContext(), result.message, android.widget.Toast.LENGTH_SHORT).show()
+                            }
+                            is ApiResult.Loading -> {}
+                        }
+                    }
+                }
+            } else {
+                // 如果没有有效的recordId，直接关闭（可能是新创建的记录，还没有保存到后端）
+                dismiss()
+            }
+            return
+        }
         
         // 编辑模式下，只更新第一个（因为运动是单项编辑）
         val item = selectedItems.first()

@@ -231,6 +231,10 @@ class HomeFragment : Fragment() {
                         }
                     }
                 }
+                setOnExerciseDeletedListener { recordId ->
+                    // ViewModel 的 deleteExerciseRecord 已经处理了删除和重新加载数据
+                    // 这里不需要再次调用，只需要通知即可
+                }
             }
             dialog.show(parentFragmentManager, "EditExerciseDialog")
         }

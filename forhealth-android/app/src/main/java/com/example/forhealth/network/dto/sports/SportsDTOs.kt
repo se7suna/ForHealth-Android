@@ -43,7 +43,8 @@ data class LogSportsRequest(
 // 更新运动记录请求
 data class UpdateSportsRecordRequest(
     val record_id: String? = null,
-    val sport_name: String? = null,
+    val old_sport_name: String? = null,
+    val new_sport_name: String? = null,
     val created_at: String? = null,
     val duration_time: Int? = null
 )

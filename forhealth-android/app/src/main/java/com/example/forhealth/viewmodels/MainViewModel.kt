@@ -1140,23 +1140,35 @@ class MainViewModel : ViewModel() {
             
             val request = UpdateSportsRecordRequest(
                 record_id = activity.id,
-                sport_name = activity.name,
+                old_sport_name = activity.name,
+                new_sport_name = activity.name,
                 created_at = activity.time,
                 duration_time = activity.duration
             )
             
             when (val result = exerciseRepository.updateSportRecord(request)) {
                 is ApiResult.Success -> {
-                    // 重新加载今日记录以获取更新后的数据
-                    loadTodayExercises()
-                    // 从当前列表中找到更新后的记录
-                    val updatedActivity = _exercises.value?.find { it.id == activity.id }
-                    if (updatedActivity != null) {
-                        onResult(ApiResult.Success(updatedActivity))
-                    } else {
-                        // 如果找不到，返回原始对象（可能已被删除）
-                        onResult(ApiResult.Success(activity))
+                    // 立即更新本地状态（同步 LiveData）
+                    val currentExercises = _exercises.value ?: emptyList()
+                    val updatedExercises = currentExercises.map { exercise ->
+                        if (exercise.id == activity.id) {
+                            // 更新匹配的记录
+                            activity
+                        } else {
+                            exercise
+                        }
                     }
+                    setExercises(updatedExercises)
+                    
+                    // 异步重新加载今日记录以确保数据同步
+                    loadTodayExercises()
+                    // 重新加载每日卡路里摘要以更新圆环
+                    loadDailyCalorieSummary(null)
+
+                    // 更新时间线
+                    updateTimeline()
+                    
+                    onResult(ApiResult.Success(activity))
                 }
                 is ApiResult.Error -> onResult(ApiResult.Error(result.message))
                 is ApiResult.Loading -> onResult(result)
@@ -1171,10 +1183,19 @@ class MainViewModel : ViewModel() {
         viewModelScope.launch {
             when (val result = exerciseRepository.deleteSportRecord(recordId)) {
                 is ApiResult.Success -> {
-                    // 更新本地状态
+                    // 立即同步更新本地状态（更新 LiveData，触发UI更新）
                     val currentExercises = _exercises.value ?: emptyList()
                     val updatedExercises = currentExercises.filterNot { it.id == recordId }
+                    
+                    // setExercises 会更新 _exercises.value，同时会调用 updateTimeline()
+                    // 这会立即触发 UI 更新（通过 timelineItems LiveData 的观察者）
                     setExercises(updatedExercises)
+                    
+                    // 异步重新加载今日记录以确保与后端数据完全同步
+                    loadTodayExercises()
+                    // 重新加载每日卡路里摘要以更新圆环和统计数据
+                    loadDailyCalorieSummary(null)
+                    
                     onResult(ApiResult.Success(true))
                 }
                 is ApiResult.Error -> onResult(ApiResult.Error(result.message))
