@@ -59,6 +59,9 @@ class HomeFragment : Fragment() {
         
         // 观察数据变化
         observeData()
+        
+        // 从后端加载今日饮食记录
+        loadTodayMeals()
     }
     
     private fun setupInitialData() {
@@ -512,6 +515,13 @@ class HomeFragment : Fragment() {
         }
     }
     
+    /**
+     * 从后端加载今日饮食记录
+     */
+    private fun loadTodayMeals() {
+        viewModel.loadTodayMeals()
+    }
+    
     private fun updateStatsDisplay(stats: DailyStats) {
         // 更新卡路里显示
         val netCalories = stats.calories.current - stats.burned
@@ -532,6 +542,12 @@ class HomeFragment : Fragment() {
         binding.progressCarbs.setProgress(stats.carbs.current, stats.carbs.target, R.color.amber_400)
         binding.progressFat.setProgress(stats.fat.current, stats.fat.target, R.color.rose_400)
         binding.progressProtein.setProgress(stats.protein.current, stats.protein.target, R.color.blue_400)
+    }
+    
+    override fun onResume() {
+        super.onResume()
+        // 当Fragment重新可见时，重新加载今日饮食记录（确保数据是最新的）
+        loadTodayMeals()
     }
     
     override fun onDestroyView() {

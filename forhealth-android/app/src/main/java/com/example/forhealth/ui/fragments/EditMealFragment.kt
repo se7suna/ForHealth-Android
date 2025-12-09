@@ -361,6 +361,7 @@ class EditMealFragment : DialogFragment() {
         }
         
         updateFoodList()
+        updateCartAdapter() // 更新适配器以显示新添加的食物
         updateCart()
     }
     
@@ -420,6 +421,8 @@ class EditMealFragment : DialogFragment() {
         isCartExpanded = !isCartExpanded
         
         if (isCartExpanded) {
+            // 展开购物车时，更新适配器以确保显示最新的数据
+            updateCartAdapter()
             binding.scrollCartContent.visibility = View.VISIBLE
             binding.layoutCartFooter.visibility = View.VISIBLE
             binding.btnAddNowCollapsed.visibility = View.GONE
@@ -573,7 +576,9 @@ class EditMealFragment : DialogFragment() {
     private fun saveMeals() {
         // 如果购物车为空，删除整个meal group
         if (selectedItems.isEmpty()) {
-            originalMealGroup?.id?.let { mealGroupId ->
+            // 检查是否有有效的mealGroupId（不能为空字符串）
+            val mealGroupId = originalMealGroup?.id?.takeIf { it.isNotBlank() }
+            if (mealGroupId != null) {
                 // 通过ViewModel删除
                 lifecycleScope.launch {
                     mainViewModel.deleteMealRecord(mealGroupId) { result ->
@@ -589,8 +594,8 @@ class EditMealFragment : DialogFragment() {
                         }
                     }
                 }
-            } ?: run {
-                // 如果没有mealGroupId，直接关闭
+            } else {
+                // 如果没有有效的mealGroupId，直接关闭（可能是新创建的记录，还没有保存到后端）
                 dismiss()
             }
             return

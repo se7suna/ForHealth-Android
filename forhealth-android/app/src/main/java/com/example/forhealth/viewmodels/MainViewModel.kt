@@ -55,13 +55,13 @@ class MainViewModel : ViewModel() {
         val currentMeals = _meals.value ?: emptyList()
         val resultMeals = currentMeals.toMutableList()
         
-        // 先合并新添加的meals中相同名称、相同类型、相同时间的
-        val newMealsGrouped = meals.groupBy { "${it.name}_${it.type}_${it.time}" }
+        // 先合并新添加的meals中相同名称、相同时间戳的（不再考虑type）
+        val newMealsGrouped = meals.groupBy { "${it.name}_${it.time}" }
             .map { (_, mealList) ->
                 if (mealList.size == 1) {
                     mealList.first()
                 } else {
-                    // 合并相同名称、类型、时间的meal
+                    // 合并相同名称、时间戳的meal
                     val first = mealList.first()
                     mealList.drop(1).fold(first) { acc, meal ->
                         acc.copy(
@@ -75,13 +75,11 @@ class MainViewModel : ViewModel() {
             }
         
         // 然后与现有的meals合并
-        // 对于同一类型的meal，需要找到同一类型中时间最接近的meal进行合并
-        // 如果找不到，则添加到对应类型的meal group中
+        // 现在只按时间戳和名称合并，不再考虑meal_type
         newMealsGrouped.forEach { newMeal ->
-            // 先尝试找相同名称、类型、时间的meal（精确匹配）
+            // 先尝试找相同名称、相同时间戳的meal（精确匹配）
             var existingIndex = resultMeals.indexOfFirst { 
                 it.name == newMeal.name && 
-                it.type == newMeal.type && 
                 it.time == newMeal.time 
             }
             
@@ -95,27 +93,8 @@ class MainViewModel : ViewModel() {
                     fat = existing.fat + newMeal.fat
                 )
             } else {
-                // 没有找到精确匹配，查找同一类型中是否有相同名称的meal（用于合并同一类型的meal）
-                // 找到同一类型、相同名称的meal，使用第一个找到的进行合并
-                existingIndex = resultMeals.indexOfFirst { 
-                    it.name == newMeal.name && 
-                    it.type == newMeal.type
-                }
-                
-                if (existingIndex >= 0) {
-                    // 找到相同类型和名称的meal，合并到该meal中，并更新时间戳为新的时间
-                    val existing = resultMeals[existingIndex]
-                    resultMeals[existingIndex] = existing.copy(
-                        calories = existing.calories + newMeal.calories,
-                        protein = existing.protein + newMeal.protein,
-                        carbs = existing.carbs + newMeal.carbs,
-                        fat = existing.fat + newMeal.fat,
-                        time = newMeal.time // 使用新的时间戳
-                    )
-                } else {
-                    // 没有找到相同类型和名称的meal，直接添加
-                    resultMeals.add(newMeal)
-                }
+                // 没有找到精确匹配，直接添加
+                resultMeals.add(newMeal)
             }
         }
         
@@ -189,15 +168,15 @@ class MainViewModel : ViewModel() {
         val meals = _meals.value ?: emptyList()
         val exercises = _exercises.value ?: emptyList()
         
-        // 按餐分组：相同meal_type的meal归为一组（根据后端API的meal_type字段）
-        val mealGroups = meals.groupBy { it.type }
-            .map { (mealType, mealList) ->
-                // 使用该meal_type中最早的时间作为显示时间
-                val earliestTime = mealList.minByOrNull { it.time }?.time ?: DateUtils.getCurrentTime()
+        // 按时间戳分组：相同时间戳的meal归为一组（精确到秒）
+        val mealGroups = meals.groupBy { it.time }
+            .map { (timestamp, mealList) ->
+                // 使用该时间戳中第一个meal的type作为显示类型（用于UI显示）
+                val mealType = mealList.firstOrNull()?.type ?: MealType.BREAKFAST
                 MealGroup(
                     id = mealList.firstOrNull()?.id ?: "", // 使用第一个meal的id作为group id
                     meals = mealList,
-                    time = earliestTime,
+                    time = timestamp,
                     type = mealType
                 )
             }
@@ -227,21 +206,21 @@ class MainViewModel : ViewModel() {
         val targetMeal = currentMeals.find { it.id == mealGroup.id }
         
         if (targetMeal != null) {
-            // 找到原始 meal，删除所有相同 time 和 type 的 meals（确保删除整个 meal group）
+            // 找到原始 meal，删除所有相同时间戳的 meals（确保删除整个 meal group）
             val updatedMeals = currentMeals.filterNot { meal ->
-                meal.time == targetMeal.time && meal.type == targetMeal.type
+                meal.time == targetMeal.time
             }
             
             // 添加新的 meals（使用原始 time，保持时间一致性）
             val newMeals = mealGroup.meals.map { meal ->
-                meal.copy(time = targetMeal.time) // 保持原始时间
+                meal.copy(time = targetMeal.time) // 保持原始时间戳
             }
             val finalMeals = newMeals + updatedMeals
             _meals.value = finalMeals
         } else {
-            // 如果找不到原始 meal（可能是新添加的），则按 time 和 type 删除
+            // 如果找不到原始 meal（可能是新添加的），则按时间戳删除
             val updatedMeals = currentMeals.filterNot { meal ->
-                meal.time == mealGroup.time && meal.type == mealGroup.type
+                meal.time == mealGroup.time
             }
             
             // 添加新的 meals
@@ -389,9 +368,9 @@ class MainViewModel : ViewModel() {
                             // 更新本地状态：移除旧的meal group和createMealRecords自动添加的新meals，然后添加完整的updatedMeals
                             val currentMealsAfterCreate = _meals.value ?: emptyList()
                             val updatedMealsList = if (targetMeal != null) {
-                                // 移除旧的meal group和自动添加的新meals
+                                // 移除旧的meal group（按时间戳）和自动添加的新meals
                                 currentMealsAfterCreate.filterNot { meal ->
-                                    (meal.time == targetMeal.time && meal.type == targetMeal.type) ||
+                                    meal.time == targetMeal.time ||
                                     newMeals.any { it.id == meal.id }
                                 } + updatedMeals
                             } else {
@@ -420,7 +399,7 @@ class MainViewModel : ViewModel() {
                 val targetMeal = currentMeals.find { it.id == originalMealGroup.id }
                 val updatedMealsList = if (targetMeal != null) {
                     currentMeals.filterNot { meal ->
-                        meal.time == targetMeal.time && meal.type == targetMeal.type
+                        meal.time == targetMeal.time
                     } + updatedMeals
                 } else {
                     currentMeals + updatedMeals
@@ -478,11 +457,11 @@ class MainViewModel : ViewModel() {
         val currentMeals = _meals.value ?: emptyList()
         
         // 找到对应的meal group并删除所有meals
-        // 通过mealGroupId找到对应的meal，然后通过time和type找到同一组的所有meals
+        // 通过mealGroupId找到对应的meal，然后通过时间戳找到同一组的所有meals
         val targetMeal = currentMeals.find { it.id == mealGroupId }
         if (targetMeal != null) {
             val updatedMeals = currentMeals.filterNot { meal ->
-                meal.time == targetMeal.time && meal.type == targetMeal.type
+                meal.time == targetMeal.time
             }
             _meals.value = updatedMeals
             
@@ -738,28 +717,42 @@ class MainViewModel : ViewModel() {
     }
     
     /**
-     * 删除食物记录（单个记录）
+     * 删除食物记录（单个记录或同一时间戳的所有记录）
+     * 现在按时间戳分组，所以删除一条记录会删除同一时间戳的所有记录
      */
     fun deleteMealRecord(recordId: String, onResult: (ApiResult<Boolean>) -> Unit) {
         viewModelScope.launch {
-            // 先找到该记录对应的meal group（通过time和type）
+            // 先找到该记录对应的meal group（通过时间戳）
             val currentMeals = _meals.value ?: emptyList()
             val targetMeal = currentMeals.find { it.id == recordId }
             
             if (targetMeal == null) {
-                onResult(ApiResult.Error("找不到要删除的记录"))
+                // 如果找不到记录，可能已经被删除了，或者记录ID无效
+                // 尝试通过时间戳查找（如果originalMealGroup有时间戳信息）
+                // 如果还是找不到，返回成功（可能记录已经不存在了）
+                onResult(ApiResult.Success(true))
                 return@launch
             }
             
-            // 找到同一meal group的所有记录（相同time和type）
+            // 找到同一时间戳的所有记录（相同time）
             val mealGroupRecords = currentMeals.filter { 
-                it.time == targetMeal.time && it.type == targetMeal.type 
+                it.time == targetMeal.time
+            }
+            
+            if (mealGroupRecords.isEmpty()) {
+                // 如果没有找到记录，直接返回成功
+                onResult(ApiResult.Success(true))
+                return@launch
             }
             
             // 逐个删除所有记录
             var hasError = false
             var errorMessage = ""
             for (meal in mealGroupRecords) {
+                // 确保meal.id不为空
+                if (meal.id.isBlank()) {
+                    continue
+                }
                 when (val result = mealRepository.deleteFoodRecord(meal.id)) {
                     is ApiResult.Success -> { /* 删除成功 */ }
                     is ApiResult.Error -> {

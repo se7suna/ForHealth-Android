@@ -79,9 +79,13 @@ class CartFoodAdapter(
         
         val foodId = item.foodItem.id
         
-        // Unit 按钮
+        // Unit 按钮 - 将"份"和"克"统一显示为"serve"
+        val unitText = when (item.foodItem.unit) {
+            "份", "克" -> "serve"
+            else -> item.foodItem.unit
+        }
         val unitButton = TextView(holder.itemView.context).apply {
-            text = item.foodItem.unit
+            text = unitText
             setPadding(
                 holder.itemView.context.resources.getDimensionPixelSize(R.dimen.spacing_8),
                 holder.itemView.context.resources.getDimensionPixelSize(R.dimen.spacing_4),
@@ -97,9 +101,9 @@ class CartFoodAdapter(
             }
         }
         
-        // Gram 按钮
+        // Gram 按钮 - 改为"grams"
         val gramButton = TextView(holder.itemView.context).apply {
-            text = "Grams (g)"
+            text = "grams"
             setPadding(
                 holder.itemView.context.resources.getDimensionPixelSize(R.dimen.spacing_8),
                 holder.itemView.context.resources.getDimensionPixelSize(R.dimen.spacing_4),

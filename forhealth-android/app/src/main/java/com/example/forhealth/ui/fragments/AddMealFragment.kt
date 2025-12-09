@@ -354,6 +354,7 @@ class AddMealFragment : DialogFragment() {
         }
         
         updateFoodList()
+        updateCartAdapter() // 更新适配器以显示新添加的食物
         updateCart()
     }
     
@@ -394,6 +395,8 @@ class AddMealFragment : DialogFragment() {
         isCartExpanded = !isCartExpanded
         
         if (isCartExpanded) {
+            // 展开购物车时，更新适配器以确保显示最新的数据
+            updateCartAdapter()
             binding.scrollCartContent.visibility = View.VISIBLE
             binding.layoutCartFooter.visibility = View.VISIBLE
             binding.btnAddNowCollapsed.visibility = View.GONE
