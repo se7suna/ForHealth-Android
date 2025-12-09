@@ -59,6 +59,35 @@ def sample_recipe_data():
         "prep_time": 15
     }
 
+def convert_food_data_to_form(food_data):
+    """将嵌套的食物数据转换为表单格式（multipart/form-data）"""
+    nutrition = food_data.get("nutrition_per_serving", {})
+    form_data = {
+        "name": food_data["name"],
+        "serving_size": food_data["serving_size"],
+        "serving_unit": food_data.get("serving_unit", "克"),
+        "calories": nutrition.get("calories", 0),
+        "protein": nutrition.get("protein", 0),
+        "carbohydrates": nutrition.get("carbohydrates", 0),
+        "fat": nutrition.get("fat", 0),
+    }
+    
+    # 可选字段
+    if "category" in food_data and food_data["category"]:
+        form_data["category"] = food_data["category"]
+    if "brand" in food_data and food_data["brand"]:
+        form_data["brand"] = food_data["brand"]
+    if "barcode" in food_data and food_data["barcode"]:
+        form_data["barcode"] = food_data["barcode"]
+    if "fiber" in nutrition:
+        form_data["fiber"] = nutrition["fiber"]
+    if "sugar" in nutrition:
+        form_data["sugar"] = nutrition["sugar"]
+    if "sodium" in nutrition:
+        form_data["sodium"] = nutrition["sodium"]
+    
+    return form_data
+
 
 # ========== 食谱管理测试 ==========
 
@@ -85,7 +114,8 @@ async def test_create_recipe_success(auth_client, sample_recipe_data):
         }
     }
     
-    food_response = await auth_client.post("/api/food/", json=food_data)
+    form_data = convert_food_data_to_form(food_data)
+    food_response = await auth_client.post("/api/food/", data=form_data)
     if food_response.status_code != 201:
         pytest.skip("无法创建测试食物")
     
@@ -194,7 +224,8 @@ async def test_get_recipe(auth_client, sample_recipe_data):
         }
     }
     
-    food_response = await auth_client.post("/api/food/", json=food_data)
+    form_data = convert_food_data_to_form(food_data)
+    food_response = await auth_client.post("/api/food/", data=form_data)
     if food_response.status_code != 201:
         pytest.skip("无法创建测试食物")
     
@@ -259,7 +290,8 @@ async def test_update_recipe(auth_client, sample_recipe_data):
         }
     }
     
-    food_response = await auth_client.post("/api/food/", json=food_data)
+    form_data = convert_food_data_to_form(food_data)
+    food_response = await auth_client.post("/api/food/", data=form_data)
     if food_response.status_code != 201:
         pytest.skip("无法创建测试食物")
     
@@ -327,7 +359,8 @@ async def test_delete_recipe(auth_client, sample_recipe_data):
         }
     }
     
-    food_response = await auth_client.post("/api/food/", json=food_data)
+    form_data = convert_food_data_to_form(food_data)
+    food_response = await auth_client.post("/api/food/", data=form_data)
     if food_response.status_code != 201:
         pytest.skip("无法创建测试食物")
     
@@ -386,7 +419,8 @@ async def test_create_recipe_record(auth_client, sample_recipe_data):
         }
     }
     
-    food_response = await auth_client.post("/api/food/", json=food_data)
+    form_data = convert_food_data_to_form(food_data)
+    food_response = await auth_client.post("/api/food/", data=form_data)
     if food_response.status_code != 201:
         pytest.skip("无法创建测试食物")
     
@@ -479,7 +513,8 @@ async def test_update_recipe_record(auth_client, sample_recipe_data):
         }
     }
     
-    food_response = await auth_client.post("/api/food/", json=food_data)
+    form_data = convert_food_data_to_form(food_data)
+    food_response = await auth_client.post("/api/food/", data=form_data)
     if food_response.status_code != 201:
         pytest.skip("无法创建测试食物")
     
@@ -560,7 +595,8 @@ async def test_delete_recipe_record(auth_client, sample_recipe_data):
         }
     }
     
-    food_response = await auth_client.post("/api/food/", json=food_data)
+    form_data = convert_food_data_to_form(food_data)
+    food_response = await auth_client.post("/api/food/", data=form_data)
     if food_response.status_code != 201:
         pytest.skip("无法创建测试食物")
     
