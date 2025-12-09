@@ -12,16 +12,26 @@ import android.view.ViewGroup
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.fragment.app.DialogFragment
 import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.lifecycleScope
 import com.example.forhealth.R
 import com.example.forhealth.databinding.FragmentAddMealBinding
 import com.example.forhealth.models.*
 import com.example.forhealth.ui.activities.CameraActivity
 import com.example.forhealth.ui.adapters.CartFoodAdapter
 import com.example.forhealth.ui.adapters.FoodListAdapter
-import com.example.forhealth.utils.Constants
 import com.example.forhealth.utils.DateUtils
 import com.google.android.material.button.MaterialButton
+import com.example.forhealth.repositories.FoodRepository
+import com.example.forhealth.network.ApiResult
+import com.example.forhealth.network.dto.food.FoodListResponse
+import com.example.forhealth.network.dto.food.FoodSearchItemResponse
+import com.example.forhealth.network.dto.food.SimplifiedFoodListResponse
+import com.example.forhealth.network.dto.food.SimplifiedFoodSearchItem
+import com.example.forhealth.viewmodels.MainViewModel
+import com.google.gson.Gson
 import java.util.*
+import kotlinx.coroutines.launch
 
 class AddMealFragment : DialogFragment() {
     
@@ -33,11 +43,15 @@ class AddMealFragment : DialogFragment() {
     private val selectedItems = mutableListOf<SelectedFoodItem>()
     private var selectedType: MealType = MealType.BREAKFAST
     private val customFoods = mutableListOf<FoodItem>() // 保存的自定义食物
-    private var filteredFood: List<FoodItem> = Constants.FOOD_DB
+    private var remoteFoods: List<FoodItem> = emptyList()
+    private var filteredFood: List<FoodItem> = emptyList()
+    private var currentQuery: String = ""
     private var isCartExpanded = false
     
     private lateinit var foodAdapter: FoodListAdapter
     private lateinit var cartAdapter: CartFoodAdapter
+    private val foodRepository = FoodRepository()
+    private lateinit var mainViewModel: MainViewModel
     
     fun setOnMealAddedListener(listener: (List<MealItem>) -> Unit) {
         onMealAddedListener = listener
@@ -83,8 +97,15 @@ class AddMealFragment : DialogFragment() {
         setupFoodList()
         setupCart()
         
-        // 初始化食物列表（包含自定义食物）
-        updateAllFoodList()
+        // 复用父Fragment的MainViewModel（若失败则退回Activity作用域）
+        mainViewModel = try {
+            ViewModelProvider(requireParentFragment())[MainViewModel::class.java]
+        } catch (e: Exception) {
+            ViewModelProvider(requireActivity())[MainViewModel::class.java]
+        }
+        
+        // 初始化食物列表（调用仓库）
+        fetchFoods()
     }
     
     private fun setupCloseButton() {
@@ -98,7 +119,8 @@ class AddMealFragment : DialogFragment() {
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
             override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
             override fun afterTextChanged(s: Editable?) {
-                filterFood(s?.toString() ?: "")
+                currentQuery = s?.toString()?.trim() ?: ""
+                applyFoodFilter()
             }
         })
     }
@@ -159,7 +181,7 @@ class AddMealFragment : DialogFragment() {
                         customFoods.add(foodItem)
                     }
                     // 更新食物列表
-                    updateAllFoodList()
+                    applyFoodFilter()
                     // 将自定义食物添加到购物车
                     addToCart(foodItem)
                     // 展开购物车
@@ -233,20 +255,15 @@ class AddMealFragment : DialogFragment() {
         binding.rvFoodList.adapter = foodAdapter
     }
     
-    private fun updateAllFoodList() {
-        // 合并常量食物列表和自定义食物列表
-        val allFoods = Constants.FOOD_DB + customFoods
-        val query = binding.etSearch.text.toString()
-        filterFood(query, allFoods)
-    }
-    
-    private fun filterFood(query: String, allFoods: List<FoodItem> = Constants.FOOD_DB + customFoods) {
+    private fun applyFoodFilter() {
+        val query = currentQuery
+        val combined = remoteFoods + customFoods.filter {
+            query.isBlank() || it.name.contains(query, ignoreCase = true)
+        }
         filteredFood = if (query.isBlank()) {
-            allFoods
+            combined
         } else {
-            allFoods.filter {
-                it.name.contains(query, ignoreCase = true)
-            }
+            combined.filter { it.name.contains(query, ignoreCase = true) }
         }
         updateFoodList()
     }
@@ -258,6 +275,66 @@ class AddMealFragment : DialogFragment() {
             onAddClick = { food -> addToCart(food) }
         )
         binding.rvFoodList.adapter = foodAdapter
+    }
+
+    private fun fetchFoods() {
+        lifecycleScope.launch {
+            when (val result = foodRepository.searchFoods()) {
+                is ApiResult.Success -> {
+                    remoteFoods = parseFoods(result.data)
+                    applyFoodFilter()
+                }
+                is ApiResult.Error -> {
+                    android.widget.Toast.makeText(requireContext(), result.message, android.widget.Toast.LENGTH_SHORT).show()
+                }
+                is ApiResult.Loading -> { /* no-op */ }
+            }
+        }
+    }
+    
+    private fun parseFoods(data: Any): List<FoodItem> {
+        val gson = Gson()
+        return try {
+            val simplified = gson.fromJson(gson.toJson(data), SimplifiedFoodListResponse::class.java)
+            simplified.foods.map { mapSimplifiedItem(it) }
+        } catch (_: Exception) {
+            try {
+                val full = gson.fromJson(gson.toJson(data), FoodListResponse::class.java)
+                full.foods.map { mapFullItem(it) }
+            } catch (_: Exception) {
+                emptyList()
+            }
+        }
+    }
+    
+    private fun mapSimplifiedItem(item: SimplifiedFoodSearchItem): FoodItem {
+        val id = item.food_id ?: item.boohee_id?.toString() ?: item.code
+        return FoodItem(
+            id = id,
+            name = item.name,
+            calories = item.nutrition.calories,
+            protein = item.nutrition.protein,
+            carbs = item.nutrition.carbohydrates,
+            fat = item.nutrition.fat,
+            unit = item.weight_unit,
+            gramsPerUnit = item.weight,
+            image = item.image_url ?: ""
+        )
+    }
+    
+    private fun mapFullItem(item: FoodSearchItemResponse): FoodItem {
+        val id = item.food_id ?: item.boohee_id?.toString() ?: item.code
+        return FoodItem(
+            id = id,
+            name = item.name,
+            calories = item.nutrition_per_serving.calories,
+            protein = item.nutrition_per_serving.protein,
+            carbs = item.nutrition_per_serving.carbohydrates,
+            fat = item.nutrition_per_serving.fat,
+            unit = item.weight_unit,
+            gramsPerUnit = item.weight,
+            image = item.image_url ?: ""
+        )
     }
     
     private fun addToCart(food: FoodItem) {
@@ -459,26 +536,37 @@ class AddMealFragment : DialogFragment() {
     private fun saveMeals() {
         if (selectedItems.isEmpty()) return
         
-        // 所有meal使用相同的时间戳，确保同一批次添加的meal可以正确分组
-        val currentTime = DateUtils.getCurrentTime()
+        // 所有meal使用相同的时间戳（ISO 8601），确保同一批次添加的meal可以正确分组
+        val currentTime = DateUtils.getCurrentDateTimeIso()
         
-        val meals = selectedItems.map { item ->
-            val macros = calculateItemMacros(item)
-            MealItem(
-                id = "${System.currentTimeMillis()}-${UUID.randomUUID()}",
-                name = item.foodItem.name,
-                calories = macros.calories,
-                protein = macros.protein,
-                carbs = macros.carbs,
-                fat = macros.fat,
-                time = currentTime,
-                type = selectedType,
-                image = item.foodItem.image
-            )
+        setSaveButtonsEnabled(false)
+        
+        mainViewModel.createMealRecords(
+            items = selectedItems.toList(),
+            mealType = selectedType,
+            time = currentTime
+        ) { result ->
+            when (result) {
+                is ApiResult.Success -> {
+                    onMealAddedListener?.invoke(result.data)
+                    dismiss()
+                }
+                is ApiResult.Error -> {
+                    android.widget.Toast.makeText(requireContext(), result.message, android.widget.Toast.LENGTH_SHORT).show()
+                    setSaveButtonsEnabled(true)
+                }
+                is ApiResult.Loading -> {
+                    // 不会触发
+                }
+            }
         }
-        
-        onMealAddedListener?.invoke(meals)
-        dismiss()
+    }
+    
+    private fun setSaveButtonsEnabled(enabled: Boolean) {
+        binding.btnSave.isEnabled = enabled
+        binding.btnAddNowCollapsed.isEnabled = enabled
+        binding.btnSave.text = if (enabled) getString(R.string.add_meal) else "Saving..."
+        binding.btnAddNowCollapsed.text = if (enabled) getString(R.string.add_meal) else "Saving..."
     }
     
     override fun onDestroyView() {

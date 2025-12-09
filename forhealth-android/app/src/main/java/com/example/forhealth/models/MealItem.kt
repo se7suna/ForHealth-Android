@@ -10,7 +10,8 @@ data class MealItem(
     val time: String,
     val type: MealType,
     val image: String? = null,
-    val foodId: String? = null // food_id from FoodRecordResponse
+    val foodId: String? = null, // food_id from FoodRecordResponse
+    val servingAmount: Double? = null // 份量（与后端serving_amount对齐）
 ) {
     val itemType: ItemType = ItemType.MEAL
 }

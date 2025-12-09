@@ -51,7 +51,7 @@
 - [x] 在MainViewModel中添加从Repository加载数据的方法（loadTodayMeals、createMealRecord等）
 
 ### 待完成工作：
-- [ ] 修改AddMealFragment、EditMealFragment、CustomFoodFragment，移除直接使用Constants，改为通过ViewModel
+- [x] 修改AddMealFragment、EditMealFragment、CustomFoodFragment，移除直接使用Constants，改为通过ViewModel/Repository；AddMealFragment 已支持调用 FoodRepository.searchFoods 并逐条创建食物记录
 - [ ] 修改CameraActivity，移除直接API调用，改为通过ViewModel
 - [ ] 修改MainActivity或其他调用MainViewModel的地方，调用loadTodayMeals()加载数据
 

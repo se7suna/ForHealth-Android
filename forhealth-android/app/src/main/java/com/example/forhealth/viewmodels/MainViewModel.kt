@@ -10,6 +10,7 @@ import com.example.forhealth.models.MealGroup
 import com.example.forhealth.models.MealItem
 import com.example.forhealth.models.MealGroupTimelineItem
 import com.example.forhealth.models.MealType
+import com.example.forhealth.models.SelectedFoodItem
 import com.example.forhealth.models.TimelineItem
 import com.example.forhealth.models.UserProfile
 import com.example.forhealth.models.WorkoutGroup
@@ -347,7 +348,8 @@ class MainViewModel : ViewModel() {
             time = dto.recorded_at,
             type = mealTypeStringToEnum(dto.meal_type),
             image = null, // FoodRecordResponse没有image字段
-            foodId = dto.food_id
+            foodId = dto.food_id,
+            servingAmount = dto.serving_amount
         )
     }
     
@@ -357,7 +359,7 @@ class MainViewModel : ViewModel() {
     private fun mealItemToFoodRecordCreateRequest(meal: MealItem): FoodRecordCreateRequest {
         return FoodRecordCreateRequest(
             food_id = meal.foodId ?: "",
-            serving_amount = 1.0, // TODO: 需要从meal中获取份量信息
+            serving_amount = meal.servingAmount ?: 1.0,
             recorded_at = meal.time,
             meal_type = mealTypeEnumToString(meal.type),
             notes = null
@@ -370,7 +372,7 @@ class MainViewModel : ViewModel() {
     private fun mealItemToFoodRecordUpdateRequest(meal: MealItem): FoodRecordUpdateRequest {
         return FoodRecordUpdateRequest(
             food_name = meal.name,
-            serving_amount = 1.0, // TODO: 需要从meal中获取份量信息
+            serving_amount = meal.servingAmount ?: 1.0,
             recorded_at = meal.time,
             meal_type = mealTypeEnumToString(meal.type),
             notes = null,
@@ -446,6 +448,74 @@ class MainViewModel : ViewModel() {
                 is ApiResult.Loading -> onResult(result)
             }
         }
+    }
+    
+    /**
+     * 批量创建食物记录（逐条上传）
+     */
+    fun createMealRecords(
+        items: List<SelectedFoodItem>,
+        mealType: MealType,
+        time: String,
+        onResult: (ApiResult<List<MealItem>>) -> Unit
+    ) {
+        viewModelScope.launch {
+            if (items.isEmpty()) {
+                onResult(ApiResult.Error("没有可保存的餐食"))
+                return@launch
+            }
+            
+            val createdMeals = mutableListOf<MealItem>()
+            for (item in items) {
+                val foodId = item.foodItem.id
+                if (foodId.isBlank()) {
+                    onResult(ApiResult.Error("食物ID缺失，无法保存：${item.foodItem.name}"))
+                    return@launch
+                }
+                
+                val request = selectedFoodItemToCreateRequest(
+                    item = item,
+                    recordedAt = time,
+                    mealTypeString = mealTypeEnumToString(mealType)
+                )
+                
+                when (val result = mealRepository.createFoodRecord(request)) {
+                    is ApiResult.Success -> {
+                        val mealItem = foodRecordResponseToMealItem(result.data)
+                        createdMeals.add(mealItem)
+                    }
+                    is ApiResult.Error -> {
+                        onResult(ApiResult.Error(result.message))
+                        return@launch
+                    }
+                    is ApiResult.Loading -> { /* ignore */ }
+                }
+            }
+            
+            // 本地状态更新
+            addMeals(createdMeals)
+            onResult(ApiResult.Success(createdMeals))
+        }
+    }
+
+    private fun selectedFoodItemToCreateRequest(
+        item: SelectedFoodItem,
+        recordedAt: String,
+        mealTypeString: String
+    ): FoodRecordCreateRequest {
+        val servingAmount = if (item.mode == com.example.forhealth.models.QuantityMode.GRAM) {
+            // grams / gramsPerUnit
+            item.count / item.foodItem.gramsPerUnit
+        } else {
+            item.count
+        }
+        return FoodRecordCreateRequest(
+            food_id = item.foodItem.id,
+            serving_amount = servingAmount,
+            recorded_at = recordedAt,
+            meal_type = mealTypeString,
+            notes = null
+        )
     }
     
     /**

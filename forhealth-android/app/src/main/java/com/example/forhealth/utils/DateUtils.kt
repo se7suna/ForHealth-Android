@@ -6,6 +6,7 @@ import java.util.*
 object DateUtils {
     private val timeFormat = SimpleDateFormat("HH:mm", Locale.getDefault())
     private val dateFormat = SimpleDateFormat("EEEE, dd MMM", Locale.getDefault())
+    private val isoDateTimeFormat = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ssXXX", Locale.getDefault())
     
     fun getCurrentTime(): String {
         return timeFormat.format(Date())
@@ -13,6 +14,14 @@ object DateUtils {
     
     fun getCurrentDate(): String {
         return dateFormat.format(Date())
+    }
+    
+    /**
+     * 返回 ISO 8601 带时区的时间戳，用于后端 recorded_at
+     * 例：2025-03-01T11:21:35+08:00
+     */
+    fun getCurrentDateTimeIso(): String {
+        return isoDateTimeFormat.format(Date())
     }
     
     fun getMealTypeByHour(): com.example.forhealth.models.MealType {
