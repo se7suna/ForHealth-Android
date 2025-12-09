@@ -17,7 +17,7 @@ TEST_USER = {
     "password": settings.USER_PASSWORD
 }
 # 用于存储测试过程中创建的资源 ID
-test_sport_type = None
+test_sport_name = None
 test_record_id = None
 test_token = None
 
@@ -50,41 +50,41 @@ async def auth_client():
 @pytest.mark.asyncio
 @pytest.mark.parametrize("sport_data,expected_status,expected_success", [
     # 正常情况
-    ({"sport_type": "自定义跑步", "describe": "户外跑步", "METs": 8.0}, 200, True),
-    ({"sport_type": "瑜伽", "describe": "放松瑜伽", "METs": 2.5}, 200, True),
-    ({"sport_type": "ex游泳", "describe": "自由泳", "METs": 9.5}, 200, True), # 游泳在默认表内
+    ({"sport_name": "自定义跑步", "describe": "户外跑步", "METs": 8.0}, 200, True),
+    ({"sport_name": "瑜伽", "describe": "放松瑜伽", "METs": 2.5}, 200, True),
+    ({"sport_name": "ex游泳", "describe": "自由泳", "METs": 9.5}, 200, True), # 游泳在默认表内
     # 边界条件 - 最小METs值
-    ({"sport_type": "冥想", "describe": "静坐", "METs": 0.1}, 200, True),
+    ({"sport_name": "冥想", "describe": "静坐", "METs": 0.1}, 200, True),
     # 边界条件 - 最大METs值
-    ({"sport_type": "极限训练", "describe": "高强度", "METs": 20.0}, 200, True),
+    ({"sport_name": "极限训练", "describe": "高强度", "METs": 20.0}, 200, True),
 ])
 async def test_create_sports(auth_client, sport_data, expected_status, expected_success):
     """测试创建自定义运动类型 - 正常情况和边界条件"""
     response = None
     try:
-        response = await auth_client.post("/api/sports/create-sport", json=sport_data)
+        response = await auth_client.post("/api/sports/create-sport", data=sport_data,files={})
         result = response.json()
         assert response.status_code == expected_status
         assert result["success"] == expected_success
     finally:
         if response and result.get("success"):        # 完成测试后删除创建的运动类型
-            response = await auth_client.delete(f"/api/sports/delete-sport/{sport_data['sport_type']}")
+            response = await auth_client.delete(f"/api/sports/delete-sport/{sport_data['sport_name']}")
             assert response.status_code == 200
-            
+          
 
 
 @pytest.mark.asyncio
 @pytest.mark.parametrize("invalid_sport_data,expected_status", [
     # 异常情况 - METs为负数
-    ({"sport_type": "无效运动", "describe": "测试", "METs": -1.0}, 422),
+    ({"sport_name": "无效运动", "describe": "测试", "METs": -1.0}, 422),
     # 异常情况 - METs为0
-    ({"sport_type": "无效运动2", "describe": "测试", "METs": 0}, 422),
+    ({"sport_name": "无效运动2", "describe": "测试", "METs": 0}, 422),
     # 异常情况 - 缺少必要字段
-    ({"sport_type": "缺少METs", "describe": "测试"}, 422),
+    ({"sport_name": "缺少METs", "describe": "测试"}, 422),
 ])
 async def test_create_sports_invalid(auth_client, invalid_sport_data, expected_status):
     """测试创建自定义运动类型 - 异常情况"""
-    response = await auth_client.post("/api/sports/create-sport", json=invalid_sport_data)
+    response = await auth_client.post("/api/sports/create-sport", data=invalid_sport_data,files={})
     assert response.status_code == expected_status
 
 
@@ -94,7 +94,8 @@ async def test_create_sports_without_auth():
     async with AsyncClient(app=app, base_url="http://test") as client:
         response = await client.post(
             "/api/sports/create-sport",
-            json={"sport_type": "测试", "describe": "测试", "METs": 5.0}
+            data={"sport_name": "测试", "describe": "测试", "METs": 5.0},
+            files={}
         )
         assert response.status_code == 403
 
@@ -113,7 +114,7 @@ async def test_get_available_sports_types(auth_client):
 
     # 验证返回数据格式
     for sport in sports_list:
-        assert "sport_type" in sport
+        assert "sport_name" in sport
         assert "METs" in sport
         assert sport["METs"] > 0
 
@@ -121,68 +122,150 @@ async def test_get_available_sports_types(auth_client):
 # ================== 测试：更新自定义运动类型 ==================
 
 @pytest.mark.asyncio
-@pytest.mark.skip(reason="功能Bug: update_sports服务使用了schema中不存在的new_sport_type字段，需修复sports_service.py:75或schemas/sports.py")
-@pytest.mark.parametrize("sport_type,update_data,expected_success", [
+@pytest.mark.parametrize("original_data,update_data,expected_success", [
     # 正常更新 - 使用唯一名称
     (
-        "自定义跑步_test1",
-        {"sport_type": "自定义跑步_test1", "describe": "更新后的描述", "METs": 9.0},
+        {"sport_name": "自定义跑步_test4", "describe": "初始描述", "METs": 8.0},
+        {"old_sport_name": "自定义跑步_test4","new_sport_name": "自定义跑步_test4plus", "describe": "更新后的描述", "METs": 9.0},
         True
     ),
     # 边界条件 - 更新为最小METs - 使用唯一名称
     (
-        "自定义跑步_test2",
-        {"sport_type": "自定义跑步_test2", "describe": "低强度", "METs": 0.5},
+        {"sport_name": "自定义跑步_test2", "describe": "初始描述", "METs": 8.0},
+        {"old_sport_name": "自定义跑步_test2","new_sport_name": "自定义跑步_test2plus", "describe": "低强度", "METs": 0.5},
         True
     ),
 ])
-async def test_update_sports(auth_client, sport_type, update_data, expected_success):
+async def test_update_sports(auth_client, original_data, update_data, expected_success):
     """测试更新自定义运动类型 - 正常情况"""
-    # 先创建运动类型（使用参数化的唯一 sport_type）
-    create_data = {
-        "sport_type": sport_type,
-        "describe": "初始描述",
-        "METs": 8.0
-    }
-    create_response = await auth_client.post("/api/sports/create-sport", json=create_data)
-    assert create_response.status_code == 200
+    # 先创建运动类型
+    try:
+        updated =False
 
-    # 再更新
-    response = await auth_client.post("/api/sports/update-sport", json=update_data)
+        create_response = await auth_client.post("/api/sports/create-sport", data=original_data,files={})
+        assert create_response.status_code == 200
 
-    if expected_success:
+        # 再更新
+        response = await auth_client.post("/api/sports/update-sport", data=update_data,files={})
+
+        if expected_success:
+            assert response.status_code == 200
+            updated =True
+            result = response.json()
+            assert result["success"] == expected_success
+    finally:
+        # 清理 - 删除创建的运动类型（使用参数化的 sport_name）
+        if updated:
+            sport_name = update_data["new_sport_name"]
+        else:
+            sport_name = update_data["old_sport_name"]
+        response = await auth_client.delete(f"/api/sports/delete-sport/{sport_name}")
         assert response.status_code == 200
-        result = response.json()
-        assert result["success"] == expected_success
-
-    # 清理 - 删除创建的运动类型（使用参数化的 sport_type）
-    await auth_client.delete(f"/api/sports/delete-sport/{sport_type}")
 
 
 @pytest.mark.asyncio
 @pytest.mark.parametrize("invalid_update_data,expected_status", [
     # 异常情况 - METs为负数
-    ({"sport_type": "自定义跑步", "describe": "无效", "METs": -5.0}, 422),
+    ({"sport_name": "自定义跑步", "describe": "无效", "METs": -5.0}, 422),
     # 异常情况 - METs为0
-    ({"sport_type": "自定义跑步", "describe": "无效", "METs": 0}, 422),
+    ({"sport_name": "自定义跑步", "describe": "无效", "METs": 0}, 422),
 ])
 async def test_update_sports_invalid(auth_client, invalid_update_data, expected_status):
     """测试更新自定义运动类型 - 异常情况"""
     response = await auth_client.post("/api/sports/update-sport", json=invalid_update_data)
     assert response.status_code == expected_status
 
+# ================== 测试：运动类型包含图片的增删改 ==================
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("sport_data,image_file,update_sport_data,update_image_file,expected_status,expected_success", [
+    ({"sport_name": "自定义游泳_test20", "describe": "户外游泳", "METs": 8.0}, "test_sport_image1.jpeg", 
+     {"old_sport_name": "自定义游泳_test20","new_sport_name": "自定义游泳_test12plus", "describe": "户外游泳", "METs": 8.0}, "test_sport_image2.jpeg",
+     200, True),
+])
+async def test_sports_with_image(auth_client, sport_data, image_file, update_sport_data, update_image_file, expected_status, expected_success): 
+    """测试自定义运动类型 - 包含图片"""
+    async def tools_find_sport(sport_name):
+        ##获取全部运动
+        r = await auth_client.get(f"/api/sports/get-available-sports-types")
+        assert r.status_code == 200
+        ##找到要删除的运动类型
+        for sport in r.json():
+            if sport["sport_name"] == sport_name:
+                return sport
+    def tools_get_path(image_url):
+        #解析得到相对的路径
+        from urllib.parse import urlparse
+        parsed_url = urlparse(image_url).path # "/static/sport_images/xxx.jpeg"
+        base = settings.IMAGE_BASE_URL  # "/static"
+        assert parsed_url.startswith(base + "/"),"无效的路径名"
+        relative_path = parsed_url[len(base) + 1:] # "sport_images/xxx.jpeg"
+        # 合成后端可检索路径 backend/uploads/sport_images/xxx.jpeg
+        return Path(__file__).parent.parent / settings.IMAGE_STORAGE_PATH / relative_path
+
+    try:
+        # 上传包含图片的表单数据
+        response = None
+        update =None
+
+        test_image_path = Path(__file__).parent / "test_picture" / image_file
+        response = await auth_client.post(
+            "/api/sports/create-sport",
+            data=sport_data,
+            files={"image_file": (image_file, open(test_image_path, "rb"), "image/jpeg")}
+        )
+        assert response.status_code == expected_status
+        result = response.json()
+        assert result["success"] == expected_success
+
+        # 确保创建时图片已保存
+        create_sport = await tools_find_sport(sport_data["sport_name"])
+        create_image_path = tools_get_path(create_sport["image_url"])
+        assert create_image_path.exists(),"图片未保存"
+
+        # 更新
+        test_update_image_path = Path(__file__).parent / "test_picture" / update_image_file
+        update_response = await auth_client.post(
+            "/api/sports/update-sport",
+            data=update_sport_data,
+            files={"image_file": (update_image_file, open(test_update_image_path, "rb"), "image/jpeg")}
+        )
+        assert update_response.status_code == expected_status
+        update =True
+        update_result = update_response.json()
+        assert update_result["success"] == expected_success
+        # 确保更新时图片已保存
+        update_sport = await tools_find_sport(update_sport_data["new_sport_name"])
+        update_image_path = tools_get_path(update_sport["image_url"])
+        assert update_image_path.exists(),"图片未保存"
+    finally:
+        if response and result.get("success"):        # 完成测试后删除创建的运动类型
+            #确保删除时正确查找运动名
+            if update:
+                delete_sport_name = update_sport_data["new_sport_name"]
+            else:
+                delete_sport_name = update_sport_data["old_sport_name"]
+            #先存储图片路径
+            delete_sport = await tools_find_sport(delete_sport_name)
+            test_delete_path = tools_get_path(delete_sport["image_url"])
+
+            response = await auth_client.delete(f"/api/sports/delete-sport/{delete_sport_name}")
+            assert response.status_code == 200
+           
+            assert not test_delete_path.exists(),"图片未删除"
+ 
 
 # ================== 测试：记录运动 ==================
 
 @pytest.mark.asyncio
 @pytest.mark.parametrize("log_data,expected_status,expected_success", [
     # 正常情况 - 使用当前时间
-    ({"sport_type": "跑步", "duration_time": 30}, 200, True),
-    ({"sport_type": "跑步", "duration_time": 60}, 200, True),
+    ({"sport_name": "慢走 3km/h", "duration_time": 30}, 200, True),
+    ({"sport_name": "慢走 3km/h", "duration_time": 60}, 200, True),
     # 边界条件 - 最小持续时间
-    ({"sport_type": "跑步", "duration_time": 1}, 200, True),
+    ({"sport_name": "慢走 3km/h", "duration_time": 1}, 200, True),
     # 边界条件 - 最大持续时间
-    ({"sport_type": "跑步", "duration_time": 480}, 200, True),
+    ({"sport_name": "慢走 3km/h", "duration_time": 480}, 200, True),
 ])
 async def test_log_sports_record(auth_client, log_data, expected_status, expected_success):
     """测试记录运动 - 正常情况和边界条件"""
@@ -208,11 +291,11 @@ async def test_log_sports_record(auth_client, log_data, expected_status, expecte
 @pytest.mark.asyncio
 @pytest.mark.parametrize("invalid_log_data,expected_status", [
     # 异常情况 - 持续时间为0
-    ({"sport_type": "跑步", "duration_time": 0}, 422),
+    ({"sport_name": "慢走 3km/h", "duration_time": 0}, 422),
     # 异常情况 - 持续时间为负数
-    ({"sport_type": "跑步", "duration_time": -10}, 422),
+    ({"sport_name": "慢走 3km/h", "duration_time": -10}, 422),
     # 异常情况 - 缺少必要字段
-    ({"sport_type": "跑步"}, 422),
+    ({"sport_name": "慢走 3km/h"}, 422),
 ])
 async def test_log_sports_record_invalid(auth_client, invalid_log_data, expected_status):
     """测试记录运动 - 异常情况"""
@@ -228,7 +311,7 @@ async def test_log_sports_with_past_time(auth_client):
     """测试使用过去时间记录运动"""
     past_time = (datetime.utcnow() - timedelta(days=1)).isoformat()
     log_data = {
-        "sport_type": "跑步",
+        "sport_name": "慢走 3km/h",
         "created_at": past_time,
         "duration_time": 45
     }
@@ -252,7 +335,7 @@ async def test_get_all_sports_records(auth_client):
     # 验证记录格式
     if len(records) > 0:
         record = records[0]
-        assert "sport_type" in record
+        assert "sport_name" in record
         assert "created_at" in record
         assert "duration_time" in record
         assert "calories_burned" in record
@@ -267,12 +350,12 @@ async def test_get_all_sports_records(auth_client):
 @pytest.mark.asyncio
 @pytest.mark.parametrize("search_params,should_have_results", [
     # 按运动类型搜索
-    ({"sport_type": "自定义跑步"}, True),
+    ({"sport_name": "自定义跑步"}, True),
     # 按日期范围搜索
     ({"start_date": (date.today() - timedelta(days=7)).isoformat(),
       "end_date": date.today().isoformat()}, True),
     # 组合搜索
-    ({"sport_type": "自定义跑步",
+    ({"sport_name": "自定义跑步",
       "start_date": (date.today() - timedelta(days=7)).isoformat(),
       "end_date": date.today().isoformat()}, True),
 ])
@@ -299,9 +382,9 @@ async def test_search_sports_records_invalid_date_range(auth_client):
 
 
 @pytest.mark.asyncio
-async def test_search_nonexistent_sport_type(auth_client):
+async def test_search_nonexistent_sport_name(auth_client):
     """测试搜索不存在的运动类型"""
-    search_params = {"sport_type": "不存在的运动类型_XYZ123"}
+    search_params = {"sport_name": "不存在的运动类型_XYZ123"}
 
     response = await auth_client.post("/api/sports/search-sports-records", json=search_params)
     assert response.status_code == 200
@@ -323,7 +406,8 @@ async def test_update_sports_record(auth_client):
         record_id = records[0]["record_id"]
         update_data = {
             "record_id": record_id,
-            "sport_type": "跑步",
+            "old_sport_name": records[0]["sport_name"],
+            "new_sport_name": "健走 6.5km/h",
             "duration_time": 45,
             "created_at": datetime.utcnow().isoformat()
         }
@@ -336,9 +420,9 @@ async def test_update_sports_record(auth_client):
 @pytest.mark.asyncio
 @pytest.mark.parametrize("invalid_update_data", [
     # 异常情况 - 持续时间为负数
-    {"_id": "test_id", "sport_type": "自定义跑步", "duration_time": -10},
+    {"_id": "test_id", "sport_name": "自定义跑步", "duration_time": -10},
     # 异常情况 - 持续时间为0
-    {"_id": "test_id", "sport_type": "自定义跑步", "duration_time": 0},
+    {"_id": "test_id", "sport_name": "自定义跑步", "duration_time": 0},
 ])
 async def test_update_sports_record_invalid(auth_client, invalid_update_data):
     """测试更新运动记录 - 异常情况"""
@@ -395,7 +479,7 @@ async def test_delete_sports_record(auth_client):
     """测试删除运动记录"""
     # 先创建一条记录用于删除
     log_data = {
-        "sport_type": "跑步",
+        "sport_name": "慢走 3km/h",
         "created_at": datetime.utcnow().isoformat(),
         "duration_time": 20
     }
@@ -407,10 +491,10 @@ async def test_delete_sports_record(auth_client):
     records = records_response.json()
 
     if len(records) > 0:
-        sport_type = records[0]["sport_type"]
+        sport_name = records[0]["sport_name"]
         record_id = records[0]["record_id"]
         created_at = records[0]["created_at"]
-        assert sport_type == "跑步"  # 假设创建时返回的ID为"123"
+        assert sport_name == log_data["sport_name"]  # 假设创建时返回的ID为"123"
         #assert created_at ==  log_data["created_at"] # 确保记录ID存在
 
         # 删除记录
@@ -435,21 +519,21 @@ async def test_delete_sports(auth_client):
     """测试删除自定义运动类型"""
     # 先创建一个用于删除的运动类型
     create_data = {
-        "sport_type": "待删除的运动",
+        "sport_name": "待删除的运动",
         "describe": "测试删除",
         "METs": 5.0
     }
-    create_response = await auth_client.post("/api/sports/create-sport", json=create_data)
+    create_response = await auth_client.post("/api/sports/create-sport", data=create_data,files={})
     assert create_response.status_code == 200
 
     # 删除刚创建的运动类型
-    response = await auth_client.delete(f"/api/sports/delete-sport/{create_data['sport_type']}")
+    response = await auth_client.delete(f"/api/sports/delete-sport/{create_data['sport_name']}")
     assert response.status_code == 200
     assert response.json()["success"] is True
 
 
 @pytest.mark.asyncio
-async def test_delete_nonexistent_sport_type(auth_client):
+async def test_delete_nonexistent_sport_name(auth_client):
     """测试删除不存在的运动类型"""
     response = await auth_client.delete("/api/sports/delete-sport/不存在的运动类型_XYZ")
     assert response.status_code == 404
@@ -460,13 +544,13 @@ async def test_delete_nonexistent_sport_type(auth_client):
 @pytest.mark.asyncio
 @pytest.mark.parametrize("invalid_data,expected_status", [
     # 空字符串的运动类型
-    ({"sport_type": "", "describe": "测试", "METs": 5.0}, 422),
+    ({"sport_name": "", "describe": "测试", "METs": 5.0}, 422),
     # METs为字符串
-    ({"sport_type": "测试", "describe": "测试", "METs": "invalid"}, 422),# 参数数据类型错误，pydantic类验证抛出
+    ({"sport_name": "测试", "describe": "测试", "METs": "invalid"}, 422),# 参数数据类型错误，pydantic类验证抛出
 ])
 async def test_data_format_validation(auth_client, invalid_data, expected_status):
     """测试数据格式有效性验证"""
-    response = await auth_client.post("/api/sports/create-sport", json=invalid_data)
+    response = await auth_client.post("/api/sports/create-sport", data=invalid_data,files={})
     assert response.status_code == expected_status
 
 
@@ -477,22 +561,22 @@ async def test_calories_calculation_accuracy(auth_client):
     """测试卡路里计算的准确性"""
     # 创建一个已知METs的运动类型
     sport_data = {
-        "sport_type": "测试计算",
+        "sport_name": "测试计算",
         "describe": "用于测试卡路里计算",
         "METs": 10.0  # 使用一个容易计算的值
     }
-    await auth_client.post("/api/sports/create-sport", json=sport_data)
+    await auth_client.post("/api/sports/create-sport", data=sport_data,files={})
 
     # 记录运动
     log_data = {
-        "sport_type": "测试计算",
+        "sport_name": "测试计算",
         "created_at": datetime.utcnow().isoformat(),
         "duration_time": 60  # 60分钟
     }
     await auth_client.post("/api/sports/log-sports", json=log_data)
 
     # 获取记录
-    search_params = {"sport_type": "测试计算"}
+    search_params = {"sport_name": "测试计算"}
     response = await auth_client.post("/api/sports/search-sports-records", json=search_params)
     records = response.json()
 
@@ -530,7 +614,7 @@ async def test_multiple_records_same_sport(auth_client):
     # 创建多条相同运动类型的记录
     for duration in [10, 20, 30]:
         log_data = {
-            "sport_type": "跑步",
+            "sport_name": "慢走 3km/h",
             "created_at": datetime.utcnow().isoformat(),
             "duration_time": duration
         }
@@ -538,7 +622,7 @@ async def test_multiple_records_same_sport(auth_client):
         assert response.status_code == 200
 
     # 查询该运动类型的所有记录
-    search_params = {"sport_type": "跑步"}
+    search_params = {"sport_name": log_data["sport_name"]}
     response = await auth_client.post("/api/sports/search-sports-records", json=search_params)
     records = response.json()
 
@@ -549,20 +633,28 @@ async def test_multiple_records_same_sport(auth_client):
 
 @pytest.mark.asyncio
 async def test_complete_workflow(auth_client):
-    sport_type="集成测试运动"
+    old_sport_name="集成测试运动5"
+    new_sport_type="更新后测试运动5"
     """集成测试：完整的工作流程"""
     # 1. 创建自定义运动类型
-    sport_data = {
-        "sport_type": sport_type,
+    old_sport_data = {
+        "sport_name": old_sport_name,
         "describe": "完整流程测试",
         "METs": 7.5
     }
-    create_response = await auth_client.post("/api/sports/create-sport", json=sport_data)
+    create_response = await auth_client.post("/api/sports/create-sport", data=old_sport_data,files={})
+    assert create_response.status_code == 200
+    new_sport_data = {
+        "sport_name": new_sport_type,
+        "describe": "完整流程测试",
+        "METs": 7.5
+    }
+    create_response = await auth_client.post("/api/sports/create-sport", data=new_sport_data,files={})
     assert create_response.status_code == 200
 
     # 2. 记录运动
     log_data = {
-        "sport_type": sport_type,
+        "sport_name": old_sport_name,
         "created_at": datetime.utcnow().isoformat(),
         "duration_time": 40
     }
@@ -570,7 +662,7 @@ async def test_complete_workflow(auth_client):
     assert log_response.status_code == 200
 
     # 3. 查询记录
-    search_params = {"sport_type": sport_type}
+    search_params = {"sport_name": old_sport_name}
     search_response = await auth_client.post("/api/sports/search-sports-records", json=search_params)
     records = search_response.json()
     assert len(records) > 0
@@ -580,7 +672,8 @@ async def test_complete_workflow(auth_client):
     # 4. 更新记录
     update_data = {
         "record_id": record_id,
-        "sport_type": sport_type,
+        "old_sport_name": old_sport_name,
+        "new_sport_name": new_sport_type,
         "duration_time": 50,
         "created_at": datetime.utcnow().isoformat()
     }
@@ -596,5 +689,7 @@ async def test_complete_workflow(auth_client):
     assert delete_record_response.status_code == 200
 
     # 7. 删除运动类型
-    delete_sport_response = await auth_client.delete(f"/api/sports/delete-sport/{sport_type}")
+    delete_sport_response = await auth_client.delete(f"/api/sports/delete-sport/{old_sport_name}")
+    assert delete_sport_response.status_code == 200
+    delete_sport_response = await auth_client.delete(f"/api/sports/delete-sport/{new_sport_type}")
     assert delete_sport_response.status_code == 200

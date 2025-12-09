@@ -20,7 +20,7 @@ TEST_USER = {
 @pytest_asyncio.fixture
 async def auth_client():
     """创建已认证的客户端"""
-    async with AsyncClient(base_url="http://127.0.0.1:8000", timeout=30.0, http2=False) as client:
+    async with AsyncClient(base_url="http://127.0.0.1:8000", timeout=60.0, http2=False) as client:
         # 登录获取 token
         response = await client.post(
             "/api/auth/login",
@@ -41,7 +41,7 @@ async def auth_client():
 
 @pytest.fixture
 def sample_food_data():
-    """示例食物数据"""
+    """示例食物数据（嵌套格式）"""
     return {
         "name": "测试苹果",
         "category": "水果",
@@ -61,25 +61,69 @@ def sample_food_data():
         "image_url": "https://example.com/apple.jpg"
     }
 
+def convert_food_data_to_form(food_data):
+    """将嵌套的食物数据转换为表单格式（multipart/form-data）"""
+    nutrition = food_data.get("nutrition_per_serving", {})
+    form_data = {
+        "name": food_data["name"],
+        "serving_size": food_data["serving_size"],
+        "serving_unit": food_data.get("serving_unit", "克"),
+        "calories": nutrition.get("calories", 0),
+        "protein": nutrition.get("protein", 0),
+        "carbohydrates": nutrition.get("carbohydrates", 0),
+        "fat": nutrition.get("fat", 0),
+    }
+    
+    # 可选字段
+    if "category" in food_data and food_data["category"]:
+        form_data["category"] = food_data["category"]
+    if "brand" in food_data and food_data["brand"]:
+        form_data["brand"] = food_data["brand"]
+    if "barcode" in food_data and food_data["barcode"]:
+        form_data["barcode"] = food_data["barcode"]
+    if "fiber" in nutrition:
+        form_data["fiber"] = nutrition["fiber"]
+    if "sugar" in nutrition:
+        form_data["sugar"] = nutrition["sugar"]
+    if "sodium" in nutrition:
+        form_data["sodium"] = nutrition["sodium"]
+    
+    return form_data
+
 
 # ========== 食物管理测试 ==========
 
 @pytest.mark.asyncio
 async def test_create_food_success(auth_client, sample_food_data):
-    """测试创建食物 - 成功"""
+    """测试创建食物 - 成功（包含图片上传）"""
     expected_success = {
         "status_code": 201,
         "name": "测试苹果",
         "category": "水果"
     }
     
-    response = await auth_client.post("/api/food/", json=sample_food_data)
+    form_data = convert_food_data_to_form(sample_food_data)
+    
+    # 读取测试图片文件
+    from pathlib import Path
+    test_image_path = Path(__file__).parent / "test_picture" / "image2.jpg"
+    
+    # 创建食物并上传图片
+    with open(test_image_path, "rb") as image_file:
+        files = {
+            "image": ("image2.jpg", image_file, "image/jpeg")
+        }
+        response = await auth_client.post("/api/food/", data=form_data, files=files)
         
     assert response.status_code == expected_success["status_code"]
     if response.status_code == 201:
         data = response.json()
         assert data["name"] == expected_success["name"]
         assert data["category"] == expected_success["category"]
+        
+        # 验证图片上传成功
+        assert "image_url" in data
+        assert data["image_url"] is not None
         
         # 测试后清理：删除创建的测试数据
         food_id = data.get("id")
@@ -146,7 +190,8 @@ async def test_get_food(auth_client, sample_food_data):
     }
     
     # 先创建一个食物
-    create_response = await auth_client.post("/api/food/", json=sample_food_data)
+    form_data = convert_food_data_to_form(sample_food_data)
+    create_response = await auth_client.post("/api/food/", data=form_data)
     if create_response.status_code != 201:
         pytest.skip("无法创建测试食物")
     
@@ -174,7 +219,8 @@ async def test_update_food(auth_client, sample_food_data):
     }
     
     # 先创建一个食物
-    create_response = await auth_client.post("/api/food/", json=sample_food_data)
+    form_data = convert_food_data_to_form(sample_food_data)
+    create_response = await auth_client.post("/api/food/", data=form_data)
     if create_response.status_code != 201:
         pytest.skip("无法创建测试食物")
     
@@ -205,7 +251,8 @@ async def test_delete_food(auth_client, sample_food_data):
     }
     
     # 先创建一个食物
-    create_response = await auth_client.post("/api/food/", json=sample_food_data)
+    form_data = convert_food_data_to_form(sample_food_data)
+    create_response = await auth_client.post("/api/food/", data=form_data)
     if create_response.status_code != 201:
         pytest.skip("无法创建测试食物")
     
@@ -215,6 +262,68 @@ async def test_delete_food(auth_client, sample_food_data):
     response = await auth_client.delete(f"/api/food/{food_id}")
     
     assert response.status_code == expected_success["status_code"]
+
+
+@pytest.mark.asyncio
+async def test_update_food_image(auth_client, sample_food_data):
+    """测试更新食物图片 - 成功"""
+    expected_success = {
+        "status_code": 200
+    }
+    
+    # 先创建一个食物
+    form_data = convert_food_data_to_form(sample_food_data)
+    create_response = await auth_client.post("/api/food/", data=form_data)
+    if create_response.status_code != 201:
+        pytest.skip("无法创建测试食物")
+    
+    food_id = create_response.json().get("id")
+    
+    # 读取测试图片文件
+    from pathlib import Path
+    test_image_path = Path(__file__).parent / "test_picture" / "image2.jpg"
+    
+    # 更新食物图片
+    with open(test_image_path, "rb") as image_file:
+        files = {
+            "image": ("image2.jpg", image_file, "image/jpeg")
+        }
+        response = await auth_client.put(f"/api/food/{food_id}/image", files=files)
+    
+    assert response.status_code == expected_success["status_code"]
+    if response.status_code == 200:
+        data = response.json()
+        assert "image_url" in data
+        assert data["image_url"] is not None
+        assert data["id"] == food_id
+    
+    # 清理
+    if food_id:
+        await auth_client.delete(f"/api/food/{food_id}")
+
+
+@pytest.mark.asyncio
+async def test_update_food_image_not_found(auth_client):
+    """测试更新不存在的食物图片 - 应该返回404"""
+    expected_error = {
+        "status_code": 404
+    }
+    
+    # 使用一个不存在的食物ID
+    fake_food_id = "507f1f77bcf86cd799439011"
+    
+    # 读取测试图片文件
+    from pathlib import Path
+    test_image_path = Path(__file__).parent / "test_picture" / "image2.jpg"
+    
+    # 尝试更新不存在的食物的图片
+    with open(test_image_path, "rb") as image_file:
+        files = {
+            "image": ("image2.jpg", image_file, "image/jpeg")
+        }
+        response = await auth_client.put(f"/api/food/{fake_food_id}/image", files=files)
+    
+    assert response.status_code == expected_error["status_code"]
 
 
 # ========== 食物记录管理测试 ==========
@@ -228,7 +337,8 @@ async def test_create_food_record(auth_client, sample_food_data):
     }
 
     # 先创建一个食物
-    food_response = await auth_client.post("/api/food/", json=sample_food_data)
+    form_data = convert_food_data_to_form(sample_food_data)
+    food_response = await auth_client.post("/api/food/", data=form_data)
     assert food_response.status_code == expected_success["create_food_status"]
     
     if food_response.status_code == 201:
@@ -299,7 +409,8 @@ async def test_update_food_record(auth_client, sample_food_data):
     }
     
     # 先创建食物和记录
-    food_response = await auth_client.post("/api/food/", json=sample_food_data)
+    form_data = convert_food_data_to_form(sample_food_data)
+    food_response = await auth_client.post("/api/food/", data=form_data)
     if food_response.status_code != 201:
         pytest.skip("无法创建测试食物")
     
@@ -347,7 +458,8 @@ async def test_delete_food_record(auth_client, sample_food_data):
     }
     
     # 先创建食物和记录
-    food_response = await auth_client.post("/api/food/", json=sample_food_data)
+    form_data = convert_food_data_to_form(sample_food_data)
+    food_response = await auth_client.post("/api/food/", data=form_data)
     if food_response.status_code != 201:
         pytest.skip("无法创建测试食物")
     
@@ -459,7 +571,8 @@ async def test_create_food_unauthorized():
         }
     }
     
+    form_data = convert_food_data_to_form(food_data)
     async with AsyncClient(base_url="http://localhost:8000") as client:
-        response = await client.post("/api/food/", json=food_data)
+        response = await client.post("/api/food/", data=form_data)
         # 未认证应该返回 401 或 403
         assert response.status_code in expected_error["status_code_range"]

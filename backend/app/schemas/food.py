@@ -1,12 +1,13 @@
 from pydantic import BaseModel, Field, field_validator, ConfigDict
 from typing import Optional, List, Dict, Any, Union
 from datetime import datetime, date
+from fastapi import UploadFile
 from app.models.food import NutritionData, FullNutritionData, BooheeFoodSearchItem
 
 
 # ========== 食物管理 ==========
 class FoodCreateRequest(BaseModel):
-    """创建食物请求"""
+    """创建食物请求（支持图片文件上传）"""
     name: str = Field(..., min_length=1, max_length=100, description="食物名称")
     category: Optional[str] = Field(None, max_length=50, description="食物分类")
     serving_size: float = Field(..., gt=0, description="标准份量（克）")
@@ -15,7 +16,7 @@ class FoodCreateRequest(BaseModel):
     full_nutrition: Optional[FullNutritionData] = Field(None, description="完整营养信息（与测试脚本格式一致）")
     brand: Optional[str] = Field(None, max_length=100, description="品牌")
     barcode: Optional[str] = Field(None, max_length=50, description="条形码")
-    image_url: Optional[str] = Field(None, description="食物图片URL")
+    image: Optional[UploadFile] = Field(None, description="食物图片文件（可选，支持 jpg/jpeg/png/webp/gif，最大10MB）")
 
     class Config:
         json_schema_extra = {

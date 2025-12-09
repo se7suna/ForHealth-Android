@@ -1,9 +1,12 @@
 import asyncio
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+from pathlib import Path
 from contextlib import asynccontextmanager
 from app.config import settings
-from app.database import (connect_to_mongo, close_mongo_connection, 
+from app.database import (connect_to_mongo, close_mongo_connection)
+from app.db_init.init_dataset import (initialize_foods_table,
                           initialize_sports_table,initialize_default_user)
 from app.routers import auth, user, sports, food, recipe, visualization
 
@@ -25,9 +28,14 @@ async def lifespan(app: FastAPI):
 
 async def run_initialization():
     """异步后台初始化：不会阻塞应用启动。"""
-    # print("⚙️ 开始初始化后台数据...")
-    await initialize_sports_table()
+    print("⚙️ 开始初始化后台数据...")
+    
+    print("⚙️ 开始初始化默认用户...")
     await initialize_default_user()
+    print("⚙️ 开始初始化运动表...")
+    await initialize_sports_table()
+    print("⚙️ 开始初始化食物表...")
+    await initialize_foods_table()
 
     print("✅ 数据库初始化完成！")
 
@@ -58,6 +66,11 @@ app.include_router(sports.router, prefix="/api")
 app.include_router(food.router, prefix="/api")
 app.include_router(recipe.router, prefix="/api")
 app.include_router(visualization.router)
+
+# 配置静态文件服务（用于访问上传的图片）
+uploads_path = Path(settings.IMAGE_STORAGE_PATH)
+uploads_path.mkdir(parents=True, exist_ok=True)
+app.mount(settings.IMAGE_BASE_URL, StaticFiles(directory=str(uploads_path)), name="static")
 
 
 @app.get("/")
