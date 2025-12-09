@@ -42,7 +42,7 @@ class HomeFragment : Fragment() {
         timelineAdapter = TimelineAdapter(
             items = emptyList(),
             onMealGroupClick = { mealGroup -> openEditMealDialog(mealGroup) },
-            onWorkoutGroupClick = { workoutGroup -> openEditWorkoutDialog(workoutGroup) }
+            onExerciseClick = { activity -> openEditExerciseDialog(activity) }
         )
         binding.rvTimeline.layoutManager = LinearLayoutManager(requireContext())
         binding.rvTimeline.adapter = timelineAdapter
@@ -62,6 +62,9 @@ class HomeFragment : Fragment() {
         
         // 从后端加载今日饮食记录
         loadTodayMeals()
+        
+        // 从后端加载今日运动记录
+        loadTodayExercises()
     }
     
     private fun setupInitialData() {
@@ -142,15 +145,42 @@ class HomeFragment : Fragment() {
     }
     
     private fun openAddExerciseDialog() {
-        // 使用 DialogFragment 作为覆盖层，显示添加运动界面
-        val dialog = AddExerciseFragment().apply {
-            // 设置回调，当添加成功后更新数据
-            setOnExerciseAddedListener { exercises ->
-                viewModel.addExercises(exercises)
+        fun showDialog(exerciseLibrary: List<com.example.forhealth.models.ExerciseItem>) {
+            val dialog = AddExerciseFragment().apply {
+                setExerciseLibrary(exerciseLibrary)
+                // 设置回调，当添加成功后通过API创建记录
+                setOnExerciseAddedListener { exercises ->
+                    viewModel.createExerciseRecords(exercises) { result ->
+                        when (result) {
+                            is com.example.forhealth.network.ApiResult.Success -> {
+                                // 数据已通过loadTodayExercises更新
+                            }
+                            is com.example.forhealth.network.ApiResult.Error -> {
+                                android.widget.Toast.makeText(requireContext(), result.message, android.widget.Toast.LENGTH_SHORT).show()
+                            }
+                            is com.example.forhealth.network.ApiResult.Loading -> {}
+                        }
+                    }
+                }
+            }
+            dialog.show(parentFragmentManager, "AddExerciseDialog")
+            toggleFabMenu() // 收起菜单
+        }
+
+        val cached = viewModel.exerciseLibrary.value ?: emptyList()
+        if (cached.isNotEmpty()) {
+            showDialog(cached)
+        } else {
+            viewModel.loadExerciseLibrary { result: com.example.forhealth.network.ApiResult<List<com.example.forhealth.models.ExerciseItem>> ->
+                when (result) {
+                    is com.example.forhealth.network.ApiResult.Success -> showDialog(result.data)
+                    is com.example.forhealth.network.ApiResult.Error -> {
+                        android.widget.Toast.makeText(requireContext(), result.message, android.widget.Toast.LENGTH_SHORT).show()
+                    }
+                    is com.example.forhealth.network.ApiResult.Loading -> {}
+                }
             }
         }
-        dialog.show(parentFragmentManager, "AddExerciseDialog")
-        toggleFabMenu() // 收起菜单
     }
     
     private fun openProfileFragment() {
@@ -182,17 +212,44 @@ class HomeFragment : Fragment() {
         dialog.show(parentFragmentManager, "EditMealDialog")
     }
     
-    private fun openEditWorkoutDialog(workoutGroup: com.example.forhealth.models.WorkoutGroup) {
-        val dialog = EditWorkoutFragment().apply {
-            setWorkoutGroup(workoutGroup)
-            setOnWorkoutUpdatedListener { updatedGroup ->
-                viewModel.updateWorkoutGroup(updatedGroup)
+    private fun openEditExerciseDialog(activity: com.example.forhealth.models.ActivityItem) {
+        fun showDialog(exerciseLibrary: List<com.example.forhealth.models.ExerciseItem>) {
+            val dialog = EditExerciseFragment().apply {
+                setExerciseLibrary(exerciseLibrary)
+                setActivity(activity)
+                setOnExerciseUpdatedListener { updatedActivity ->
+                    // 直接传递ActivityItem给ViewModel，ViewModel内部使用ExerciseRepository处理
+                    viewModel.updateExerciseRecord(updatedActivity) { result ->
+                        when (result) {
+                            is com.example.forhealth.network.ApiResult.Success -> {
+                                // 数据已通过loadTodayExercises更新
+                            }
+                            is com.example.forhealth.network.ApiResult.Error -> {
+                                android.widget.Toast.makeText(requireContext(), result.message, android.widget.Toast.LENGTH_SHORT).show()
+                            }
+                            is com.example.forhealth.network.ApiResult.Loading -> {}
+                        }
+                    }
+                }
             }
-            setOnWorkoutDeletedListener { workoutGroupId ->
-                viewModel.deleteWorkoutGroup(workoutGroupId)
+            dialog.show(parentFragmentManager, "EditExerciseDialog")
+        }
+        
+        // 从缓存或加载运动库数据
+        val cached = viewModel.exerciseLibrary.value ?: emptyList()
+        if (cached.isNotEmpty()) {
+            showDialog(cached)
+        } else {
+            viewModel.loadExerciseLibrary { result: com.example.forhealth.network.ApiResult<List<com.example.forhealth.models.ExerciseItem>> ->
+                when (result) {
+                    is com.example.forhealth.network.ApiResult.Success -> showDialog(result.data)
+                    is com.example.forhealth.network.ApiResult.Error -> {
+                        android.widget.Toast.makeText(requireContext(), result.message, android.widget.Toast.LENGTH_SHORT).show()
+                    }
+                    is com.example.forhealth.network.ApiResult.Loading -> {}
+                }
             }
         }
-        dialog.show(parentFragmentManager, "EditWorkoutDialog")
     }
     
     private var currentRange: AnalyticsRange = AnalyticsRange.DAY
@@ -522,6 +579,13 @@ class HomeFragment : Fragment() {
         viewModel.loadTodayMeals()
     }
     
+    /**
+     * 从后端加载今日运动记录
+     */
+    private fun loadTodayExercises() {
+        viewModel.loadTodayExercises()
+    }
+    
     private fun updateStatsDisplay(stats: DailyStats) {
         // 更新卡路里显示
         val netCalories = stats.calories.current - stats.burned
@@ -548,6 +612,8 @@ class HomeFragment : Fragment() {
         super.onResume()
         // 当Fragment重新可见时，重新加载今日饮食记录（确保数据是最新的）
         loadTodayMeals()
+        // 重新加载今日运动记录
+        loadTodayExercises()
     }
     
     override fun onDestroyView() {

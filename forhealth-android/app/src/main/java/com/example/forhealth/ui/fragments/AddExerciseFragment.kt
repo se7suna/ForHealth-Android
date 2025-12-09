@@ -13,9 +13,9 @@ import com.example.forhealth.databinding.FragmentAddExerciseBinding
 import com.example.forhealth.models.*
 import com.example.forhealth.ui.adapters.CartExerciseAdapter
 import com.example.forhealth.ui.adapters.ExerciseListAdapter
-import com.example.forhealth.utils.Constants
 import com.example.forhealth.utils.DateUtils
 import com.google.android.material.button.MaterialButton
+import java.text.SimpleDateFormat
 import java.util.*
 
 class AddExerciseFragment : DialogFragment() {
@@ -27,11 +27,20 @@ class AddExerciseFragment : DialogFragment() {
     
     private val selectedItems = mutableListOf<SelectedExerciseItem>()
     private var selectedCategory: ExerciseType = ExerciseType.CARDIO
-    private var filteredExercises: List<ExerciseItem> = Constants.EXERCISE_DB.filter { it.category == ExerciseType.CARDIO }
+    private var allExercises: List<ExerciseItem> = emptyList()
+    private var filteredExercises: List<ExerciseItem> = emptyList()
     private var isCartExpanded = false
     
     private lateinit var exerciseAdapter: ExerciseListAdapter
     private lateinit var cartAdapter: CartExerciseAdapter
+
+    fun setExerciseLibrary(exercises: List<ExerciseItem>) {
+        allExercises = exercises
+        filteredExercises = exercises.filter { it.category == selectedCategory }
+        if (::exerciseAdapter.isInitialized) {
+            updateExerciseList()
+        }
+    }
     
     fun setOnExerciseAddedListener(listener: (List<ActivityItem>) -> Unit) {
         onExerciseAddedListener = listener
@@ -170,9 +179,9 @@ class AddExerciseFragment : DialogFragment() {
     
     private fun filterExercises(query: String) {
         filteredExercises = if (query.isBlank()) {
-            Constants.EXERCISE_DB.filter { it.category == selectedCategory }
+            allExercises.filter { it.category == selectedCategory }
         } else {
-            Constants.EXERCISE_DB.filter {
+            allExercises.filter {
                 it.name.contains(query, ignoreCase = true) &&
                 (query.isNotBlank() || it.category == selectedCategory)
             }
@@ -340,14 +349,16 @@ class AddExerciseFragment : DialogFragment() {
         
         // 为每条运动使用唯一的时间戳（毫秒级），确保在时间线上正确排序
         val baseTime = System.currentTimeMillis()
-        val currentTimeString = DateUtils.getCurrentTime()
+        // 使用 ISO 8601 格式：2025-12-09T12:54:54
+        val isoFormat = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.getDefault())
+        val currentTimeString = isoFormat.format(Date())
         val activities = selectedItems.mapIndexed { index, item ->
             ActivityItem(
                 id = "${baseTime + index}-${UUID.randomUUID()}",
                 name = item.exerciseItem.name,
                 caloriesBurned = item.exerciseItem.caloriesPerUnit * item.count,
                 duration = item.count.toInt(),
-                time = currentTimeString, // 使用相同的时间字符串，但id不同确保分开显示
+                time = currentTimeString, // 使用 ISO 8601 格式的时间字符串
                 type = item.exerciseItem.category,
                 image = item.exerciseItem.image
             )

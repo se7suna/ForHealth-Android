@@ -21,13 +21,13 @@ data class MealGroupTimelineItem(
     override val itemType: ItemType get() = ItemType.MEAL_GROUP
 }
 
-// WorkoutGroup 继承 TimelineItem
-data class WorkoutGroupTimelineItem(
-    val workoutGroup: WorkoutGroup
+// Exercise (ActivityItem) 继承 TimelineItem
+data class ExerciseTimelineItem(
+    val activity: ActivityItem
 ) : TimelineItem() {
-    override val id: String get() = workoutGroup.id
-    override val name: String get() = "Exercise"
-    override val time: String get() = workoutGroup.time
-    override val itemType: ItemType get() = ItemType.WORKOUT_GROUP
+    override val id: String get() = activity.id
+    override val name: String get() = activity.name
+    override val time: String get() = activity.time
+    override val itemType: ItemType get() = ItemType.EXERCISE
 }
 

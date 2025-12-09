@@ -13,7 +13,6 @@ import com.example.forhealth.databinding.FragmentAddExerciseBinding
 import com.example.forhealth.models.*
 import com.example.forhealth.ui.adapters.CartExerciseAdapter
 import com.example.forhealth.ui.adapters.ExerciseListAdapter
-import com.example.forhealth.utils.Constants
 import com.example.forhealth.utils.DateUtils
 import com.google.android.material.button.MaterialButton
 import java.util.*
@@ -27,12 +26,21 @@ class EditExerciseFragment : DialogFragment() {
     
     private val selectedItems = mutableListOf<SelectedExerciseItem>()
     private var selectedCategory: ExerciseType = ExerciseType.CARDIO
-    private var filteredExercises: List<ExerciseItem> = Constants.EXERCISE_DB.filter { it.category == ExerciseType.CARDIO }
+    private var allExercises: List<ExerciseItem> = emptyList()
+    private var filteredExercises: List<ExerciseItem> = emptyList()
     private var isCartExpanded = false
     private var originalActivity: ActivityItem? = null
     
     private lateinit var exerciseAdapter: ExerciseListAdapter
     private lateinit var cartAdapter: CartExerciseAdapter
+    
+    fun setExerciseLibrary(exercises: List<ExerciseItem>) {
+        allExercises = exercises
+        filteredExercises = exercises.filter { it.category == selectedCategory }
+        if (::exerciseAdapter.isInitialized) {
+            updateExerciseList()
+        }
+    }
     
     fun setOnExerciseUpdatedListener(listener: (ActivityItem) -> Unit) {
         onExerciseUpdatedListener = listener
@@ -42,8 +50,8 @@ class EditExerciseFragment : DialogFragment() {
         originalActivity = activity
         selectedCategory = activity.type
         
-        // 将ActivityItem转换为SelectedExerciseItem
-        val exerciseItem = Constants.EXERCISE_DB.find { it.name == activity.name }
+        // 将ActivityItem转换为SelectedExerciseItem（从运动库中查找）
+        val exerciseItem = allExercises.find { it.name == activity.name }
         if (exerciseItem != null) {
             selectedItems.clear()
             selectedItems.add(SelectedExerciseItem(
@@ -173,9 +181,9 @@ class EditExerciseFragment : DialogFragment() {
     
     private fun filterExercises(query: String) {
         filteredExercises = if (query.isBlank()) {
-            Constants.EXERCISE_DB.filter { it.category == selectedCategory }
+            allExercises.filter { it.category == selectedCategory }
         } else {
-            Constants.EXERCISE_DB.filter {
+            allExercises.filter {
                 it.name.contains(query, ignoreCase = true) &&
                 (query.isNotBlank() || it.category == selectedCategory)
             }

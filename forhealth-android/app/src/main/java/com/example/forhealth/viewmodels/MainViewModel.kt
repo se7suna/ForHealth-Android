@@ -11,15 +11,22 @@ import com.example.forhealth.models.MealItem
 import com.example.forhealth.models.MealGroupTimelineItem
 import com.example.forhealth.models.MealType
 import com.example.forhealth.models.SelectedFoodItem
+import com.example.forhealth.models.SelectedExerciseItem
 import com.example.forhealth.models.TimelineItem
 import com.example.forhealth.models.UserProfile
-import com.example.forhealth.models.WorkoutGroup
-import com.example.forhealth.models.WorkoutGroupTimelineItem
+import com.example.forhealth.models.ExerciseTimelineItem
+import com.example.forhealth.models.ExerciseItem
 import com.example.forhealth.network.ApiResult
 import com.example.forhealth.network.dto.food.FoodRecordCreateRequest
 import com.example.forhealth.network.dto.food.FoodRecordResponse
 import com.example.forhealth.network.dto.food.FoodRecordUpdateRequest
+import com.example.forhealth.network.dto.sports.LogSportsRequest
+import com.example.forhealth.network.dto.sports.SearchSportRecordsResponse
+import com.example.forhealth.network.dto.sports.SearchSportsResponse
+import com.example.forhealth.network.dto.sports.UpdateSportsRecordRequest
+import com.example.forhealth.models.ExerciseType
 import com.example.forhealth.repositories.MealRepository
+import com.example.forhealth.repositories.ExerciseRepository
 import com.example.forhealth.utils.DateUtils
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
@@ -44,6 +51,10 @@ class MainViewModel : ViewModel() {
     
     private val _userProfile = MutableLiveData<UserProfile>(UserProfile.getInitial())
     val userProfile: LiveData<UserProfile> = _userProfile
+
+    // 运动库（从后端获取可用运动列表）
+    private val _exerciseLibrary = MutableLiveData<List<ExerciseItem>>(emptyList())
+    val exerciseLibrary: LiveData<List<ExerciseItem>> = _exerciseLibrary
     
     init {
         updateTimeline()
@@ -109,6 +120,9 @@ class MainViewModel : ViewModel() {
         // TODO: 更新AI建议
     }
     
+    /**
+     * 添加运动记录（本地方法，保留用于向后兼容）
+     */
     fun addExercises(exercises: List<ActivityItem>) {
         val currentExercises = _exercises.value ?: emptyList()
         val updatedExercises = exercises + currentExercises
@@ -121,6 +135,45 @@ class MainViewModel : ViewModel() {
         
         // 更新时间线
         updateTimeline()
+    }
+    
+    /**
+     * 创建运动记录（通过API）
+     * 接受ActivityItem列表，内部转换为DTO并调用Repository
+     */
+    fun createExerciseRecords(
+        activities: List<ActivityItem>,
+        onResult: (ApiResult<List<ActivityItem>>) -> Unit
+    ) {
+        viewModelScope.launch {
+            if (activities.isEmpty()) {
+                onResult(ApiResult.Error("没有可保存的运动"))
+                return@launch
+            }
+            
+            for (activity in activities) {
+                val request = LogSportsRequest(
+                    sport_name = activity.name,
+                    created_at = activity.time,
+                    duration_time = activity.duration
+                )
+                
+                when (val result = exerciseRepository.logSports(request)) {
+                    is ApiResult.Success -> { /* 继续处理下一条 */ }
+                    is ApiResult.Error -> {
+                        onResult(ApiResult.Error(result.message))
+                        return@launch
+                    }
+                    is ApiResult.Loading -> { /* ignore */ }
+                }
+            }
+            
+            // 重新加载今日记录以获取正确的ID和calories_burned
+            loadTodayExercises()
+            // 返回更新后的列表
+            val updatedActivities = _exercises.value ?: emptyList()
+            onResult(ApiResult.Success(updatedActivities))
+        }
     }
     
     /**
@@ -181,18 +234,13 @@ class MainViewModel : ViewModel() {
                 )
             }
         
-        // 按workout分组：每条exercise单独成为一组（强制拆分）
-        val workoutGroups = exercises.map { activity ->
-            WorkoutGroup(
-                id = activity.id, // 使用activity的id作为group id
-                activities = listOf(activity), // 每条运动单独打包
-                time = activity.time
-            )
+        // 每条exercise直接作为timeline item（不再包装成WorkoutGroup）
+        val exerciseItems = exercises.map { activity ->
+            ExerciseTimelineItem(activity)
         }
         
         val timeline: List<TimelineItem> = 
-            (mealGroups.map { MealGroupTimelineItem(it) } + 
-             workoutGroups.map { WorkoutGroupTimelineItem(it) })
+            (mealGroups.map { MealGroupTimelineItem(it) } + exerciseItems)
             .sortedByDescending { it.time }
         _timelineItems.value = timeline
     }
@@ -431,27 +479,6 @@ class MainViewModel : ViewModel() {
         val fat: Double
     )
     
-    fun updateWorkoutGroup(workoutGroup: WorkoutGroup) {
-        val currentExercises = _exercises.value ?: emptyList()
-        
-        // 删除旧的activity（通过id匹配，因为现在每个WorkoutGroup只包含一条运动）
-        val updatedExercises = currentExercises.filterNot { exercise ->
-            exercise.id == workoutGroup.id
-        }
-        
-        // 添加新的activities（虽然通常只有一条，但保持兼容性）
-        val finalExercises = workoutGroup.activities + updatedExercises
-        _exercises.value = finalExercises
-        
-        // 重新计算统计数据
-        val currentStats = _dailyStats.value ?: DailyStats.getInitial()
-        val totalBurned = finalExercises.sumOf { it.caloriesBurned }
-        _dailyStats.value = currentStats.copy(burned = totalBurned)
-        
-        // 更新时间线
-        updateTimeline()
-    }
-    
     fun deleteMealGroup(mealGroupId: String) {
         // 这个方法保留用于向后兼容，但实际应该使用deleteMealRecord
         val currentMeals = _meals.value ?: emptyList()
@@ -471,24 +498,6 @@ class MainViewModel : ViewModel() {
             // 更新时间线
             updateTimeline()
         }
-    }
-    
-    fun deleteWorkoutGroup(workoutGroupId: String) {
-        val currentExercises = _exercises.value ?: emptyList()
-        
-        // 删除对应的activity（通过id匹配，因为现在每个WorkoutGroup只包含一条运动）
-        val updatedExercises = currentExercises.filterNot { exercise ->
-            exercise.id == workoutGroupId
-        }
-        _exercises.value = updatedExercises
-        
-        // 重新计算统计数据
-        val currentStats = _dailyStats.value ?: DailyStats.getInitial()
-        val totalBurned = updatedExercises.sumOf { it.caloriesBurned }
-        _dailyStats.value = currentStats.copy(burned = totalBurned)
-        
-        // 更新时间线
-        updateTimeline()
     }
     
     private fun recalculateStats() {
@@ -590,6 +599,7 @@ class MainViewModel : ViewModel() {
     // ==================== 从Repository加载数据的方法 ====================
     
     private val mealRepository = MealRepository()
+    private val exerciseRepository = ExerciseRepository()
     
     /**
      * 从后端加载今日餐食数据
@@ -771,6 +781,174 @@ class MainViewModel : ViewModel() {
                 deleteMealGroup(recordId) // 使用现有的删除方法更新本地状态
                 onResult(ApiResult.Success(true))
             }
+        }
+    }
+
+    /**
+     * 更新运动记录（通过API）
+     * 接受ActivityItem，内部转换为DTO并调用Repository
+     */
+    fun updateExerciseRecord(
+        activity: ActivityItem,
+        onResult: (ApiResult<ActivityItem>) -> Unit
+    ) {
+        viewModelScope.launch {
+            onResult(ApiResult.Loading)
+            
+            val request = UpdateSportsRecordRequest(
+                record_id = activity.id,
+                sport_name = activity.name,
+                created_at = activity.time,
+                duration_time = activity.duration
+            )
+            
+            when (val result = exerciseRepository.updateSportRecord(request)) {
+                is ApiResult.Success -> {
+                    // 重新加载今日记录以获取更新后的数据
+                    loadTodayExercises()
+                    // 从当前列表中找到更新后的记录
+                    val updatedActivity = _exercises.value?.find { it.id == activity.id }
+                    if (updatedActivity != null) {
+                        onResult(ApiResult.Success(updatedActivity))
+                    } else {
+                        // 如果找不到，返回原始对象（可能已被删除）
+                        onResult(ApiResult.Success(activity))
+                    }
+                }
+                is ApiResult.Error -> onResult(ApiResult.Error(result.message))
+                is ApiResult.Loading -> onResult(result)
+            }
+        }
+    }
+    
+    /**
+     * 删除运动记录（通过API）
+     */
+    fun deleteExerciseRecord(recordId: String, onResult: (ApiResult<Boolean>) -> Unit) {
+        viewModelScope.launch {
+            when (val result = exerciseRepository.deleteSportRecord(recordId)) {
+                is ApiResult.Success -> {
+                    // 更新本地状态
+                    val currentExercises = _exercises.value ?: emptyList()
+                    val updatedExercises = currentExercises.filterNot { it.id == recordId }
+                    setExercises(updatedExercises)
+                    onResult(ApiResult.Success(true))
+                }
+                is ApiResult.Error -> onResult(ApiResult.Error(result.message))
+                is ApiResult.Loading -> onResult(ApiResult.Loading)
+            }
+        }
+    }
+
+    /**
+     * 加载今日运动记录（从后端）
+     */
+    fun loadTodayExercises() {
+        viewModelScope.launch {
+            when (val result = exerciseRepository.getTodaySportsRecords()) {
+                is ApiResult.Success -> {
+                    val activities = result.data.map { searchSportRecordResponseToActivityItem(it) }
+                    setExercises(activities)
+                }
+                is ApiResult.Error -> {
+                    // 处理错误，可以显示错误消息
+                }
+                is ApiResult.Loading -> {}
+            }
+        }
+    }
+    
+    /**
+     * 重新拉取运动记录（向后兼容方法）
+     */
+    fun loadExerciseRecords() {
+        loadTodayExercises()
+    }
+
+    /**
+     * 加载可用运动列表（运动库），供选择使用
+     */
+    fun loadExerciseLibrary(onResult: (ApiResult<List<ExerciseItem>>) -> Unit = {}) {
+        viewModelScope.launch {
+            when (val result = exerciseRepository.getAvailableSportsTypes()) {
+                is ApiResult.Success -> {
+                    val items = result.data.map { searchSportsResponseToExerciseItem(it) }
+                    _exerciseLibrary.value = items
+                    onResult(ApiResult.Success(items))
+                }
+                is ApiResult.Error -> onResult(ApiResult.Error(result.message))
+                is ApiResult.Loading -> onResult(result)
+            }
+        }
+    }
+    
+    // ==================== DTO ↔ Model 转换方法（运动） ====================
+    
+    /**
+     * 将后端DTO转换为前端Model
+     */
+    private fun searchSportRecordResponseToActivityItem(dto: SearchSportRecordsResponse): ActivityItem {
+        val recordId = dto.record_id ?: UUID.randomUUID().toString()
+        val sportName = dto.sport_name ?: ""
+        val duration = dto.duration_time ?: 0
+        val caloriesBurned = dto.calories_burned ?: 0.0
+        val createdAt = dto.created_at ?: DateUtils.getCurrentTime()
+        val sportType = dto.sport_type?.let { sportTypeStringToEnum(it) } ?: ExerciseType.CARDIO
+        
+        return ActivityItem(
+            id = recordId,
+            name = sportName,
+            caloriesBurned = caloriesBurned,
+            duration = duration,
+            time = createdAt,
+            type = sportType,
+            image = null // SearchSportRecordsResponse没有image字段
+        )
+    }
+
+    /**
+     * 将运动类型DTO转换为前端ExerciseItem（用于选择列表）
+     */
+    private fun searchSportsResponseToExerciseItem(dto: SearchSportsResponse): ExerciseItem {
+        val id = dto.sport_name ?: UUID.randomUUID().toString()
+        val name = dto.sport_name ?: "Sport"
+        val category = dto.sport_type?.let { sportTypeStringToEnum(it) } ?: ExerciseType.CARDIO
+        val mets = dto.METs ?: 5.0
+        // 将METs近似转换为每分钟消耗（假设70kg，公式：MET * 3.5 * 70 / 200）
+        val caloriesPerMin = mets * 3.5 * 70 / 200.0
+        val image = dto.image_url ?: ""
+        return ExerciseItem(
+            id = id,
+            name = name,
+            caloriesPerUnit = caloriesPerMin,
+            unit = "min",
+            image = image,
+            category = category
+        )
+    }
+    
+    /**
+     * 后端sport_type字符串转换为前端ExerciseType枚举
+     */
+    private fun sportTypeStringToEnum(sportType: String): ExerciseType {
+        return when (sportType.uppercase()) {
+            "CARDIO" -> ExerciseType.CARDIO
+            "STRENGTH" -> ExerciseType.STRENGTH
+            "FLEXIBILITY" -> ExerciseType.FLEXIBILITY
+            "SPORTS" -> ExerciseType.SPORTS
+            else -> ExerciseType.CARDIO // 默认值
+        }
+    }
+    
+    /**
+     * 前端ExerciseType枚举转换为后端sport_type字符串
+     */
+    private fun exerciseTypeEnumToString(exerciseType: ExerciseType): String {
+        return when (exerciseType) {
+            ExerciseType.CARDIO -> "CARDIO"
+            ExerciseType.STRENGTH -> "STRENGTH"
+            ExerciseType.FLEXIBILITY -> "FLEXIBILITY"
+            ExerciseType.SPORTS -> "SPORTS"
         }
     }
 }

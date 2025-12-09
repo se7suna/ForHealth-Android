@@ -7,6 +7,7 @@ import android.widget.ImageView
 import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
 import coil.load
+import coil.decode.SvgDecoder
 import com.example.forhealth.R
 import com.example.forhealth.models.ExerciseItem
 import com.example.forhealth.models.SelectedExerciseItem
@@ -39,7 +40,9 @@ class ExerciseListAdapter(
         val selected = selectedItems.find { it.exerciseItem.id == exercise.id }
 
         // 加载图片
-        holder.ivExerciseImage.load(exercise.image) {
+        var image_url = exercise.image.replace("127.0.0.1", "10.0.2.2")
+        holder.ivExerciseImage.load(image_url) {
+            decoderFactory { result, options, _ -> SvgDecoder(result.source, options) }
             placeholder(R.color.slate_100)
             error(R.color.slate_100)
         }
