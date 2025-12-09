@@ -7,16 +7,21 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import androidx.fragment.app.DialogFragment
+import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.example.forhealth.R
 import com.example.forhealth.databinding.FragmentAddMealBinding
 import com.example.forhealth.models.*
+import com.example.forhealth.network.ApiResult
+import com.example.forhealth.repositories.FoodRepository
 import com.example.forhealth.ui.adapters.CartFoodAdapter
 import com.example.forhealth.ui.adapters.FoodListAdapter
-import com.example.forhealth.utils.Constants
 import com.example.forhealth.utils.DateUtils
+import com.example.forhealth.viewmodels.MainViewModel
 import com.google.android.material.button.MaterialButton
-import java.util.*
+import com.google.gson.Gson
+import kotlinx.coroutines.launch
 
 class EditMealFragment : DialogFragment() {
     
@@ -28,12 +33,17 @@ class EditMealFragment : DialogFragment() {
     
     private val selectedItems = mutableListOf<SelectedFoodItem>()
     private var selectedType: MealType = MealType.BREAKFAST
-    private var filteredFood: List<FoodItem> = Constants.FOOD_DB
+    private val customFoods = mutableListOf<FoodItem>() // 保存的自定义食物
+    private var remoteFoods: List<FoodItem> = emptyList()
+    private var filteredFood: List<FoodItem> = emptyList()
+    private var currentQuery: String = ""
     private var isCartExpanded = false
     private var originalMealGroup: MealGroup? = null
     
     private lateinit var foodAdapter: FoodListAdapter
     private lateinit var cartAdapter: CartFoodAdapter
+    private val foodRepository = FoodRepository()
+    private lateinit var mainViewModel: MainViewModel
     
     fun setOnMealUpdatedListener(listener: (MealGroup) -> Unit) {
         onMealUpdatedListener = listener
@@ -50,27 +60,62 @@ class EditMealFragment : DialogFragment() {
         // 将MealItem转换为SelectedFoodItem
         selectedItems.clear()
         mealGroup.meals.forEach { meal ->
-            // 从meal反向查找对应的FoodItem
-            val foodItem = Constants.FOOD_DB.find { it.name == meal.name }
-            if (foodItem != null) {
-                // 计算数量（假设是unit模式，如果calories匹配则使用unit，否则计算gram）
-                val ratio = meal.calories / foodItem.calories
-                val count = if (ratio >= 0.9 && ratio <= 1.1) {
-                    // 接近1，可能是unit模式
-                    1.0
+            // 从meal创建FoodItem（使用meal中的信息）
+            // 直接使用meal中的信息创建FoodItem，因为我们已经有了完整的营养信息
+            val foodItem = createFoodItemFromMeal(meal)
+            
+            // 计算数量：根据servingAmount或通过营养值反推
+            val servingAmount = meal.servingAmount ?: 1.0
+            val count: Double
+            val mode: QuantityMode
+            
+            // 如果servingAmount接近1，可能是unit模式；否则计算gram
+            if (servingAmount >= 0.9 && servingAmount <= 1.1) {
+                count = 1.0
+                mode = QuantityMode.UNIT
+            } else {
+                // 根据营养值反推gram数
+                val ratio = if (foodItem.calories > 0) {
+                    meal.calories / foodItem.calories
                 } else {
-                    // 计算gram
-                    meal.calories / foodItem.calories * foodItem.gramsPerUnit
+                    servingAmount
                 }
-                val mode = if (ratio >= 0.9 && ratio <= 1.1) QuantityMode.UNIT else QuantityMode.GRAM
-                
-                selectedItems.add(SelectedFoodItem(
-                    foodItem = foodItem,
-                    count = count,
-                    mode = mode
-                ))
+                count = ratio * foodItem.gramsPerUnit
+                mode = QuantityMode.GRAM
             }
+            
+            selectedItems.add(SelectedFoodItem(
+                foodItem = foodItem,
+                count = count,
+                mode = mode
+            ))
         }
+    }
+    
+    private fun createFoodItemFromMeal(meal: MealItem): FoodItem {
+        // 使用meal中的信息创建FoodItem
+        // 根据servingAmount计算每单位营养值
+        val servingAmount = meal.servingAmount ?: 1.0
+        
+        // 默认使用100g作为单位（如果无法确定）
+        // 如果servingAmount是1，假设是1份（100g）；否则假设是gram数
+        val defaultGramsPerUnit = if (servingAmount >= 0.9 && servingAmount <= 1.1) {
+            100.0 // 1份 = 100g
+        } else {
+            servingAmount * 100.0 // 假设servingAmount是份数，每份100g
+        }
+        
+        return FoodItem(
+            id = meal.foodId ?: meal.id, // 使用foodId或record id
+            name = meal.name,
+            calories = meal.calories / servingAmount, // 每单位卡路里
+            protein = meal.protein / servingAmount,
+            carbs = meal.carbs / servingAmount,
+            fat = meal.fat / servingAmount,
+            unit = "份",
+            gramsPerUnit = defaultGramsPerUnit,
+            image = meal.image ?: ""
+        )
     }
     
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -102,12 +147,22 @@ class EditMealFragment : DialogFragment() {
         val titleView = binding.root.findViewById<android.widget.TextView>(R.id.tvTitle)
         titleView?.text = "Edit Meal"
         
+        // 复用父Fragment的MainViewModel（若失败则退回Activity作用域）
+        mainViewModel = try {
+            ViewModelProvider(requireParentFragment())[MainViewModel::class.java]
+        } catch (e: Exception) {
+            ViewModelProvider(requireActivity())[MainViewModel::class.java]
+        }
+        
         setupCloseButton()
         setupSearchBar()
         setupMealTypeTabs()
         setupCreateCustomFoodButton()
         setupFoodList()
         setupCart()
+        
+        // 初始化食物列表（调用仓库）
+        fetchFoods()
         
         // 初始显示购物车
         if (selectedItems.isNotEmpty()) {
@@ -128,7 +183,8 @@ class EditMealFragment : DialogFragment() {
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
             override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
             override fun afterTextChanged(s: Editable?) {
-                filterFood(s?.toString() ?: "")
+                currentQuery = s?.toString()?.trim() ?: ""
+                applyFoodFilter()
             }
         })
     }
@@ -184,7 +240,8 @@ class EditMealFragment : DialogFragment() {
         binding.btnCreateCustomFood.setOnClickListener {
             val customFoodFragment = CustomFoodFragment().apply {
                 setOnCustomFoodCreatedListener { foodItem ->
-                    // 将自定义食物添加到购物车
+                    // 将自定义食物添加到本地列表和购物车
+                    customFoods.add(foodItem)
                     addToCart(foodItem)
                     // 展开购物车
                     if (!isCartExpanded) {
@@ -207,15 +264,77 @@ class EditMealFragment : DialogFragment() {
         binding.rvFoodList.adapter = foodAdapter
     }
     
-    private fun filterFood(query: String) {
+    private fun applyFoodFilter() {
+        val query = currentQuery
+        val combined = remoteFoods + customFoods.filter {
+            query.isBlank() || it.name.contains(query, ignoreCase = true)
+        }
         filteredFood = if (query.isBlank()) {
-            Constants.FOOD_DB
+            combined
         } else {
-            Constants.FOOD_DB.filter {
-                it.name.contains(query, ignoreCase = true)
-            }
+            combined.filter { it.name.contains(query, ignoreCase = true) }
         }
         updateFoodList()
+    }
+    
+    private fun fetchFoods() {
+        lifecycleScope.launch {
+            when (val result = foodRepository.searchFoods()) {
+                is ApiResult.Success -> {
+                    remoteFoods = parseFoods(result.data)
+                    applyFoodFilter()
+                }
+                is ApiResult.Error -> {
+                    android.widget.Toast.makeText(requireContext(), result.message, android.widget.Toast.LENGTH_SHORT).show()
+                }
+                is ApiResult.Loading -> { /* no-op */ }
+            }
+        }
+    }
+    
+    private fun parseFoods(data: Any): List<FoodItem> {
+        val gson = Gson()
+        return try {
+            val simplified = gson.fromJson(gson.toJson(data), com.example.forhealth.network.dto.food.SimplifiedFoodListResponse::class.java)
+            simplified.foods.map { mapSimplifiedItem(it) }
+        } catch (_: Exception) {
+            try {
+                val full = gson.fromJson(gson.toJson(data), com.example.forhealth.network.dto.food.FoodListResponse::class.java)
+                full.foods.map { mapFullItem(it) }
+            } catch (_: Exception) {
+                emptyList()
+            }
+        }
+    }
+    
+    private fun mapSimplifiedItem(item: com.example.forhealth.network.dto.food.SimplifiedFoodSearchItem): FoodItem {
+        val id = item.food_id ?: item.boohee_id?.toString() ?: item.code
+        return FoodItem(
+            id = id,
+            name = item.name,
+            calories = item.nutrition.calories,
+            protein = item.nutrition.protein,
+            carbs = item.nutrition.carbohydrates,
+            fat = item.nutrition.fat,
+            unit = item.weight_unit,
+            gramsPerUnit = item.weight,
+            image = item.image_url ?: ""
+        )
+    }
+    
+    private fun mapFullItem(item: com.example.forhealth.network.dto.food.FoodSearchItemResponse): FoodItem {
+        val id = item.food_id ?: item.boohee_id?.toString() ?: item.code
+        return FoodItem(
+            id = id,
+            name = item.name,
+            calories = item.nutrition_per_serving.calories,
+            protein = item.nutrition_per_serving.protein,
+            carbs = item.nutrition_per_serving.carbohydrates,
+            fat = item.nutrition_per_serving.fat,
+            unit = item.weight_unit,
+            gramsPerUnit = item.weight,
+            image = item.image_url ?: ""
+        )
     }
     
     private fun updateFoodList() {
@@ -260,9 +379,25 @@ class EditMealFragment : DialogFragment() {
         
         binding.btnDeleteRecord.setOnClickListener {
             originalMealGroup?.id?.let { mealGroupId ->
-                onMealDeletedListener?.invoke(mealGroupId)
+                // 通过ViewModel删除（会调用API）
+                lifecycleScope.launch {
+                    mainViewModel.deleteMealRecord(mealGroupId) { result ->
+                        when (result) {
+                            is ApiResult.Success -> {
+                                onMealDeletedListener?.invoke(mealGroupId)
+                                dismiss()
+                            }
+                            is ApiResult.Error -> {
+                                android.widget.Toast.makeText(requireContext(), result.message, android.widget.Toast.LENGTH_SHORT).show()
+                            }
+                            is ApiResult.Loading -> {}
+                        }
+                    }
+                }
+            } ?: run {
+                // 如果没有mealGroupId，直接关闭
+                dismiss()
             }
-            dismiss()
         }
         
         cartAdapter = CartFoodAdapter(
@@ -439,36 +574,84 @@ class EditMealFragment : DialogFragment() {
         // 如果购物车为空，删除整个meal group
         if (selectedItems.isEmpty()) {
             originalMealGroup?.id?.let { mealGroupId ->
-                onMealDeletedListener?.invoke(mealGroupId)
+                // 通过ViewModel删除
+                lifecycleScope.launch {
+                    mainViewModel.deleteMealRecord(mealGroupId) { result ->
+                        when (result) {
+                            is ApiResult.Success -> {
+                                onMealDeletedListener?.invoke(mealGroupId)
+                                dismiss()
+                            }
+                            is ApiResult.Error -> {
+                                android.widget.Toast.makeText(requireContext(), result.message, android.widget.Toast.LENGTH_SHORT).show()
+                            }
+                            is ApiResult.Loading -> {}
+                        }
+                    }
+                }
+            } ?: run {
+                // 如果没有mealGroupId，直接关闭
+                dismiss()
             }
-            dismiss()
             return
         }
         
-        val meals = selectedItems.map { item ->
-            val macros = calculateItemMacros(item)
-            MealItem(
-                id = UUID.randomUUID().toString(),
-                name = item.foodItem.name,
-                calories = macros.calories,
-                protein = macros.protein,
-                carbs = macros.carbs,
-                fat = macros.fat,
-                time = originalMealGroup?.time ?: DateUtils.getCurrentTime(),
-                type = selectedType,
-                image = item.foodItem.image
-            )
-        }
-        
+        // 创建新的MealGroup（包含所有selectedItems）
+        val currentTime = originalMealGroup?.time ?: DateUtils.getCurrentDateTimeIso()
         val mealGroup = MealGroup(
-            id = originalMealGroup?.id ?: UUID.randomUUID().toString(),
-            meals = meals,
-            time = originalMealGroup?.time ?: DateUtils.getCurrentTime(),
+            id = originalMealGroup?.id ?: "", // 使用原始ID
+            meals = selectedItems.map { item ->
+                val macros = calculateItemMacros(item)
+                MealItem(
+                    id = "", // 将在ViewModel中设置
+                    name = item.foodItem.name,
+                    calories = macros.calories,
+                    protein = macros.protein,
+                    carbs = macros.carbs,
+                    fat = macros.fat,
+                    time = currentTime,
+                    type = selectedType,
+                    image = item.foodItem.image,
+                    foodId = item.foodItem.id,
+                    servingAmount = if (item.mode == QuantityMode.GRAM) {
+                        item.count / item.foodItem.gramsPerUnit
+                    } else {
+                        item.count
+                    }
+                )
+            },
+            time = currentTime,
             type = selectedType
         )
         
-        onMealUpdatedListener?.invoke(mealGroup)
-        dismiss()
+        // 通过ViewModel更新
+        setSaveButtonsEnabled(false)
+        lifecycleScope.launch {
+            mainViewModel.updateMealGroupRecords(
+                originalMealGroup = originalMealGroup,
+                newMealGroup = mealGroup,
+                selectedItems = selectedItems.toList()
+            ) { result ->
+                when (result) {
+                    is ApiResult.Success -> {
+                        onMealUpdatedListener?.invoke(result.data)
+                        dismiss()
+                    }
+                    is ApiResult.Error -> {
+                        android.widget.Toast.makeText(requireContext(), result.message, android.widget.Toast.LENGTH_SHORT).show()
+                        setSaveButtonsEnabled(true)
+                    }
+                    is ApiResult.Loading -> {}
+                }
+            }
+        }
+    }
+    
+    private fun setSaveButtonsEnabled(enabled: Boolean) {
+        binding.btnSave.isEnabled = enabled
+        binding.btnAddNowCollapsed.isEnabled = enabled
+        binding.btnSave.text = if (enabled) getString(R.string.add_meal) else "Saving..."
+        binding.btnAddNowCollapsed.text = if (enabled) getString(R.string.add_meal) else "Saving..."
     }
     
     override fun onDestroyView() {

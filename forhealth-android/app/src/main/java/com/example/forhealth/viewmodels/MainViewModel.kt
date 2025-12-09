@@ -219,6 +219,7 @@ class MainViewModel : ViewModel() {
     }
     
     fun updateMealGroup(mealGroup: MealGroup) {
+        // 这个方法保留用于向后兼容，但实际应该使用updateMealGroupRecords
         val currentMeals = _meals.value ?: emptyList()
         
         // 通过 MealGroup 的 id 找到对应的原始 meal
@@ -255,6 +256,202 @@ class MainViewModel : ViewModel() {
         updateTimeline()
     }
     
+    /**
+     * 更新餐食组记录（通过API）
+     * 比较原始MealGroup和新的MealGroup，执行更新/删除/创建操作
+     */
+    fun updateMealGroupRecords(
+        originalMealGroup: MealGroup?,
+        newMealGroup: MealGroup,
+        selectedItems: List<SelectedFoodItem>,
+        onResult: (ApiResult<MealGroup>) -> Unit
+    ) {
+        viewModelScope.launch {
+            if (originalMealGroup == null) {
+                // 如果没有原始数据，直接创建新记录
+                createMealRecords(
+                    items = selectedItems,
+                    mealType = newMealGroup.type,
+                    time = newMealGroup.time
+                ) { result ->
+                    when (result) {
+                        is ApiResult.Success<*> -> {
+                            @Suppress("UNCHECKED_CAST")
+                            val mealItems = result.data as List<MealItem>
+                            val mealGroup = MealGroup(
+                                id = mealItems.firstOrNull()?.id ?: "",
+                                meals = mealItems,
+                                time = newMealGroup.time,
+                                type = newMealGroup.type
+                            )
+                            onResult(ApiResult.Success(mealGroup))
+                        }
+                        is ApiResult.Error -> onResult(ApiResult.Error(result.message))
+                        is ApiResult.Loading -> onResult(result)
+                    }
+                }
+                return@launch
+            }
+            
+            // 获取原始meal group中的所有记录ID
+            val originalMealIds = originalMealGroup.meals.mapNotNull { it.id }.filter { it.isNotBlank() }
+            val newMealCount = selectedItems.size
+            
+            // 策略：
+            // 1. 如果新记录数量 <= 原始记录数量，更新前N条，删除剩余的
+            // 2. 如果新记录数量 > 原始记录数量，更新所有原始记录，创建新的记录
+            
+            val updatedMeals = mutableListOf<MealItem>()
+            var updateIndex = 0
+            var hasError = false
+            var errorMessage = ""
+            
+            // 先更新现有记录
+            for (i in originalMealIds.indices) {
+                if (updateIndex >= selectedItems.size) {
+                    // 新记录数量少于原始记录，删除剩余的
+                    when (val deleteResult = mealRepository.deleteFoodRecord(originalMealIds[i])) {
+                        is ApiResult.Success -> { /* 删除成功 */ }
+                        is ApiResult.Error -> {
+                            hasError = true
+                            errorMessage = deleteResult.message
+                            break
+                        }
+                        is ApiResult.Loading -> {}
+                    }
+                } else {
+                    // 更新现有记录
+                    val item = selectedItems[updateIndex]
+                    val macros = calculateMacrosFromSelectedItem(item)
+                    val mealItem = MealItem(
+                        id = originalMealIds[i],
+                        name = item.foodItem.name,
+                        calories = macros.calories,
+                        protein = macros.protein,
+                        carbs = macros.carbs,
+                        fat = macros.fat,
+                        time = newMealGroup.time,
+                        type = newMealGroup.type,
+                        image = item.foodItem.image,
+                        foodId = item.foodItem.id,
+                        servingAmount = if (item.mode == com.example.forhealth.models.QuantityMode.GRAM) {
+                            item.count / item.foodItem.gramsPerUnit
+                        } else {
+                            item.count
+                        }
+                    )
+                    
+                    val request = mealItemToFoodRecordUpdateRequest(mealItem)
+                    when (val updateResult = mealRepository.updateFoodRecord(originalMealIds[i], request)) {
+                        is ApiResult.Success -> {
+                            val updatedMeal = foodRecordResponseToMealItem(updateResult.data)
+                            updatedMeals.add(updatedMeal)
+                        }
+                        is ApiResult.Error -> {
+                            hasError = true
+                            errorMessage = updateResult.message
+                            break
+                        }
+                        is ApiResult.Loading -> {}
+                    }
+                    updateIndex++
+                }
+            }
+            
+            if (hasError) {
+                onResult(ApiResult.Error(errorMessage))
+                return@launch
+            }
+            
+            // 创建新记录（如果新记录数量 > 原始记录数量）
+            if (updateIndex < selectedItems.size) {
+                val remainingItems = selectedItems.subList(updateIndex, selectedItems.size)
+                // 先保存当前meals状态，因为createMealRecords会自动更新
+                val currentMealsBeforeCreate = _meals.value ?: emptyList()
+                val targetMeal = currentMealsBeforeCreate.find { it.id == originalMealGroup.id }
+                
+                createMealRecords(
+                    items = remainingItems,
+                    mealType = newMealGroup.type,
+                    time = newMealGroup.time
+                ) { result ->
+                    when (result) {
+                        is ApiResult.Success<*> -> {
+                            @Suppress("UNCHECKED_CAST")
+                            val newMeals = result.data as List<MealItem>
+                            updatedMeals.addAll(newMeals)
+                            val mealGroup = MealGroup(
+                                id = updatedMeals.firstOrNull()?.id ?: "",
+                                meals = updatedMeals,
+                                time = newMealGroup.time,
+                                type = newMealGroup.type
+                            )
+                            // 更新本地状态：移除旧的meal group和createMealRecords自动添加的新meals，然后添加完整的updatedMeals
+                            val currentMealsAfterCreate = _meals.value ?: emptyList()
+                            val updatedMealsList = if (targetMeal != null) {
+                                // 移除旧的meal group和自动添加的新meals
+                                currentMealsAfterCreate.filterNot { meal ->
+                                    (meal.time == targetMeal.time && meal.type == targetMeal.type) ||
+                                    newMeals.any { it.id == meal.id }
+                                } + updatedMeals
+                            } else {
+                                // 移除自动添加的新meals，然后添加完整的updatedMeals
+                                currentMealsAfterCreate.filterNot { meal ->
+                                    newMeals.any { it.id == meal.id }
+                                } + updatedMeals
+                            }
+                            setMeals(updatedMealsList)
+                            onResult(ApiResult.Success(mealGroup))
+                        }
+                        is ApiResult.Error -> onResult(ApiResult.Error(result.message))
+                        is ApiResult.Loading -> onResult(result)
+                    }
+                }
+            } else {
+                // 所有记录都已更新
+                val mealGroup = MealGroup(
+                    id = updatedMeals.firstOrNull()?.id ?: "",
+                    meals = updatedMeals,
+                    time = newMealGroup.time,
+                    type = newMealGroup.type
+                )
+                // 更新本地状态
+                val currentMeals = _meals.value ?: emptyList()
+                val targetMeal = currentMeals.find { it.id == originalMealGroup.id }
+                val updatedMealsList = if (targetMeal != null) {
+                    currentMeals.filterNot { meal ->
+                        meal.time == targetMeal.time && meal.type == targetMeal.type
+                    } + updatedMeals
+                } else {
+                    currentMeals + updatedMeals
+                }
+                setMeals(updatedMealsList)
+                onResult(ApiResult.Success(mealGroup))
+            }
+        }
+    }
+    
+    private fun calculateMacrosFromSelectedItem(item: SelectedFoodItem): MacroResult {
+        val ratio = if (item.mode == com.example.forhealth.models.QuantityMode.GRAM) {
+            item.count / item.foodItem.gramsPerUnit
+        } else {
+            item.count
+        }
+        return MacroResult(
+            calories = item.foodItem.calories * ratio,
+            protein = item.foodItem.protein * ratio,
+            carbs = item.foodItem.carbs * ratio,
+            fat = item.foodItem.fat * ratio
+        )
+    }
+    
+    private data class MacroResult(
+        val calories: Double,
+        val protein: Double,
+        val carbs: Double,
+        val fat: Double
+    )
+    
     fun updateWorkoutGroup(workoutGroup: WorkoutGroup) {
         val currentExercises = _exercises.value ?: emptyList()
         
@@ -277,6 +474,7 @@ class MainViewModel : ViewModel() {
     }
     
     fun deleteMealGroup(mealGroupId: String) {
+        // 这个方法保留用于向后兼容，但实际应该使用deleteMealRecord
         val currentMeals = _meals.value ?: emptyList()
         
         // 找到对应的meal group并删除所有meals
@@ -540,17 +738,45 @@ class MainViewModel : ViewModel() {
     }
     
     /**
-     * 删除食物记录
+     * 删除食物记录（单个记录）
      */
     fun deleteMealRecord(recordId: String, onResult: (ApiResult<Boolean>) -> Unit) {
         viewModelScope.launch {
-            when (val result = mealRepository.deleteFoodRecord(recordId)) {
-                is ApiResult.Success -> {
-                    deleteMealGroup(recordId) // 使用现有的删除方法
-                    onResult(ApiResult.Success(true))
+            // 先找到该记录对应的meal group（通过time和type）
+            val currentMeals = _meals.value ?: emptyList()
+            val targetMeal = currentMeals.find { it.id == recordId }
+            
+            if (targetMeal == null) {
+                onResult(ApiResult.Error("找不到要删除的记录"))
+                return@launch
+            }
+            
+            // 找到同一meal group的所有记录（相同time和type）
+            val mealGroupRecords = currentMeals.filter { 
+                it.time == targetMeal.time && it.type == targetMeal.type 
+            }
+            
+            // 逐个删除所有记录
+            var hasError = false
+            var errorMessage = ""
+            for (meal in mealGroupRecords) {
+                when (val result = mealRepository.deleteFoodRecord(meal.id)) {
+                    is ApiResult.Success -> { /* 删除成功 */ }
+                    is ApiResult.Error -> {
+                        hasError = true
+                        errorMessage = result.message
+                        break
+                    }
+                    is ApiResult.Loading -> {}
                 }
-                is ApiResult.Error -> onResult(ApiResult.Error(result.message))
-                is ApiResult.Loading -> onResult(result)
+            }
+            
+            if (hasError) {
+                onResult(ApiResult.Error(errorMessage))
+            } else {
+                // 更新本地状态
+                deleteMealGroup(recordId) // 使用现有的删除方法更新本地状态
+                onResult(ApiResult.Success(true))
             }
         }
     }
