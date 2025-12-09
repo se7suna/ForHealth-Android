@@ -320,7 +320,8 @@ class HomeFragment : Fragment() {
                         .setDuration(300)
                         .start()
                     
-                    // 更新Analytics视图
+                    // 加载Analytics数据并更新视图
+                    loadAnalyticsData()
                     updateAnalyticsDisplay()
                 }
                 .start()
@@ -335,18 +336,102 @@ class HomeFragment : Fragment() {
         binding.btnRangeDay.setOnClickListener {
             currentRange = AnalyticsRange.DAY
             updateRangeButtons()
-            updateAnalyticsDisplay()
+            loadAnalyticsData()
         }
         binding.btnRangeWeek.setOnClickListener {
             currentRange = AnalyticsRange.WEEK
             updateRangeButtons()
-            updateAnalyticsDisplay()
+            loadAnalyticsData()
         }
         binding.btnRangeMonth.setOnClickListener {
             currentRange = AnalyticsRange.MONTH
             updateRangeButtons()
-            updateAnalyticsDisplay()
+            loadAnalyticsData()
         }
+    }
+    
+    /**
+     * 根据当前范围加载Analytics数据
+     */
+    private fun loadAnalyticsData() {
+        when (currentRange) {
+            AnalyticsRange.DAY -> {
+                // 日视图：加载每日卡路里摘要（会自动加载营养素分析）
+                val today = getTodayDateString()
+                viewModel.loadDailyCalorieSummary(today)
+            }
+            AnalyticsRange.WEEK -> {
+                // 周视图：加载最近7天的时间序列趋势和营养素分析
+                val (startDate, endDate) = getWeekDateRange()
+                viewModel.loadTimeSeriesTrend(startDate, endDate, "day")
+                viewModel.loadNutritionAnalysis(startDate, endDate, null)
+            }
+            AnalyticsRange.MONTH -> {
+                // 月视图：加载最近28天的时间序列趋势和营养素分析
+                val (startDate, endDate) = getMonthDateRange()
+                viewModel.loadTimeSeriesTrend(startDate, endDate, "week")
+                viewModel.loadNutritionAnalysis(startDate, endDate, null)
+            }
+        }
+    }
+    
+    /**
+     * 获取今天的日期字符串（YYYY-MM-DD）
+     */
+    private fun getTodayDateString(): String {
+        val calendar = java.util.Calendar.getInstance()
+        val year = calendar.get(java.util.Calendar.YEAR)
+        val month = calendar.get(java.util.Calendar.MONTH) + 1
+        val day = calendar.get(java.util.Calendar.DAY_OF_MONTH)
+        return String.format("%04d-%02d-%02d", year, month, day)
+    }
+    
+    /**
+     * 获取周视图的日期范围（最近7天）
+     * @return Pair(startDate, endDate) 格式为 YYYY-MM-DD
+     */
+    private fun getWeekDateRange(): Pair<String, String> {
+        val calendar = java.util.Calendar.getInstance()
+        val endDate = calendar.clone() as java.util.Calendar
+        
+        // 开始日期：7天前
+        calendar.add(java.util.Calendar.DAY_OF_MONTH, -6) // -6 因为包含今天，所以是7天
+        
+        val startYear = calendar.get(java.util.Calendar.YEAR)
+        val startMonth = calendar.get(java.util.Calendar.MONTH) + 1
+        val startDay = calendar.get(java.util.Calendar.DAY_OF_MONTH)
+        val startDate = String.format("%04d-%02d-%02d", startYear, startMonth, startDay)
+        
+        val endYear = endDate.get(java.util.Calendar.YEAR)
+        val endMonth = endDate.get(java.util.Calendar.MONTH) + 1
+        val endDay = endDate.get(java.util.Calendar.DAY_OF_MONTH)
+        val endDateStr = String.format("%04d-%02d-%02d", endYear, endMonth, endDay)
+        
+        return Pair(startDate, endDateStr)
+    }
+    
+    /**
+     * 获取月视图的日期范围（最近28天）
+     * @return Pair(startDate, endDate) 格式为 YYYY-MM-DD
+     */
+    private fun getMonthDateRange(): Pair<String, String> {
+        val calendar = java.util.Calendar.getInstance()
+        val endDate = calendar.clone() as java.util.Calendar
+        
+        // 开始日期：28天前
+        calendar.add(java.util.Calendar.DAY_OF_MONTH, -27) // -27 因为包含今天，所以是28天
+        
+        val startYear = calendar.get(java.util.Calendar.YEAR)
+        val startMonth = calendar.get(java.util.Calendar.MONTH) + 1
+        val startDay = calendar.get(java.util.Calendar.DAY_OF_MONTH)
+        val startDate = String.format("%04d-%02d-%02d", startYear, startMonth, startDay)
+        
+        val endYear = endDate.get(java.util.Calendar.YEAR)
+        val endMonth = endDate.get(java.util.Calendar.MONTH) + 1
+        val endDay = endDate.get(java.util.Calendar.DAY_OF_MONTH)
+        val endDateStr = String.format("%04d-%02d-%02d", endYear, endMonth, endDay)
+        
+        return Pair(startDate, endDateStr)
     }
     
     private fun updateRangeButtons() {
@@ -371,8 +456,7 @@ class HomeFragment : Fragment() {
     
     private fun updateAnalyticsDisplay() {
         val stats = viewModel.dailyStats.value ?: DailyStats.getInitial()
-        val meals = viewModel.meals.value ?: emptyList()
-        val exercises = viewModel.exercises.value ?: emptyList()
+        val dailyCalorieSummary = viewModel.dailyCalorieSummary.value
         
         // 根据范围更新Activity Trend标题
         val activityTitle = binding.root.findViewById<android.widget.TextView>(R.id.tvActivityTrendTitle)
@@ -382,24 +466,44 @@ class HomeFragment : Fragment() {
             getString(R.string.activity_trend)
         }
         
-        // 生成图表数据
-        val chartData = generateChartData(stats, meals, exercises)
+        // 生成图表数据（使用后端数据）
+        val chartData = generateChartData()
         drawActivityChart(chartData)
         
         // 计算显示值（日：总数，周/月：平均值）
         val (intakeDisplay, burnedDisplay, labelText) = when (currentRange) {
             AnalyticsRange.DAY -> {
-                Triple(stats.calories.current, stats.burned, getString(R.string.total_intake))
+                // 日视图：使用后端 daily-calorie-summary 数据，如果未加载则设为0
+                if (dailyCalorieSummary != null) {
+                    Triple(
+                        dailyCalorieSummary.total_intake,
+                        dailyCalorieSummary.total_burned,
+                        getString(R.string.total_intake)
+                    )
+                } else {
+                    // 如果后端数据未加载，设为0（不再使用本地数据）
+                    Triple(0.0, 0.0, getString(R.string.total_intake))
+                }
             }
             AnalyticsRange.WEEK -> {
-                val avgIntake = chartData.sumOf { it.intake } / 7.0
-                val avgBurned = chartData.sumOf { it.burned } / 7.0
-                Triple(avgIntake, avgBurned, getString(R.string.avg_intake))
+                // 周视图：计算平均值
+                if (chartData.isNotEmpty()) {
+                    val avgIntake = chartData.sumOf { it.intake } / chartData.size.toDouble()
+                    val avgBurned = chartData.sumOf { it.burned } / chartData.size.toDouble()
+                    Triple(avgIntake, avgBurned, getString(R.string.avg_intake))
+                } else {
+                    Triple(0.0, 0.0, getString(R.string.avg_intake))
+                }
             }
             AnalyticsRange.MONTH -> {
-                val avgIntake = chartData.sumOf { it.intake } / 28.0
-                val avgBurned = chartData.sumOf { it.burned } / 28.0
-                Triple(avgIntake, avgBurned, getString(R.string.avg_intake))
+                // 月视图：计算平均值
+                if (chartData.isNotEmpty()) {
+                    val avgIntake = chartData.sumOf { it.intake } / chartData.size.toDouble()
+                    val avgBurned = chartData.sumOf { it.burned } / chartData.size.toDouble()
+                    Triple(avgIntake, avgBurned, getString(R.string.avg_intake))
+                } else {
+                    Triple(0.0, 0.0, getString(R.string.avg_intake))
+                }
             }
         }
         
@@ -417,30 +521,25 @@ class HomeFragment : Fragment() {
         binding.tvSumLabel.text = sumLabel
         binding.tvSum.text = "${Math.round(sumValue)} ${getString(R.string.kcal)}"
         
-        // 计算宏量营养素（基于卡路里）
-        val proteinCal = stats.protein.current * 4
-        val carbsCal = stats.carbs.current * 4
-        val fatCal = stats.fat.current * 9
+        // 获取宏量营养素数据（从后端 nutrition-analysis API）
+        val macroData = viewModel.macroDataForChart.value
+        
+        // 计算宏量营养素（使用后端数据，如果未加载则设为0）
+        val proteinCal = macroData?.proteinCalories ?: 0.0
+        val carbsCal = macroData?.carbsCalories ?: 0.0
+        val fatCal = macroData?.fatCalories ?: 0.0
         val totalMacroCal = proteinCal + carbsCal + fatCal
+        val totalIntakeValue = macroData?.totalCalories ?: intakeDisplay
         
-        // 计算总摄入量（根据当前范围）
-        val totalIntakeValue = when (currentRange) {
-            AnalyticsRange.DAY -> intakeDisplay
-            AnalyticsRange.WEEK -> chartData.sumOf { it.intake }
-            AnalyticsRange.MONTH -> chartData.sumOf { it.intake }
-        }
-        
-        // 检查是否有记录（meals或exercises不为空）
-        val hasRecords = meals.isNotEmpty() || exercises.isNotEmpty()
-        
-        // 更新甜甜圈图（如果没有记录，传入0值以显示灰色圆环）
-        if (hasRecords) {
+        // 更新甜甜圈图（如果后端数据未加载，传入0值以显示灰色圆环）
+        if (macroData != null && totalIntakeValue > 0) {
             binding.macroDonutChart.setMacros(proteinCal, carbsCal, fatCal, totalIntakeValue)
         } else {
             binding.macroDonutChart.setMacros(0.0, 0.0, 0.0, 0.0)
         }
         
-        if (totalMacroCal > 0) {
+        // 计算并显示百分比
+        if (totalMacroCal > 0 && macroData != null) {
             val proteinPct = (proteinCal / totalMacroCal * 100).toInt()
             val carbsPct = (carbsCal / totalMacroCal * 100).toInt()
             val fatPct = (fatCal / totalMacroCal * 100).toInt()
@@ -452,6 +551,7 @@ class HomeFragment : Fragment() {
             binding.tvMacroFat.text = "Fat: ${fatPct}%"
             binding.tvMacroFat.setTextColor(resources.getColor(R.color.rose_400, null))
         } else {
+            // 如果后端数据未加载，显示0%（不再使用本地数据）
             binding.tvMacroProtein.text = "Protein: 0%"
             binding.tvMacroProtein.setTextColor(resources.getColor(R.color.blue_500, null))
             binding.tvMacroCarbs.text = "Carbs: 0%"
@@ -461,58 +561,41 @@ class HomeFragment : Fragment() {
         }
     }
     
-    private fun generateChartData(
-        stats: DailyStats,
-        meals: List<com.example.forhealth.models.MealItem>,
-        exercises: List<com.example.forhealth.models.ActivityItem>
-    ): List<com.example.forhealth.ui.views.ChartDataPoint> {
+    /**
+     * 生成图表数据（使用后端API数据）
+     */
+    private fun generateChartData(): List<com.example.forhealth.ui.views.ChartDataPoint> {
         return when (currentRange) {
             AnalyticsRange.DAY -> {
-                // 日视图：单个数据点（用于柱状图）
-                val totalCals = meals.sumOf { it.calories }.toDouble()
-                val totalBurn = exercises.sumOf { it.caloriesBurned }.toDouble()
-                
-                listOf(
-                    com.example.forhealth.ui.views.ChartDataPoint(
-                        label = "Today",
-                        intake = if (totalCals > 0) totalCals else 1800.0,
-                        burned = if (totalBurn > 0) totalBurn else 400.0
+                // 日视图：使用 daily-calorie-summary 数据
+                val dailyCalorieSummary = viewModel.dailyCalorieSummary.value
+                if (dailyCalorieSummary != null) {
+                    listOf(
+                        com.example.forhealth.ui.views.ChartDataPoint(
+                            label = "Today",
+                            intake = dailyCalorieSummary.total_intake,
+                            burned = dailyCalorieSummary.total_burned
+                        )
                     )
-                )
-            }
-            AnalyticsRange.WEEK -> {
-                // 周视图：7天
-                val days = listOf("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun")
-                val totalCals = meals.sumOf { it.calories }.toDouble()
-                val totalBurn = exercises.sumOf { it.caloriesBurned }.toDouble()
-                
-                days.mapIndexed { index, day ->
-                    if (day == "Tue") {
-                        // 当前日使用真实数据
+                } else {
+                    // 如果数据未加载，返回空数据点
+                    listOf(
                         com.example.forhealth.ui.views.ChartDataPoint(
-                            label = day,
-                            intake = if (totalCals > 0) totalCals else 1800.0,
-                            burned = if (totalBurn > 0) totalBurn else 400.0
+                            label = "Today",
+                            intake = 0.0,
+                            burned = 0.0
                         )
-                    } else {
-                        // 其他天使用模拟数据
-                        com.example.forhealth.ui.views.ChartDataPoint(
-                            label = day,
-                            intake = 1800.0 + Math.random() * 600 - 300,
-                            burned = 400.0 + Math.random() * 300 - 100
-                        )
-                    }
+                    )
                 }
             }
-            AnalyticsRange.MONTH -> {
-                // 月视图：4周
-                val weeks = listOf("W1", "W2", "W3", "W4")
-                weeks.map { week ->
-                    com.example.forhealth.ui.views.ChartDataPoint(
-                        label = week,
-                        intake = 12000.0 + Math.random() * 2000,
-                        burned = 3000.0 + Math.random() * 1000
-                    )
+            AnalyticsRange.WEEK, AnalyticsRange.MONTH -> {
+                // 周/月视图：使用 time-series-trend 数据
+                val timeSeriesData = viewModel.timeSeriesTrendData.value ?: emptyList()
+                if (timeSeriesData.isNotEmpty()) {
+                    timeSeriesData
+                } else {
+                    // 如果数据未加载，返回空列表
+                    emptyList()
                 }
             }
         }
@@ -537,23 +620,6 @@ class HomeFragment : Fragment() {
         // 观察统计数据
         viewModel.dailyStats.observe(viewLifecycleOwner) { stats ->
             updateStatsDisplay(stats)
-            // 如果Analytics视图可见，也更新它
-            if (binding.scrollAnalytics.visibility == View.VISIBLE) {
-                updateAnalyticsDisplay()
-            }
-        }
-        
-        // 观察meals和exercises变化，更新Analytics视图
-        viewModel.meals.observe(viewLifecycleOwner) {
-            if (binding.scrollAnalytics.visibility == View.VISIBLE) {
-                updateAnalyticsDisplay()
-            }
-        }
-        
-        viewModel.exercises.observe(viewLifecycleOwner) {
-            if (binding.scrollAnalytics.visibility == View.VISIBLE) {
-                updateAnalyticsDisplay()
-            }
         }
         
         // 观察时间线数据
@@ -568,6 +634,37 @@ class HomeFragment : Fragment() {
                 binding.cardAiInsight.visibility = View.VISIBLE
             } else {
                 binding.cardAiInsight.visibility = View.GONE
+            }
+        }
+        
+        // 观察用户资料，更新问候语
+        viewModel.userProfileResponse.observe(viewLifecycleOwner) { profileResponse ->
+            profileResponse?.username?.let { username ->
+                binding.tvGreeting.text = "Hello, $username"
+            } ?: run {
+                binding.tvGreeting.text = getString(R.string.hello_user)
+            }
+        }
+        
+        // 观察每日卡路里摘要，更新Analytics视图（日视图）
+        viewModel.dailyCalorieSummary.observe(viewLifecycleOwner) {
+            if (binding.scrollAnalytics.visibility == View.VISIBLE && currentRange == AnalyticsRange.DAY) {
+                updateAnalyticsDisplay()
+            }
+        }
+        
+        // 观察时间序列趋势数据，更新Analytics视图（周/月视图）
+        viewModel.timeSeriesTrendData.observe(viewLifecycleOwner) {
+            if (binding.scrollAnalytics.visibility == View.VISIBLE && 
+                (currentRange == AnalyticsRange.WEEK || currentRange == AnalyticsRange.MONTH)) {
+                updateAnalyticsDisplay()
+            }
+        }
+        
+        // 观察宏量营养素数据，更新Analytics视图（饼图）
+        viewModel.macroDataForChart.observe(viewLifecycleOwner) {
+            if (binding.scrollAnalytics.visibility == View.VISIBLE) {
+                updateAnalyticsDisplay()
             }
         }
     }

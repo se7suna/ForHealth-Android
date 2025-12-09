@@ -35,7 +35,9 @@ class MealGroupFoodAdapter(
         holder.tvFoodDetails.text = "${meal.protein.toInt()}P • ${meal.carbs.toInt()}C • ${meal.fat.toInt()}F"
         
         meal.image?.let {
-            holder.ivFoodImage.load(it) {
+            // 加载图片（将 127.0.0.1 映射为 Android 模拟器可访问的 10.0.2.2）
+            val imageUrl = it.replace("127.0.0.1", "10.0.2.2")
+            holder.ivFoodImage.load(imageUrl) {
                 placeholder(R.color.slate_100)
                 error(R.color.slate_100)
             }

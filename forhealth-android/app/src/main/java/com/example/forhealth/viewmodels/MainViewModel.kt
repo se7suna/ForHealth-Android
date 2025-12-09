@@ -25,10 +25,14 @@ import com.example.forhealth.network.dto.sports.SearchSportRecordsResponse
 import com.example.forhealth.network.dto.sports.SearchSportsResponse
 import com.example.forhealth.network.dto.sports.UpdateSportsRecordRequest
 import com.example.forhealth.models.ExerciseType
+import com.example.forhealth.network.dto.visualization.*
 import com.example.forhealth.repositories.MealRepository
 import com.example.forhealth.repositories.ExerciseRepository
+import com.example.forhealth.ui.views.ChartDataPoint
 import com.example.forhealth.utils.DateUtils
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -111,9 +115,6 @@ class MainViewModel : ViewModel() {
         
         _meals.value = resultMeals
         
-        // 重新计算所有统计数据
-        recalculateStats()
-        
         // 更新时间线
         updateTimeline()
         
@@ -132,6 +133,9 @@ class MainViewModel : ViewModel() {
         val burned = exercises.sumOf { it.caloriesBurned }
         val currentStats = _dailyStats.value ?: DailyStats.getInitial()
         _dailyStats.value = currentStats.copy(burned = currentStats.burned + burned)
+        
+        // 重新加载每日卡路里摘要以更新圆环
+        loadDailyCalorieSummary(null)
         
         // 更新时间线
         updateTimeline()
@@ -181,7 +185,6 @@ class MainViewModel : ViewModel() {
      */
     fun setMeals(meals: List<MealItem>) {
         _meals.value = meals
-        recalculateStats()
         updateTimeline()
     }
     
@@ -276,9 +279,6 @@ class MainViewModel : ViewModel() {
             _meals.value = finalMeals
         }
         
-        // 重新计算统计数据
-        recalculateStats()
-        
         // 更新时间线
         updateTimeline()
     }
@@ -371,7 +371,7 @@ class MainViewModel : ViewModel() {
                     val request = mealItemToFoodRecordUpdateRequest(mealItem)
                     when (val updateResult = mealRepository.updateFoodRecord(originalMealIds[i], request)) {
                         is ApiResult.Success -> {
-                            val updatedMeal = foodRecordResponseToMealItem(updateResult.data)
+                            val updatedMeal = foodRecordResponseToMealItemWithImage(updateResult.data)
                             updatedMeals.add(updatedMeal)
                         }
                         is ApiResult.Error -> {
@@ -428,6 +428,8 @@ class MainViewModel : ViewModel() {
                                 } + updatedMeals
                             }
                             setMeals(updatedMealsList)
+                            // 重新加载每日卡路里摘要以更新圆环
+                            loadDailyCalorieSummary(null)
                             onResult(ApiResult.Success(mealGroup))
                         }
                         is ApiResult.Error -> onResult(ApiResult.Error(result.message))
@@ -453,6 +455,8 @@ class MainViewModel : ViewModel() {
                     currentMeals + updatedMeals
                 }
                 setMeals(updatedMealsList)
+                // 重新加载每日卡路里摘要以更新圆环
+                loadDailyCalorieSummary(null)
                 onResult(ApiResult.Success(mealGroup))
             }
         }
@@ -492,9 +496,6 @@ class MainViewModel : ViewModel() {
             }
             _meals.value = updatedMeals
             
-            // 重新计算统计数据
-            recalculateStats()
-            
             // 更新时间线
             updateTimeline()
         }
@@ -521,7 +522,7 @@ class MainViewModel : ViewModel() {
     // ==================== DTO ↔ Model 转换方法 ====================
     
     /**
-     * 将后端DTO转换为前端Model
+     * 将后端DTO转换为前端Model（不包含图片）
      */
     private fun foodRecordResponseToMealItem(dto: FoodRecordResponse): MealItem {
         return MealItem(
@@ -537,6 +538,29 @@ class MainViewModel : ViewModel() {
             foodId = dto.food_id,
             servingAmount = dto.serving_amount
         )
+    }
+    
+    /**
+     * 将后端DTO转换为前端Model，并获取食物图片URL
+     * 这是一个suspend函数，用于在协程中调用
+     */
+    private suspend fun foodRecordResponseToMealItemWithImage(dto: FoodRecordResponse): MealItem {
+        val mealItem = foodRecordResponseToMealItem(dto)
+        
+        // 如果有food_id，获取食物详情以获取图片URL
+        if (mealItem.foodId != null && mealItem.foodId.isNotBlank()) {
+            when (val foodResult = foodRepository.getFood(mealItem.foodId)) {
+                is ApiResult.Success -> {
+                    return mealItem.copy(image = foodResult.data.image_url)
+                }
+                else -> {
+                    // 如果获取失败，返回不带图片的MealItem
+                    return mealItem
+                }
+            }
+        }
+        
+        return mealItem
     }
     
     /**
@@ -596,23 +620,334 @@ class MainViewModel : ViewModel() {
         }
     }
     
+    // ==================== Analytics DTO → Model 转换方法 ====================
+    
+    /**
+     * 将时间序列趋势响应转换为图表数据点
+     * 合并 intake_trend 和 burned_trend，按日期匹配创建 ChartDataPoint
+     */
+    private fun timeSeriesTrendResponseToChartDataPoints(dto: TimeSeriesTrendResponse): List<ChartDataPoint> {
+        // 创建日期到摄入值的映射
+        val intakeMap = dto.intake_trend.associateBy { it.date }
+        // 创建日期到消耗值的映射
+        val burnedMap = dto.burned_trend.associateBy { it.date }
+        
+        // 获取所有唯一的日期
+        val allDates = (dto.intake_trend.map { it.date } + dto.burned_trend.map { it.date }).distinct().sorted()
+        
+        // 为每个日期创建 ChartDataPoint
+        return allDates.map { date ->
+            val intake = intakeMap[date]?.value ?: 0.0
+            val burned = burnedMap[date]?.value ?: 0.0
+            
+            // 格式化日期标签
+            val label = formatDateLabel(date, dto.view_type)
+            
+            ChartDataPoint(
+                label = label,
+                intake = intake,
+                burned = burned
+            )
+        }
+    }
+    
+    /**
+     * 格式化日期标签
+     * 根据视图类型返回合适的标签格式
+     */
+    private fun formatDateLabel(date: String, viewType: String): String {
+        return try {
+            when (viewType) {
+                "day" -> {
+                    // 日视图：显示 "Mon", "Tue" 等
+                    val dateFormat = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.getDefault())
+                    val dateObj = dateFormat.parse(date)
+                    val dayFormat = java.text.SimpleDateFormat("EEE", java.util.Locale.ENGLISH)
+                    dayFormat.format(dateObj ?: java.util.Date())
+                }
+                "week" -> {
+                    // 周视图：显示 "W1", "W2" 等或日期
+                    val dateFormat = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.getDefault())
+                    val dateObj = dateFormat.parse(date)
+                    val dayFormat = java.text.SimpleDateFormat("EEE", java.util.Locale.ENGLISH)
+                    dayFormat.format(dateObj ?: java.util.Date())
+                }
+                "month" -> {
+                    // 月视图：显示 "W1", "W2" 等
+                    // 这里可以根据需要自定义格式
+                    val dateFormat = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.getDefault())
+                    val dateObj = dateFormat.parse(date)
+                    val weekFormat = java.text.SimpleDateFormat("'W'w", java.util.Locale.getDefault())
+                    weekFormat.format(dateObj ?: java.util.Date())
+                }
+                else -> date
+            }
+        } catch (e: Exception) {
+            date // 如果解析失败，返回原始日期
+        }
+    }
+    
+    /**
+     * 宏量营养素数据（用于饼图）
+     */
+    data class MacroDataForChart(
+        val proteinCalories: Double,  // 蛋白质卡路里
+        val carbsCalories: Double,    // 碳水卡路里
+        val fatCalories: Double,      // 脂肪卡路里
+        val totalCalories: Double     // 总卡路里
+    )
+    
+    /**
+     * 将营养素分析响应转换为宏量营养素数据（用于饼图）
+     * 需要总摄入量来计算实际的卡路里值
+     * @param dto 营养素分析响应
+     * @param totalIntake 总摄入卡路里（如果为null，将从nutrition_vs_recommended中计算）
+     */
+    private fun nutritionAnalysisResponseToMacroData(
+        dto: NutritionAnalysisResponse,
+        totalIntake: Double? = null
+    ): MacroDataForChart {
+        // 如果没有提供总摄入量，尝试从nutrition_vs_recommended中获取
+        val actualTotalIntake = totalIntake ?: run {
+            // 查找卡路里的实际值
+            val caloriesData = dto.nutrition_vs_recommended.find { it.nutrient_name.lowercase() == "calories" }
+            caloriesData?.actual ?: 0.0
+        }
+        
+        // 从macronutrient_ratio获取百分比
+        val proteinRatio = dto.macronutrient_ratio.protein / 100.0
+        val carbsRatio = dto.macronutrient_ratio.carbohydrates / 100.0
+        val fatRatio = dto.macronutrient_ratio.fat / 100.0
+        
+        // 计算实际的卡路里值
+        val proteinCal = actualTotalIntake * proteinRatio
+        val carbsCal = actualTotalIntake * carbsRatio
+        val fatCal = actualTotalIntake * fatRatio
+        
+        return MacroDataForChart(
+            proteinCalories = proteinCal,
+            carbsCalories = carbsCal,
+            fatCalories = fatCal,
+            totalCalories = actualTotalIntake
+        )
+    }
+    
+    /**
+     * 将每日卡路里摘要转换为DailyStats
+     * 注意：这个转换只更新卡路里和消耗数据，不更新宏量营养素（protein/carbs/fat）
+     * 宏量营养素需要从nutrition-analysis API获取
+     */
+    private fun dailyCalorieSummaryToDailyStats(
+        dto: DailyCalorieSummary,
+        currentStats: DailyStats
+    ): DailyStats {
+        return currentStats.copy(
+            calories = currentStats.calories.copy(
+                current = dto.total_intake,
+                target = dto.daily_goal
+            ),
+            burned = dto.total_burned
+            // 保持protein、carbs、fat不变，因为它们需要从nutrition-analysis获取
+        )
+    }
+    
     // ==================== 从Repository加载数据的方法 ====================
     
     private val mealRepository = MealRepository()
     private val exerciseRepository = ExerciseRepository()
+    private val foodRepository = com.example.forhealth.repositories.FoodRepository()
+    private val userRepository = com.example.forhealth.repositories.UserRepository()
+    private val visualizationRepository = com.example.forhealth.repositories.VisualizationRepository()
+    
+    // 存储用户资料DTO（用于获取username）
+    private val _userProfileResponse = MutableLiveData<com.example.forhealth.network.dto.user.UserProfileResponse?>()
+    val userProfileResponse: LiveData<com.example.forhealth.network.dto.user.UserProfileResponse?> = _userProfileResponse
+    
+    // 存储每日卡路里摘要DTO（用于Analytics日视图）
+    private val _dailyCalorieSummary = MutableLiveData<DailyCalorieSummary?>()
+    val dailyCalorieSummary: LiveData<DailyCalorieSummary?> = _dailyCalorieSummary
+    
+    // 存储营养素分析DTO（用于Analytics饼图）
+    private val _nutritionAnalysis = MutableLiveData<NutritionAnalysisResponse?>()
+    val nutritionAnalysis: LiveData<NutritionAnalysisResponse?> = _nutritionAnalysis
+    
+    // 存储宏量营养素数据（用于饼图显示）
+    private val _macroDataForChart = MutableLiveData<MacroDataForChart?>()
+    val macroDataForChart: LiveData<MacroDataForChart?> = _macroDataForChart
+    
+    // 存储时间序列趋势数据（用于周/月视图折线图）
+    private val _timeSeriesTrendData = MutableLiveData<List<ChartDataPoint>>(emptyList())
+    val timeSeriesTrendData: LiveData<List<ChartDataPoint>> = _timeSeriesTrendData
     
     /**
      * 从后端加载今日餐食数据
+     * 对于每个食物记录，如果food_id存在，则获取食物详情以获取图片URL
      */
     fun loadTodayMeals() {
         viewModelScope.launch {
             when (val result = mealRepository.getTodayMeals()) {
                 is ApiResult.Success -> {
-                    val mealItems = result.data.records.map { foodRecordResponseToMealItem(it) }
-                    setMeals(mealItems)
+                    // 先转换为MealItem（此时image为null）
+                    val mealItemsWithoutImages = result.data.records.map { foodRecordResponseToMealItem(it) }
+                    
+                    // 对于每个有food_id的MealItem，并行获取食物详情以获取图片URL
+                    val mealItemsWithImages = mealItemsWithoutImages.map { mealItem ->
+                        if (mealItem.foodId != null && mealItem.foodId.isNotBlank()) {
+                            // 使用async并行获取食物详情
+                            async {
+                                when (val foodResult = foodRepository.getFood(mealItem.foodId)) {
+                                    is ApiResult.Success -> {
+                                        // 更新MealItem的image字段
+                                        mealItem.copy(image = foodResult.data.image_url)
+                                    }
+                                    else -> mealItem // 如果获取失败，保持原样
+                                }
+                            }
+                        } else {
+                            async { mealItem }
+                        }
+                    }.awaitAll()
+                    
+                    setMeals(mealItemsWithImages)
+                    
+                    // 重新加载每日卡路里摘要以更新圆环和统计数据
+                    loadDailyCalorieSummary(null)
                 }
                 is ApiResult.Error -> {
                     // 处理错误，可以显示错误消息
+                }
+                is ApiResult.Loading -> {}
+            }
+        }
+    }
+    
+    /**
+     * 从后端加载用户资料
+     */
+    fun loadUserProfile() {
+        viewModelScope.launch {
+            when (val result = userRepository.getProfile()) {
+                is ApiResult.Success -> {
+                    // 保存完整的UserProfileResponse（用于获取username等字段）
+                    _userProfileResponse.value = result.data
+                    
+                    // 将UserProfileResponse转换为UserProfile Model
+                    // 注意：UserProfile Model只有简单字段，将username映射到name
+                    val userProfile = com.example.forhealth.models.UserProfile(
+                        name = result.data.username ?: "User",
+                        age = result.data.age ?: 25,
+                        height = result.data.height?.toInt() ?: 170,
+                        gender = when (result.data.gender) {
+                            "male" -> "Male"
+                            "female" -> "Female"
+                            else -> "Male"
+                        },
+                        activityLevel = result.data.activity_level ?: "Moderate"
+                    )
+                    _userProfile.value = userProfile
+                }
+                is ApiResult.Error -> {
+                    // 处理错误，可以显示错误消息
+                }
+                is ApiResult.Loading -> {}
+            }
+        }
+    }
+    
+    /**
+     * 从后端加载每日卡路里摘要（用于Analytics日视图）
+     * @param targetDate 目标日期(YYYY-MM-DD)，默认为null（今天）
+     */
+    fun loadDailyCalorieSummary(targetDate: String? = null) {
+        viewModelScope.launch {
+            when (val result = visualizationRepository.getDailyCalorieSummary(targetDate)) {
+                is ApiResult.Success -> {
+                    // 保存完整的DailyCalorieSummary DTO（用于Analytics显示）
+                    _dailyCalorieSummary.value = result.data
+                    
+                    // 同时更新DailyStats（只更新卡路里和消耗，不更新宏量营养素）
+                    val currentStats = _dailyStats.value ?: DailyStats.getInitial()
+                    val updatedStats = dailyCalorieSummaryToDailyStats(result.data, currentStats)
+                    _dailyStats.value = updatedStats
+                    
+                    // 如果是今天的数据，同时加载营养素分析以更新饼图
+                    if (targetDate == null) {
+                        val today = getTodayDateString()
+                        loadNutritionAnalysis(today, today, result.data.total_intake)
+                    }
+                }
+                is ApiResult.Error -> {
+                    // 处理错误，可以显示错误消息
+                    // 如果加载失败，保持现有数据不变
+                }
+                is ApiResult.Loading -> {}
+            }
+        }
+    }
+    
+    /**
+     * 获取今天的日期字符串（YYYY-MM-DD）
+     */
+    private fun getTodayDateString(): String {
+        val calendar = java.util.Calendar.getInstance()
+        val year = calendar.get(java.util.Calendar.YEAR)
+        val month = calendar.get(java.util.Calendar.MONTH) + 1
+        val day = calendar.get(java.util.Calendar.DAY_OF_MONTH)
+        return String.format("%04d-%02d-%02d", year, month, day)
+    }
+    
+    /**
+     * 从后端加载营养素分析（用于Analytics饼图）
+     * @param startDate 开始日期(YYYY-MM-DD)
+     * @param endDate 结束日期(YYYY-MM-DD)
+     * @param totalIntake 总摄入卡路里（可选，用于计算宏量营养素的实际卡路里值）
+     */
+    fun loadNutritionAnalysis(
+        startDate: String,
+        endDate: String,
+        totalIntake: Double? = null
+    ) {
+        viewModelScope.launch {
+            when (val result = visualizationRepository.getNutritionAnalysis(startDate, endDate)) {
+                is ApiResult.Success -> {
+                    // 保存完整的NutritionAnalysisResponse DTO
+                    _nutritionAnalysis.value = result.data
+                    
+                    // 转换为宏量营养素数据（用于饼图显示）
+                    val macroData = nutritionAnalysisResponseToMacroData(result.data, totalIntake)
+                    _macroDataForChart.value = macroData
+                }
+                is ApiResult.Error -> {
+                    // 处理错误，设为null（不使用本地数据）
+                    _nutritionAnalysis.value = null
+                    _macroDataForChart.value = null
+                }
+                is ApiResult.Loading -> {}
+            }
+        }
+    }
+    
+    /**
+     * 从后端加载时间序列趋势（用于Analytics周/月视图折线图）
+     * @param startDate 开始日期(YYYY-MM-DD)
+     * @param endDate 结束日期(YYYY-MM-DD)
+     * @param viewType 视图类型: "day", "week", "month"（默认"day"）
+     */
+    fun loadTimeSeriesTrend(
+        startDate: String,
+        endDate: String,
+        viewType: String = "day"
+    ) {
+        viewModelScope.launch {
+            when (val result = visualizationRepository.getTimeSeriesTrend(startDate, endDate, viewType)) {
+                is ApiResult.Success -> {
+                    // 转换为图表数据点
+                    val chartData = timeSeriesTrendResponseToChartDataPoints(result.data)
+                    _timeSeriesTrendData.value = chartData
+                }
+                is ApiResult.Error -> {
+                    // 处理错误，设为空列表（不使用本地数据）
+                    _timeSeriesTrendData.value = emptyList()
                 }
                 is ApiResult.Loading -> {}
             }
@@ -627,8 +962,10 @@ class MainViewModel : ViewModel() {
             val request = mealItemToFoodRecordCreateRequest(meal)
             when (val result = mealRepository.createFoodRecord(request)) {
                 is ApiResult.Success -> {
-                    val mealItem = foodRecordResponseToMealItem(result.data)
+                    val mealItem = foodRecordResponseToMealItemWithImage(result.data)
                     addMeals(listOf(mealItem))
+                    // 重新加载每日卡路里摘要以更新圆环
+                    loadDailyCalorieSummary(null)
                     onResult(ApiResult.Success(mealItem))
                 }
                 is ApiResult.Error -> onResult(result)
@@ -668,7 +1005,7 @@ class MainViewModel : ViewModel() {
                 
                 when (val result = mealRepository.createFoodRecord(request)) {
                     is ApiResult.Success -> {
-                        val mealItem = foodRecordResponseToMealItem(result.data)
+                        val mealItem = foodRecordResponseToMealItemWithImage(result.data)
                         createdMeals.add(mealItem)
                     }
                     is ApiResult.Error -> {
@@ -681,6 +1018,8 @@ class MainViewModel : ViewModel() {
             
             // 本地状态更新
             addMeals(createdMeals)
+            // 重新加载每日卡路里摘要以更新圆环
+            loadDailyCalorieSummary(null)
             onResult(ApiResult.Success(createdMeals))
         }
     }
@@ -713,11 +1052,13 @@ class MainViewModel : ViewModel() {
             val request = mealItemToFoodRecordUpdateRequest(meal)
             when (val result = mealRepository.updateFoodRecord(recordId, request)) {
                 is ApiResult.Success -> {
-                    val mealItem = foodRecordResponseToMealItem(result.data)
+                    val mealItem = foodRecordResponseToMealItemWithImage(result.data)
                     // 更新本地meals列表
                     val currentMeals = _meals.value ?: emptyList()
                     val updatedMeals = currentMeals.map { if (it.id == recordId) mealItem else it }
                     setMeals(updatedMeals)
+                    // 重新加载每日卡路里摘要以更新圆环
+                    loadDailyCalorieSummary(null)
                     onResult(ApiResult.Success(mealItem))
                 }
                 is ApiResult.Error -> onResult(result)
@@ -779,6 +1120,8 @@ class MainViewModel : ViewModel() {
             } else {
                 // 更新本地状态
                 deleteMealGroup(recordId) // 使用现有的删除方法更新本地状态
+                // 重新加载每日卡路里摘要以更新圆环
+                loadDailyCalorieSummary(null)
                 onResult(ApiResult.Success(true))
             }
         }
