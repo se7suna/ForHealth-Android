@@ -20,8 +20,9 @@
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintEnd_toStartOf="@id/btnDeleteRecipe"
             app:layout_constraintTop_toTopOf="parent"
-        android:textSize="18sp"
-        android:text="示例食谱名称" />
+            android:textSize="18sp"
+            android:inputType="text"
+            android:text="示例食谱名称" />
 
         <Button
             android:id="@+id/btnDeleteRecipe"
