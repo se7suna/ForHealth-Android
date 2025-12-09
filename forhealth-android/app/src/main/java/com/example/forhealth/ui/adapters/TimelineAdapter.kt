@@ -10,6 +10,7 @@ import com.example.forhealth.R
 import com.example.forhealth.models.MealGroupTimelineItem
 import com.example.forhealth.models.TimelineItem
 import com.example.forhealth.models.ExerciseTimelineItem
+import com.example.forhealth.ui.adapters.ExerciseGroupAdapter
 
 class TimelineAdapter(
     private var items: List<TimelineItem>,
@@ -33,7 +34,7 @@ class TimelineAdapter(
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
         val layoutId = when (viewType) {
             0 -> R.layout.item_meal_group_card
-            1 -> R.layout.item_workout_group_card // 复用workout布局显示exercise
+            1 -> R.layout.item_workout_group_card // 使用exercise布局显示运动记录
             else -> R.layout.item_meal_group_card
         }
         val view = LayoutInflater.from(parent.context).inflate(layoutId, parent, false)
@@ -86,13 +87,13 @@ class TimelineAdapter(
             itemView.findViewById<TextView>(R.id.tvWorkoutTime)?.text = activity.time
             itemView.findViewById<TextView>(R.id.tvTotalCalories)?.text = "${activity.caloriesBurned.toInt()}"
             
-            // 使用 WorkoutGroupExerciseAdapter 显示单个exercise（兼容现有布局）
-            val rvWorkoutItems = itemView.findViewById<RecyclerView>(R.id.rvWorkoutItems)
-            rvWorkoutItems?.let {
+            // 使用 ExerciseGroupAdapter 显示运动记录列表
+            val rvExerciseItems = itemView.findViewById<RecyclerView>(R.id.rvWorkoutItems)
+            rvExerciseItems?.let {
                 // 清除之前的 adapter（如果有）
                 it.adapter = null
-                // 使用 WorkoutGroupExerciseAdapter（使用 item_workout_group_exercise.xml）
-                val adapter = WorkoutGroupExerciseAdapter(listOf(activity))
+                // 使用 ExerciseGroupAdapter 显示运动记录列表
+                val adapter = ExerciseGroupAdapter(listOf(activity))
                 it.layoutManager = LinearLayoutManager(itemView.context)
                 it.adapter = adapter
             }

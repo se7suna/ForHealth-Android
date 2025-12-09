@@ -1190,7 +1190,7 @@ class MainViewModel : ViewModel() {
         viewModelScope.launch {
             when (val result = exerciseRepository.getTodaySportsRecords()) {
                 is ApiResult.Success -> {
-                    val activities = result.data.map { searchSportRecordResponseToActivityItem(it) }
+                    val activities = result.data.map { searchSportRecordResponseToActivityItemWithImage(it) }
                     setExercises(activities)
                 }
                 is ApiResult.Error -> {
@@ -1231,7 +1231,7 @@ class MainViewModel : ViewModel() {
      * 将后端DTO转换为前端Model
      */
     private fun searchSportRecordResponseToActivityItem(dto: SearchSportRecordsResponse): ActivityItem {
-        val recordId = dto.record_id ?: UUID.randomUUID().toString()
+        val recordId = dto.record_id ?:""
         val sportName = dto.sport_name ?: ""
         val duration = dto.duration_time ?: 0
         val caloriesBurned = dto.calories_burned ?: 0.0
@@ -1247,6 +1247,28 @@ class MainViewModel : ViewModel() {
             type = sportType,
             image = null // SearchSportRecordsResponse没有image字段
         )
+    }
+    /**
+     * 将后端DTO转换为前端Model，并获取运动图片URL
+     * 这是一个suspend函数，用于在协程中调用
+     */
+    private suspend fun searchSportRecordResponseToActivityItemWithImage(dto: SearchSportRecordsResponse): ActivityItem {
+        val activityItem = searchSportRecordResponseToActivityItem(dto)
+        
+        // 根据运动名称从运动库中查找对应的图片URL
+        when (val sportResult = exerciseRepository.getAvailableSportsTypes()) {
+            is ApiResult.Success -> {
+                val sport = sportResult.data.find { it.sport_name == activityItem.name }
+                if (sport != null && !sport.image_url.isNullOrBlank()) {
+                    return activityItem.copy(image = sport.image_url)
+                }
+            }
+            else -> {
+                // 如果获取失败，返回不带图片的ActivityItem
+            }
+        }
+        
+        return activityItem
     }
 
     /**
