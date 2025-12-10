@@ -320,6 +320,7 @@ async def generate_sports_report(email: str):
     last_7day = last_day - timedelta(days=6)
     
     # 获取用户上一周的运动记录
+<<<<<<< HEAD
     from app.schemas.sports import SearchSportRecordsRequest
     search_request = SearchSportRecordsRequest(
         start_date=last_7day,
@@ -327,6 +328,13 @@ async def generate_sports_report(email: str):
         sport_name=None
     )
 
+=======
+    search_request = type('obj', (object,), {})()
+    search_request.start_date = last_7day
+    search_request.end_date = last_day
+    search_request.sport_name = None
+    
+>>>>>>> ae889bb28242f0130d0c3f5443913acc3cd385b0
     sports_logs = await search_sports_record(search_request, email)
     
     if not sports_logs:

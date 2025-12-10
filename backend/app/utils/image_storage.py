@@ -303,6 +303,7 @@ async def delete_sport_image(image_url:str) -> bool:
         )
 
 
+<<<<<<< HEAD
 def get_recipe_image_storage_path() -> Path:
     """
     获取食谱图片存储路径
@@ -460,3 +461,5 @@ def delete_recipe_image(image_url: Optional[str]) -> bool:
         return False
 
 
+=======
+>>>>>>> ae889bb28242f0130d0c3f5443913acc3cd385b0
