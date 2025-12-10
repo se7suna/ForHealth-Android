@@ -69,7 +69,7 @@ async def get_daily_calorie_summary(
     sports_pipeline = [
         {
             "$match": {
-                "email": user_email,
+                "created_by": user_email,
                 "created_at": {"$gte": start_datetime, "$lte": end_datetime}
             }
         },
@@ -342,7 +342,7 @@ async def get_time_series_trend(
     burned_pipeline = [
         {
             "$match": {
-                "email": user_email,
+                "created_by": user_email,
                 "created_at": {"$gte": start_datetime, "$lte": end_datetime}
             }
         },
@@ -474,7 +474,7 @@ async def export_health_report(
     })
 
     total_sports_records = await db.sports_records.count_documents({
-        "email": user_email,
+        "created_by": user_email,
         "created_at": {"$gte": start_datetime, "$lte": end_datetime}
     })
 
