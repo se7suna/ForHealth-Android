@@ -81,6 +81,25 @@ class HomeFragment : Fragment() {
         // 显示AI建议（默认显示）
         binding.cardAiInsight.visibility = View.VISIBLE
         
+        // 设置圆环宽度为屏幕宽度的2/5
+        binding.root.post {
+            val screenWidth = resources.displayMetrics.widthPixels
+            val ringSize = screenWidth / 5 * 2
+            val frameLayout = binding.root.findViewById<View>(R.id.frameRingProgress)
+            
+            // 同步更新圆环自身的尺寸（保持圆环大小不变）
+            binding.ringProgress.setSize(ringSize)
+            
+            // 等待圆环测量完成后再设置FrameLayout大小，使其更紧凑
+            binding.ringProgress.post {
+                // FrameLayout大小设置为圆环的实际测量大小，避免多余空间
+                val measuredSize = maxOf(binding.ringProgress.measuredWidth, binding.ringProgress.measuredHeight)
+                frameLayout?.layoutParams?.width = measuredSize
+                frameLayout?.layoutParams?.height = measuredSize
+                frameLayout?.requestLayout()
+            }
+        }
+        
         // 初始化统计数据
         updateStatsDisplay(DailyStats.getInitial())
     }
@@ -288,30 +307,42 @@ class HomeFragment : Fragment() {
         
         if (isChartMode) {
             // 切换到列表视图 - 恢复header位置
+            val scrollView = binding.scrollViewMain
+            val currentScrollY = scrollView.scrollY
+            
+            // 使用ValueAnimator实现平滑滚动
+            val scrollAnimator = android.animation.ValueAnimator.ofInt(currentScrollY, 0)
+            scrollAnimator.duration = 300
+            scrollAnimator.interpolator = android.view.animation.DecelerateInterpolator()
+            scrollAnimator.addUpdateListener { animator ->
+                val value = animator.animatedValue as Int
+                scrollView.scrollTo(0, value)
+            }
+            scrollAnimator.start()
+            
+            // 同时开始淡出analytics视图
             binding.scrollAnalytics.animate()
                 .alpha(0f)
                 .translationY(100f)
                 .setDuration(300)
+                .setInterpolator(android.view.animation.AccelerateInterpolator())
                 .withEndAction {
                     binding.scrollAnalytics.visibility = View.GONE
-                    
-                    // 恢复滚动位置
-                    binding.root.findViewById<androidx.core.widget.NestedScrollView>(R.id.scrollViewMain)?.let { scrollView ->
-                        binding.root.post {
-                            scrollView.smoothScrollTo(0, 0)
-                        }
-                    }
-                    
-                    binding.rvTimeline.alpha = 0f
-                    binding.rvTimeline.translationY = -100f
-                    binding.rvTimeline.visibility = View.VISIBLE
-                    binding.rvTimeline.animate()
-                        .alpha(1f)
-                        .translationY(0f)
-                        .setDuration(300)
-                        .start()
                 }
                 .start()
+            
+            // 在动画进行到一半时开始timeline淡入，实现更流畅的过渡
+            binding.root.postDelayed({
+                binding.rvTimeline.alpha = 0f
+                binding.rvTimeline.translationY = -100f
+                binding.rvTimeline.visibility = View.VISIBLE
+                binding.rvTimeline.animate()
+                    .alpha(1f)
+                    .translationY(0f)
+                    .setDuration(300)
+                    .setInterpolator(android.view.animation.DecelerateInterpolator())
+                    .start()
+            }, 150) // 在动画进行一半时开始切换视图，实现重叠效果
             
             binding.tvViewTitle.text = getString(R.string.timeline)
             binding.btnToggleView.setImageResource(R.drawable.ic_bar_chart)
@@ -327,22 +358,21 @@ class HomeFragment : Fragment() {
                     binding.scrollAnalytics.translationY = 100f
                     binding.scrollAnalytics.visibility = View.VISIBLE
                     
-                    // 上推动画：将整个NestedScrollView向上滚动，直到Analytics被推到顶部
-                    binding.root.findViewById<androidx.core.widget.NestedScrollView>(R.id.scrollViewMain)?.let { scrollView ->
-                        binding.root.findViewById<View>(R.id.headerSection)?.let { header ->
-                            // 计算需要滚动的距离：headerSection的高度 + 一些额外空间，确保Analytics到达顶部
-                            val scrollDistance = header.height + header.top
-                            // 延迟一下确保视图已经布局完成
-                            binding.root.post {
-                                scrollView.smoothScrollTo(0, scrollDistance)
-                            }
-                        }
+                    // 上推动画：将整个NestedScrollView向上滚动到底，推到不能再推为止
+                    // 延迟一下确保视图已经布局完成
+                    binding.root.post {
+                        val scrollView = binding.scrollViewMain
+                        // 计算最大滚动距离：内容总高度 - 可见高度
+                        val maxScrollY = scrollView.getChildAt(0).height - scrollView.height
+                        // 滚动到底
+                        scrollView.smoothScrollTo(0, maxScrollY.coerceAtLeast(0))
                     }
                     
                     binding.scrollAnalytics.animate()
                         .alpha(1f)
                         .translationY(0f)
                         .setDuration(300)
+                        .setInterpolator(android.view.animation.DecelerateInterpolator())
                         .withEndAction {
                             // 动画完成后，强制加载数据并更新所有图表
                             loadAnalyticsData()

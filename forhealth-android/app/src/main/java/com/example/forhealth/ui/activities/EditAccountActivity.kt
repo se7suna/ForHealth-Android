@@ -31,10 +31,12 @@ class EditAccountActivity : AppCompatActivity() {
     }
 
     private fun setupAvatar() {
+        // 设置默认头像
+        binding.ivAvatar.setImageResource(R.drawable.ic_user)
         // 使用 dicebear API 生成头像
         binding.ivAvatar.load("https://api.dicebear.com/9.x/avataaars/svg?seed=Felix") {
-            placeholder(R.color.slate_100)
-            error(R.color.slate_100)
+            placeholder(R.drawable.ic_user)
+            error(R.drawable.ic_user)
             transformations(CircleCropTransformation())
         }
 
