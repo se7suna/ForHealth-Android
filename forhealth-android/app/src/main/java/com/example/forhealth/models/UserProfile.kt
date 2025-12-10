@@ -4,6 +4,7 @@ data class UserProfile(
     val name: String,
     val age: Int,
     val height: Int, // in cm
+    val weight: Int, // in kg
     val gender: String, // "Male" or "Female"
     val activityLevel: String
 ) {
@@ -13,6 +14,7 @@ data class UserProfile(
                 name = "User",
                 age = 25,
                 height = 170,
+                weight = 70,
                 gender = "Male",
                 activityLevel = "Moderate"
             )

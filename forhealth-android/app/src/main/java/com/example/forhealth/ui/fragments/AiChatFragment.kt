@@ -17,12 +17,12 @@ import com.example.forhealth.models.ChatMessage
 import com.example.forhealth.models.DailyStats
 import com.example.forhealth.models.MessageRole
 import com.example.forhealth.models.UserProfile
-import com.example.forhealth.utils.AiService
 import androidx.lifecycle.lifecycleScope
-import kotlinx.coroutines.Dispatchers
+import androidx.lifecycle.ViewModelProvider
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import java.util.*
+import com.example.forhealth.viewmodels.MainViewModel
+import com.example.forhealth.network.ApiResult
 
 class AiChatFragment : DialogFragment() {
     
@@ -35,6 +35,7 @@ class AiChatFragment : DialogFragment() {
     private var userProfile: UserProfile? = null
     private var currentStats: DailyStats? = null
     private var initialContext: String? = null
+    private lateinit var viewModel: MainViewModel
     
     fun setUserProfile(profile: UserProfile) {
         userProfile = profile
@@ -65,6 +66,9 @@ class AiChatFragment : DialogFragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         
+        // 获取 ViewModel
+        viewModel = ViewModelProvider(requireActivity())[MainViewModel::class.java]
+        
         setupRecyclerView()
         setupClickListeners()
         setupInputListener()
@@ -81,14 +85,6 @@ class AiChatFragment : DialogFragment() {
         messages.add(initialMessage)
         messagesAdapter.notifyItemInserted(messages.size - 1)
         scrollToBottom()
-        
-        // 显示上下文提示（如果有）
-        initialContext?.let { context ->
-            if (context.isNotEmpty()) {
-                binding.layoutContextBubble.visibility = View.VISIBLE
-                binding.tvContextBubble.text = getString(R.string.talking_about, context)
-            }
-        }
     }
     
     private fun setupRecyclerView() {
@@ -150,46 +146,59 @@ class AiChatFragment : DialogFragment() {
         binding.progressLoading.visibility = View.VISIBLE
         binding.btnSend.isEnabled = false
         
-        // 发送到AI
-        lifecycleScope.launch {
-            try {
-                val profile = userProfile ?: UserProfile.getInitial()
-                val stats = currentStats ?: com.example.forhealth.models.DailyStats.getInitial()
-                
-                val response = withContext(Dispatchers.IO) {
-                    AiService.getChatResponse(
-                        userMessage = inputText,
-                        conversationHistory = messages.dropLast(1), // 不包括刚添加的用户消息
-                        userProfile = profile,
-                        currentStats = stats
-                    )
+        // 发送到AI - 通过 ViewModel 调用 Repository
+        val profile = userProfile ?: UserProfile.getInitial()
+        val stats = currentStats ?: com.example.forhealth.models.DailyStats.getInitial()
+        
+        // 构建上下文信息
+        val context = mutableMapOf<String, Any>()
+        profile.age?.let { context["age"] = it }
+        profile.height?.let { context["height"] = it }
+        profile.weight?.let { context["weight"] = it }
+        profile.gender?.let { context["gender"] = it }
+        context["current_calories"] = stats.calories.current
+        context["target_calories"] = stats.calories.target
+        context["current_protein"] = stats.protein.current
+        context["current_carbs"] = stats.carbs.current
+        context["current_fat"] = stats.fat.current
+        
+        viewModel.askQuestion(
+            question = inputText,
+            context = context,
+            onResult = { result ->
+                lifecycleScope.launch {
+                    when (result) {
+                        is ApiResult.Success -> {
+                            // 添加AI回复
+                            val modelMessage = ChatMessage(
+                                id = UUID.randomUUID().toString(),
+                                role = MessageRole.MODEL,
+                                text = result.data
+                            )
+                            messages.add(modelMessage)
+                            messagesAdapter.notifyItemInserted(messages.size - 1)
+                            scrollToBottom()
+                        }
+                        is ApiResult.Error -> {
+                            // 添加错误消息
+                            val errorMessage = ChatMessage(
+                                id = UUID.randomUUID().toString(),
+                                role = MessageRole.MODEL,
+                                text = "Sorry, I encountered an error: ${result.message}. Please try again."
+                            )
+                            messages.add(errorMessage)
+                            messagesAdapter.notifyItemInserted(messages.size - 1)
+                            scrollToBottom()
+                        }
+                        is ApiResult.Loading -> {
+                            // Loading状态已在UI中显示
+                        }
+                    }
+                    binding.progressLoading.visibility = View.GONE
+                    binding.btnSend.isEnabled = true
                 }
-                
-                // 添加AI回复
-                val modelMessage = ChatMessage(
-                    id = UUID.randomUUID().toString(),
-                    role = MessageRole.MODEL,
-                    text = response
-                )
-                messages.add(modelMessage)
-                messagesAdapter.notifyItemInserted(messages.size - 1)
-                scrollToBottom()
-                
-            } catch (e: Exception) {
-                // 添加错误消息
-                val errorMessage = ChatMessage(
-                    id = UUID.randomUUID().toString(),
-                    role = MessageRole.MODEL,
-                    text = "Sorry, I encountered an error. Please try again."
-                )
-                messages.add(errorMessage)
-                messagesAdapter.notifyItemInserted(messages.size - 1)
-                scrollToBottom()
-            } finally {
-                binding.progressLoading.visibility = View.GONE
-                binding.btnSend.isEnabled = true
             }
-        }
+        )
     }
     
     private fun scrollToBottom() {

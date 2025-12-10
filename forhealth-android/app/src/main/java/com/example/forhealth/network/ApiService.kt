@@ -608,14 +608,29 @@ interface ApiService {
     ): Response<MealPlanResponse>
     
     /**
-     * 知识问答（统一接口）
-     * POST /api/ai/ask/{question_type}
+     * 健康知识问答
+     * POST /api/ai/ask
      */
-    @POST("ai/ask/{question_type}")
+    @POST("ai/ask")
     suspend fun askQuestion(
-        @Path("question_type") questionType: String,
         @Body request: QuestionRequest
     ): Response<QuestionResponse>
+    
+    /**
+     * 饮食分析与建议
+     * POST /api/ai/diet/analyze
+     */
+    @POST("ai/diet/analyze")
+    suspend fun analyzeDiet(
+        @Body request: DietAnalysisRequest
+    ): Response<DietAnalysisResponse>
+    
+    /**
+     * 智能菜式推荐
+     * GET /api/ai/meal/recommend
+     */
+    @GET("ai/meal/recommend")
+    suspend fun recommendMeal(): Response<MealRecommendationResponse>
     
     /**
      * 获取提醒设置

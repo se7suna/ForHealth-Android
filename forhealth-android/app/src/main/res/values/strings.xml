@@ -133,9 +133,10 @@
     <string name="avg_sum">Avg Sum</string>
     
     <!-- AI Insight -->
-    <string name="ai_insight">AI Insight</string>
+    <string name="ai_insight">AI健康助手</string>
     <string name="ready_to_track">Ready to track! Add your first meal to get AI insights.</string>
     <string name="click_to_chat">Click to chat</string>
+    <string name="refresh_ai_insight">Refresh AI Insight</string>
     <string name="ai_nutritionist">AI Nutritionist</string>
     <string name="online">Online</string>
     <string name="ask_about_diet">Ask about your diet…</string>

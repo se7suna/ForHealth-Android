@@ -74,32 +74,6 @@
             </LinearLayout>
         </LinearLayout>
 
-        <!-- Context Bubble (if initial context exists) -->
-        <LinearLayout
-            android:id="@+id/layoutContextBubble"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:gravity="center"
-            android:padding="@dimen/spacing_16"
-            android:visibility="gone">
-
-            <TextView
-                android:id="@+id/tvContextBubble"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:maxWidth="300dp"
-                android:background="@drawable/bg_indigo_50"
-                android:paddingStart="@dimen/spacing_16"
-                android:paddingEnd="@dimen/spacing_16"
-                android:paddingTop="@dimen/spacing_8"
-                android:paddingBottom="@dimen/spacing_8"
-                android:textColor="@color/indigo_600"
-                android:textSize="@dimen/text_size_xs"
-                android:textStyle="bold"
-                android:gravity="center" />
-        </LinearLayout>
-
         <!-- Chat Messages RecyclerView -->
         <androidx.recyclerview.widget.RecyclerView
             android:id="@+id/rvMessages"

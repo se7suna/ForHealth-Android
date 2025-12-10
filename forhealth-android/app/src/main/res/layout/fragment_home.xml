@@ -400,14 +400,29 @@
                             android:gravity="center_vertical">
 
                             <TextView
-                                android:layout_width="0dp"
+                                android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
-                                android:layout_weight="1"
                                 android:text="@string/ai_insight"
                                 android:textColor="@color/indigo_800"
-                                android:textSize="@dimen/text_size_xs"
+                                android:textSize="12sp"
                                 android:textStyle="bold"
                                 android:letterSpacing="0.1" />
+
+                            <ImageButton
+                                android:id="@+id/btnRefreshAiInsight"
+                                android:layout_width="15dp"
+                                android:layout_height="15dp"
+                                android:src="@drawable/ic_refresh"
+                                android:background="?attr/selectableItemBackgroundBorderless"
+                                android:contentDescription="@string/refresh_ai_insight"
+                                android:padding="2dp"
+                                android:layout_marginStart="@dimen/spacing_8"
+                                app:tint="@color/indigo_500" />
+
+                            <View
+                                android:layout_width="0dp"
+                                android:layout_height="1dp"
+                                android:layout_weight="1" />
 
                             <TextView
                                 android:id="@+id/tvClickToChat"
@@ -428,11 +443,10 @@
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:layout_marginTop="@dimen/spacing_4"
+                            android:layout_marginEnd="@dimen/spacing_8"
                             android:text="@string/ready_to_track"
                             android:textColor="@color/indigo_700"
-                            android:textSize="@dimen/text_size_base"
-                            android:maxLines="2"
-                            android:ellipsize="end" />
+                            android:textSize="@dimen/text_size_base" />
                     </LinearLayout>
                 </LinearLayout>
             </androidx.cardview.widget.CardView>

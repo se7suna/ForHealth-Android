@@ -14,10 +14,10 @@ class MacroDonutChartView @JvmOverloads constructor(
     defStyleAttr: Int = 0
 ) : View(context, attrs, defStyleAttr) {
     
-    private var proteinCal: Double = 0.0
-    private var carbsCal: Double = 0.0
-    private var fatCal: Double = 0.0
-    private var totalIntake: Double = 0.0
+    private var proteinPercent: Double = 0.0  // 百分比值（0-100）
+    private var carbsPercent: Double = 0.0    // 百分比值（0-100）
+    private var fatPercent: Double = 0.0       // 百分比值（0-100）
+    private var totalIntake: Double = 0.0      // 总卡路里（用于中心显示）
     
     private val proteinPaint = Paint().apply {
         color = resources.getColor(R.color.blue_500, null)
@@ -52,11 +52,18 @@ class MacroDonutChartView @JvmOverloads constructor(
         isFakeBoldText = true
     }
     
-    fun setMacros(protein: Double, carbs: Double, fat: Double, total: Double = 0.0) {
-        proteinCal = protein
-        carbsCal = carbs
-        fatCal = fat
-        totalIntake = total
+    /**
+     * 设置宏量营养素百分比
+     * @param proteinPercent 蛋白质百分比（0-100）
+     * @param carbsPercent 碳水化合物百分比（0-100）
+     * @param fatPercent 脂肪百分比（0-100）
+     * @param totalIntake 总卡路里（用于中心显示，可选）
+     */
+    fun setMacros(proteinPercent: Double, carbsPercent: Double, fatPercent: Double, totalIntake: Double = 0.0) {
+        this.proteinPercent = proteinPercent
+        this.carbsPercent = carbsPercent
+        this.fatPercent = fatPercent
+        this.totalIntake = totalIntake
         invalidate()
     }
     
@@ -70,10 +77,10 @@ class MacroDonutChartView @JvmOverloads constructor(
         val radius = minOf(width, height) / 2 - 10f // 增大圆环半径
         val innerRadius = radius - 35f // 减小内圆半径，使圆环变粗
         
-        val total = proteinCal + carbsCal + fatCal
+        val totalPercent = proteinPercent + carbsPercent + fatPercent
         
         // 如果没有数据，绘制灰色圆环
-        if (total <= 0) {
+        if (totalPercent <= 0) {
             val grayPaint = Paint().apply {
                 color = resources.getColor(R.color.slate_300, null)
                 style = Paint.Style.FILL
@@ -95,9 +102,12 @@ class MacroDonutChartView @JvmOverloads constructor(
             return
         }
         
-        val proteinPct = (proteinCal / total * 360f).toFloat()
-        val carbsPct = (carbsCal / total * 360f).toFloat()
-        val fatPct = (fatCal / total * 360f).toFloat()
+        // 将百分比转换为角度（360度）
+        // 如果百分比总和不是100，按比例缩放
+        val scale = 100.0 / totalPercent
+        val proteinPct = (proteinPercent * scale / 100.0 * 360f).toFloat()
+        val carbsPct = (carbsPercent * scale / 100.0 * 360f).toFloat()
+        val fatPct = (fatPercent * scale / 100.0 * 360f).toFloat()
         
         val rect = RectF(
             centerX - radius,
@@ -134,7 +144,7 @@ class MacroDonutChartView @JvmOverloads constructor(
         canvas.drawCircle(centerX, centerY, innerRadius, centerPaint)
         
         // 绘制中心文字 - 只显示总摄入量数字，居中显示
-        val displayValue = if (totalIntake > 0) totalIntake else total
+        val displayValue = if (totalIntake > 0) totalIntake else 0.0
         val textY = centerY + (centerValuePaint.textSize / 3) // 调整垂直居中
         canvas.drawText(Math.round(displayValue).toString(), centerX, textY, centerValuePaint)
     }

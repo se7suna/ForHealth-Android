@@ -161,3 +161,25 @@ data class FeedbackDataResponse(
     val suggestions: List<String>
 )
 
+// 饮食分析请求
+data class DietAnalysisRequest(
+    val days: Int = 7 // 分析最近几天的记录（默认7天，1-30天）
+)
+
+// 饮食分析响应
+data class DietAnalysisResponse(
+    val success: Boolean,
+    val message: String, // 一句话分析建议（亲和语气）
+    val analysis: Map<String, Any>? = null // 详细分析数据（可选）
+)
+
+// 菜式推荐响应
+data class MealRecommendationResponse(
+    val success: Boolean,
+    val message: String, // 推荐语（包含时间提醒和菜式推荐）
+    val meal_type: String, // 推荐的餐次类型：早餐、午餐、晚餐、加餐
+    val recommended_dish: String, // 推荐的菜式名称
+    val nutrition_highlight: String? = null, // 营养亮点（如：高蛋白、适量碳水）
+    val reason: String? = null // 推荐理由
+)
+

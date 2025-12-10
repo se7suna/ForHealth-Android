@@ -379,25 +379,31 @@ class EditMealFragment : DialogFragment() {
         }
         
         binding.btnDeleteRecord.setOnClickListener {
-            originalMealGroup?.id?.let { mealGroupId ->
-                // 通过ViewModel删除（会调用API）
-                lifecycleScope.launch {
-                    mainViewModel.deleteMealRecord(mealGroupId) { result ->
-                        when (result) {
-                            is ApiResult.Success -> {
+            // 获取originalMealGroup中所有记录的ID
+            val mealIds = originalMealGroup?.meals?.mapNotNull { it.id }?.filter { it.isNotBlank() } ?: emptyList()
+            
+            if (mealIds.isEmpty()) {
+                // 如果没有有效的记录ID，直接关闭
+                dismiss()
+                return@setOnClickListener
+            }
+            
+            // 通过ViewModel删除所有记录（会调用API）
+            lifecycleScope.launch {
+                mainViewModel.deleteMealRecords(mealIds) { result ->
+                    when (result) {
+                        is ApiResult.Success -> {
+                            originalMealGroup?.id?.let { mealGroupId ->
                                 onMealDeletedListener?.invoke(mealGroupId)
-                                dismiss()
                             }
-                            is ApiResult.Error -> {
-                                android.widget.Toast.makeText(requireContext(), result.message, android.widget.Toast.LENGTH_SHORT).show()
-                            }
-                            is ApiResult.Loading -> {}
+                            dismiss()
                         }
+                        is ApiResult.Error -> {
+                            android.widget.Toast.makeText(requireContext(), result.message, android.widget.Toast.LENGTH_SHORT).show()
+                        }
+                        is ApiResult.Loading -> {}
                     }
                 }
-            } ?: run {
-                // 如果没有mealGroupId，直接关闭
-                dismiss()
             }
         }
         
@@ -576,27 +582,31 @@ class EditMealFragment : DialogFragment() {
     private fun saveMeals() {
         // 如果购物车为空，删除整个meal group
         if (selectedItems.isEmpty()) {
-            // 检查是否有有效的mealGroupId（不能为空字符串）
-            val mealGroupId = originalMealGroup?.id?.takeIf { it.isNotBlank() }
-            if (mealGroupId != null) {
-                // 通过ViewModel删除
-                lifecycleScope.launch {
-                    mainViewModel.deleteMealRecord(mealGroupId) { result ->
-                        when (result) {
-                            is ApiResult.Success -> {
+            // 获取originalMealGroup中所有记录的ID
+            val mealIds = originalMealGroup?.meals?.mapNotNull { it.id }?.filter { it.isNotBlank() } ?: emptyList()
+            
+            if (mealIds.isEmpty()) {
+                // 如果没有有效的记录ID，直接关闭（可能是新创建的记录，还没有保存到后端）
+                dismiss()
+                return
+            }
+            
+            // 通过ViewModel删除所有记录
+            lifecycleScope.launch {
+                mainViewModel.deleteMealRecords(mealIds) { result ->
+                    when (result) {
+                        is ApiResult.Success -> {
+                            originalMealGroup?.id?.let { mealGroupId ->
                                 onMealDeletedListener?.invoke(mealGroupId)
-                                dismiss()
                             }
-                            is ApiResult.Error -> {
-                                android.widget.Toast.makeText(requireContext(), result.message, android.widget.Toast.LENGTH_SHORT).show()
-                            }
-                            is ApiResult.Loading -> {}
+                            dismiss()
                         }
+                        is ApiResult.Error -> {
+                            android.widget.Toast.makeText(requireContext(), result.message, android.widget.Toast.LENGTH_SHORT).show()
+                        }
+                        is ApiResult.Loading -> {}
                     }
                 }
-            } else {
-                // 如果没有有效的mealGroupId，直接关闭（可能是新创建的记录，还没有保存到后端）
-                dismiss()
             }
             return
         }
