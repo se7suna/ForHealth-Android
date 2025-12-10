@@ -330,11 +330,11 @@ deploy:production:
   stage: deploy
   image: alpine:latest
   before_script:
-    # 添加重试机制安装 openssh-client
+    # 添加重试机制安装 openssh-client 和 ssh-keygen
     - |
       for i in 1 2 3 4 5; do
         echo "🔄 尝试安装 openssh-client ($i/5)..."
-        if apk add --no-cache openssh-client; then
+        if apk add --no-cache openssh-client openssh-keygen; then
           echo "✅ openssh-client 安装成功"
           break
         fi
@@ -345,7 +345,6 @@ deploy:production:
         echo "⏳ 等待 5 秒后重试..."
         sleep 5
       done
-    - eval $(ssh-agent -s)
     # 验证必需的环境变量
     - |
       if [ -z "$DEPLOY_SERVER_IP" ]; then
@@ -365,12 +364,43 @@ deploy:production:
       if [ -f "$SSH_PRIVATE_KEY" ]; then
         # File 类型：SSH_PRIVATE_KEY 是文件路径
         cp "$SSH_PRIVATE_KEY" ~/.ssh/id_rsa
+        echo "📝 使用 File 类型的 SSH 密钥"
       else
         # Variable 类型：SSH_PRIVATE_KEY 是密钥内容
         echo "$SSH_PRIVATE_KEY" | tr -d '\r' > ~/.ssh/id_rsa
+        echo "📝 使用 Variable 类型的 SSH 密钥"
       fi
     - chmod 600 ~/.ssh/id_rsa
-    - ssh-add ~/.ssh/id_rsa
+    # 检查密钥格式并尝试转换
+    - |
+      echo "🔍 检查 SSH 密钥格式..."
+      if head -n 1 ~/.ssh/id_rsa | grep -q "BEGIN OPENSSH PRIVATE KEY"; then
+        echo "⚠️ 检测到 OpenSSH 新格式密钥，尝试转换为 PEM 格式..."
+        # 尝试转换为 PEM 格式（无密码）
+        if ssh-keygen -p -m PEM -f ~/.ssh/id_rsa -N "" -P "" 2>/dev/null; then
+          echo "✅ 密钥转换为 PEM 格式成功"
+        else
+          echo "⚠️ 密钥转换失败，尝试直接使用原密钥"
+        fi
+      elif head -n 1 ~/.ssh/id_rsa | grep -q "BEGIN RSA PRIVATE KEY"; then
+        echo "✅ 检测到 PEM 格式密钥（传统格式）"
+      else
+        echo "❌ 无法识别的密钥格式"
+        head -n 1 ~/.ssh/id_rsa
+        exit 1
+      fi
+    # 启动 ssh-agent 并添加密钥
+    - eval $(ssh-agent -s)
+    - |
+      echo "🔑 添加 SSH 密钥到 ssh-agent..."
+      if ssh-add ~/.ssh/id_rsa 2>&1; then
+        echo "✅ SSH 密钥添加成功"
+      else
+        echo "❌ SSH 密钥添加失败"
+        echo "密钥内容前几行："
+        head -n 3 ~/.ssh/id_rsa
+        exit 1
+      fi
     # 添加服务器到 known_hosts，添加重试和错误处理
     - |
       echo "🔍 扫描服务器 SSH 公钥..."
