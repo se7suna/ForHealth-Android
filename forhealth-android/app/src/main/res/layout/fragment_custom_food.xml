@@ -1,0 +1,346 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.coordinatorlayout.widget.CoordinatorLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/white">
+
+    <androidx.core.widget.NestedScrollView
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:fillViewport="true"
+        android:paddingBottom="100dp">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
+
+            <!-- Header -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:background="@color/white"
+                android:paddingTop="@dimen/spacing_48"
+                android:paddingBottom="@dimen/spacing_16"
+                android:paddingStart="@dimen/spacing_24"
+                android:paddingEnd="@dimen/spacing_24"
+                android:elevation="2dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:layout_marginBottom="@dimen/spacing_24">
+
+                    <ImageButton
+                        android:id="@+id/btnBack"
+                        android:layout_width="48dp"
+                        android:layout_height="48dp"
+                        android:src="@drawable/ic_chevron_left"
+                        android:background="?attr/selectableItemBackgroundBorderless"
+                        android:contentDescription="返回"
+                        android:tint="@color/text_secondary" />
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="@string/create_custom_food"
+                        android:textColor="@color/text_primary"
+                        android:textSize="@dimen/text_size_xl"
+                        android:textStyle="bold"
+                        android:gravity="center_vertical" />
+                </LinearLayout>
+            </LinearLayout>
+
+            <!-- Content -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="@dimen/spacing_24">
+
+                <!-- Form Fields -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical">
+
+                    <!-- Food Name -->
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/food_name"
+                        android:textColor="@color/text_secondary"
+                        android:textSize="@dimen/text_size_sm"
+                        android:textStyle="bold"
+                        android:layout_marginBottom="@dimen/spacing_8" />
+
+                    <EditText
+                        android:id="@+id/etFoodName"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:hint="e.g. Grandma's Apple Pie"
+                        android:background="@drawable/bg_rounded_search_input"
+                        android:padding="@dimen/spacing_12"
+                        android:textColor="@color/text_primary"
+                        android:textColorHint="@color/text_secondary"
+                        android:textSize="@dimen/text_size_base"
+                        android:textStyle="bold"
+                        android:layout_marginBottom="@dimen/spacing_20" />
+
+                    <!-- Serving Unit and Weight -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:layout_marginBottom="@dimen/spacing_20">
+
+                        <LinearLayout
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:orientation="vertical"
+                            android:layout_marginEnd="@dimen/spacing_8">
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="@string/serving_unit"
+                                android:textColor="@color/text_secondary"
+                                android:textSize="@dimen/text_size_sm"
+                                android:textStyle="bold"
+                                android:layout_marginBottom="@dimen/spacing_8" />
+
+                            <EditText
+                                android:id="@+id/etUnitName"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:hint="e.g. 1 bowl"
+                                android:background="@drawable/bg_rounded_search_input"
+                                android:padding="@dimen/spacing_12"
+                                android:textColor="@color/text_primary"
+                                android:textColorHint="@color/text_secondary"
+                                android:textSize="@dimen/text_size_base"
+                                android:inputType="text" />
+                        </LinearLayout>
+
+                        <LinearLayout
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:orientation="vertical"
+                            android:layout_marginStart="@dimen/spacing_8">
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="@string/weight_g"
+                                android:textColor="@color/text_secondary"
+                                android:textSize="@dimen/text_size_sm"
+                                android:textStyle="bold"
+                                android:layout_marginBottom="@dimen/spacing_8" />
+
+                            <EditText
+                                android:id="@+id/etWeightPerUnit"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:hint="100"
+                                android:background="@drawable/bg_rounded_search_input"
+                                android:padding="@dimen/spacing_12"
+                                android:textColor="@color/text_primary"
+                                android:textColorHint="@color/text_secondary"
+                                android:textSize="@dimen/text_size_base"
+                                android:inputType="number" />
+                        </LinearLayout>
+                    </LinearLayout>
+
+                    <!-- Nutrition per Serving -->
+                    <View
+                        android:layout_width="match_parent"
+                        android:layout_height="1dp"
+                        android:background="@color/slate_100"
+                        android:layout_marginBottom="@dimen/spacing_16" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/nutrition_per_serving"
+                        android:textColor="@color/text_primary"
+                        android:textSize="@dimen/text_size_sm"
+                        android:textStyle="bold"
+                        android:layout_marginBottom="@dimen/spacing_16" />
+
+                    <!-- Nutrition Grid: 2x2 -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical">
+
+                        <!-- Row 1: Calories and Protein -->
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal"
+                            android:layout_marginBottom="@dimen/spacing_12">
+
+                            <!-- Calories -->
+                            <LinearLayout
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:orientation="vertical"
+                                android:layout_marginEnd="@dimen/spacing_8">
+
+                                <TextView
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="Calories (kcal)"
+                                    android:textColor="@color/text_tertiary"
+                                    android:textSize="@dimen/text_size_xs"
+                                    android:layout_marginBottom="@dimen/spacing_4" />
+
+                                <EditText
+                                    android:id="@+id/etCalories"
+                                    android:layout_width="match_parent"
+                                    android:layout_height="wrap_content"
+                                    android:background="@drawable/bg_rounded_search_input"
+                                    android:padding="@dimen/spacing_12"
+                                    android:textColor="@color/text_primary"
+                                    android:textColorHint="@color/text_secondary"
+                                    android:textSize="@dimen/text_size_base"
+                                    android:inputType="numberDecimal" />
+                            </LinearLayout>
+
+                            <!-- Protein -->
+                            <LinearLayout
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:orientation="vertical"
+                                android:layout_marginStart="@dimen/spacing_8">
+
+                                <TextView
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="Protein (g)"
+                                    android:textColor="@color/text_tertiary"
+                                    android:textSize="@dimen/text_size_xs"
+                                    android:layout_marginBottom="@dimen/spacing_4" />
+
+                                <EditText
+                                    android:id="@+id/etProtein"
+                                    android:layout_width="match_parent"
+                                    android:layout_height="wrap_content"
+                                    android:background="@drawable/bg_rounded_search_input"
+                                    android:padding="@dimen/spacing_12"
+                                    android:textColor="@color/text_primary"
+                                    android:textColorHint="@color/text_secondary"
+                                    android:textSize="@dimen/text_size_base"
+                                    android:inputType="numberDecimal" />
+                            </LinearLayout>
+                        </LinearLayout>
+
+                        <!-- Row 2: Carbs and Fat -->
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal">
+
+                            <!-- Carbs -->
+                            <LinearLayout
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:orientation="vertical"
+                                android:layout_marginEnd="@dimen/spacing_8">
+
+                                <TextView
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="Carbs (g)"
+                                    android:textColor="@color/text_tertiary"
+                                    android:textSize="@dimen/text_size_xs"
+                                    android:layout_marginBottom="@dimen/spacing_4" />
+
+                                <EditText
+                                    android:id="@+id/etCarbs"
+                                    android:layout_width="match_parent"
+                                    android:layout_height="wrap_content"
+                                    android:background="@drawable/bg_rounded_search_input"
+                                    android:padding="@dimen/spacing_12"
+                                    android:textColor="@color/text_primary"
+                                    android:textColorHint="@color/text_secondary"
+                                    android:textSize="@dimen/text_size_base"
+                                    android:inputType="numberDecimal" />
+                            </LinearLayout>
+
+                            <!-- Fat -->
+                            <LinearLayout
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:orientation="vertical"
+                                android:layout_marginStart="@dimen/spacing_8">
+
+                                <TextView
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="Fat (g)"
+                                    android:textColor="@color/text_tertiary"
+                                    android:textSize="@dimen/text_size_xs"
+                                    android:layout_marginBottom="@dimen/spacing_4" />
+
+                                <EditText
+                                    android:id="@+id/etFat"
+                                    android:layout_width="match_parent"
+                                    android:layout_height="wrap_content"
+                                    android:background="@drawable/bg_rounded_search_input"
+                                    android:padding="@dimen/spacing_12"
+                                    android:textColor="@color/text_primary"
+                                    android:textColorHint="@color/text_secondary"
+                                    android:textSize="@dimen/text_size_base"
+                                    android:inputType="numberDecimal" />
+                            </LinearLayout>
+                        </LinearLayout>
+                    </LinearLayout>
+                </LinearLayout>
+            </LinearLayout>
+        </LinearLayout>
+    </androidx.core.widget.NestedScrollView>
+
+    <!-- Bottom Action Button -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom"
+        android:orientation="vertical"
+        android:background="@color/white"
+        android:padding="@dimen/spacing_24"
+        android:elevation="8dp">
+
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:background="@color/slate_100"
+            android:layout_marginBottom="@dimen/spacing_16" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnSaveCustomFood"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/save"
+            android:textColor="@color/white"
+            android:textSize="@dimen/text_size_lg"
+            android:textStyle="bold"
+            android:paddingTop="@dimen/spacing_16"
+            android:paddingBottom="@dimen/spacing_16"
+            android:backgroundTint="@color/slate_800"
+            app:cornerRadius="@dimen/card_radius_large" />
+    </LinearLayout>
+
+</androidx.coordinatorlayout.widget.CoordinatorLayout>
+

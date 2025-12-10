@@ -1,0 +1,430 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.coordinatorlayout.widget.CoordinatorLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/white">
+
+    <androidx.core.widget.NestedScrollView
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:fillViewport="true">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
+
+            <!-- Header -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:paddingStart="@dimen/spacing_24"
+                android:paddingEnd="@dimen/spacing_24"
+                android:paddingTop="@dimen/spacing_48"
+                android:paddingBottom="@dimen/spacing_16"
+                android:background="@color/white"
+                android:elevation="2dp">
+
+                <ImageButton
+                    android:id="@+id/btnBack"
+                    android:layout_width="48dp"
+                    android:layout_height="48dp"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:contentDescription="@string/close"
+                    android:padding="@dimen/spacing_12"
+                    android:src="@drawable/ic_chevron_left"
+                    app:tint="@color/slate_500" />
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:gravity="center"
+                    android:text="@string/edit_profile"
+                    android:textColor="@color/text_primary"
+                    android:textSize="@dimen/text_size_lg"
+                    android:textStyle="bold" />
+
+                <View
+                    android:layout_width="48dp"
+                    android:layout_height="48dp" />
+            </LinearLayout>
+
+            <!-- Content -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="@dimen/spacing_24">
+
+                <!-- Avatar Area -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:gravity="center"
+                    android:layout_marginBottom="@dimen/spacing_24">
+
+                    <FrameLayout
+                        android:id="@+id/flAvatar"
+                        android:layout_width="96dp"
+                        android:layout_height="96dp"
+                        android:layout_marginBottom="@dimen/spacing_12"
+                        android:background="@drawable/bg_slate_100"
+                        android:padding="4dp">
+
+                        <ImageView
+                            android:id="@+id/ivAvatar"
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:background="@color/slate_100"
+                            android:contentDescription="Profile Avatar"
+                            android:scaleType="centerCrop" />
+                    </FrameLayout>
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/tap_to_change_avatar"
+                        android:textColor="@color/text_secondary"
+                        android:textSize="@dimen/text_size_xs" />
+                </LinearLayout>
+
+                <!-- Form Fields -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:layout_marginBottom="@dimen/spacing_24">
+
+                    <!-- Display Name -->
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/display_name"
+                        android:textColor="@color/text_primary"
+                        android:textSize="@dimen/text_size_base"
+                        android:textStyle="bold"
+                        android:layout_marginBottom="@dimen/spacing_8" />
+
+                    <com.google.android.material.textfield.TextInputLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginBottom="@dimen/spacing_16"
+                        app:boxBackgroundMode="filled"
+                        app:boxBackgroundColor="@color/slate_50"
+                        app:boxCornerRadiusTopStart="@dimen/card_radius"
+                        app:boxCornerRadiusTopEnd="@dimen/card_radius"
+                        app:boxCornerRadiusBottomStart="@dimen/card_radius"
+                        app:boxCornerRadiusBottomEnd="@dimen/card_radius"
+                        app:boxStrokeWidth="0dp"
+                        app:boxStrokeWidthFocused="2dp"
+                        app:boxStrokeColor="@color/emerald_500"
+                        app:hintEnabled="false">
+
+                        <com.google.android.material.textfield.TextInputEditText
+                            android:id="@+id/etDisplayName"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:inputType="textPersonName"
+                            android:textSize="@dimen/text_size_lg"
+                            android:textStyle="bold"
+                            android:padding="@dimen/spacing_16" />
+                    </com.google.android.material.textfield.TextInputLayout>
+
+                    <!-- Age and Height Grid -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:layout_marginBottom="@dimen/spacing_16">
+
+                        <!-- Birthdate -->
+                        <LinearLayout
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:layout_marginEnd="@dimen/spacing_8"
+                            android:orientation="vertical">
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="@string/birthdate"
+                                android:textColor="@color/text_primary"
+                                android:textSize="@dimen/text_size_base"
+                                android:textStyle="bold"
+                                android:layout_marginBottom="@dimen/spacing_8" />
+
+                            <com.google.android.material.textfield.TextInputLayout
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                app:boxBackgroundMode="filled"
+                                app:boxBackgroundColor="@color/slate_50"
+                                app:boxCornerRadiusTopStart="@dimen/card_radius"
+                                app:boxCornerRadiusTopEnd="@dimen/card_radius"
+                                app:boxCornerRadiusBottomStart="@dimen/card_radius"
+                                app:boxCornerRadiusBottomEnd="@dimen/card_radius"
+                                app:boxStrokeWidth="0dp"
+                                app:boxStrokeWidthFocused="2dp"
+                                app:boxStrokeColor="@color/emerald_500">
+
+                                <com.google.android.material.textfield.TextInputEditText
+                                    android:id="@+id/etBirthdate"
+                                    android:layout_width="match_parent"
+                                    android:layout_height="wrap_content"
+                                    android:inputType="date"
+                                    android:textSize="@dimen/text_size_lg"
+                                    android:textStyle="bold"
+                                    android:padding="@dimen/spacing_16"
+                                    android:focusable="false"
+                                    android:clickable="true" />
+                            </com.google.android.material.textfield.TextInputLayout>
+                        </LinearLayout>
+
+                        <!-- Height -->
+                        <LinearLayout
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:layout_marginStart="@dimen/spacing_8"
+                            android:orientation="vertical">
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="@string/height_cm"
+                                android:textColor="@color/text_primary"
+                                android:textSize="@dimen/text_size_base"
+                                android:textStyle="bold"
+                                android:layout_marginBottom="@dimen/spacing_8" />
+
+                            <com.google.android.material.textfield.TextInputLayout
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                app:boxBackgroundMode="filled"
+                                app:boxBackgroundColor="@color/slate_50"
+                                app:boxCornerRadiusTopStart="@dimen/card_radius"
+                                app:boxCornerRadiusTopEnd="@dimen/card_radius"
+                                app:boxCornerRadiusBottomStart="@dimen/card_radius"
+                                app:boxCornerRadiusBottomEnd="@dimen/card_radius"
+                                app:boxStrokeWidth="0dp"
+                                app:boxStrokeWidthFocused="2dp"
+                                app:boxStrokeColor="@color/emerald_500">
+
+                                <com.google.android.material.textfield.TextInputEditText
+                                    android:id="@+id/etHeight"
+                                    android:layout_width="match_parent"
+                                    android:layout_height="wrap_content"
+                                    android:inputType="number"
+                                    android:textSize="@dimen/text_size_lg"
+                                    android:textStyle="bold"
+                                    android:padding="@dimen/spacing_16" />
+                            </com.google.android.material.textfield.TextInputLayout>
+                        </LinearLayout>
+                    </LinearLayout>
+
+                    <!-- Gender -->
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/gender"
+                        android:textColor="@color/text_primary"
+                        android:textSize="@dimen/text_size_base"
+                        android:textStyle="bold"
+                        android:layout_marginBottom="@dimen/spacing_8" />
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:layout_marginBottom="@dimen/spacing_16">
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/btnGenderMale"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:layout_marginEnd="@dimen/spacing_12"
+                            android:text="@string/male"
+                            android:textSize="@dimen/text_size_lg"
+                            android:textStyle="bold"
+                            android:padding="@dimen/spacing_12"
+                            app:cornerRadius="@dimen/card_radius"
+                            style="@style/Widget.Material3.Button.OutlinedButton" />
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/btnGenderFemale"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="@string/female"
+                            android:textSize="@dimen/text_size_lg"
+                            android:textStyle="bold"
+                            android:padding="@dimen/spacing_12"
+                            app:cornerRadius="@dimen/card_radius"
+                            style="@style/Widget.Material3.Button.OutlinedButton" />
+                    </LinearLayout>
+
+                    <!-- Activity Level -->
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/activity_level"
+                        android:textColor="@color/text_primary"
+                        android:textSize="@dimen/text_size_base"
+                        android:textStyle="bold"
+                        android:layout_marginBottom="@dimen/spacing_8" />
+
+                    <com.google.android.material.textfield.TextInputLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginBottom="@dimen/spacing_16"
+                        app:boxBackgroundMode="filled"
+                        app:boxBackgroundColor="@color/slate_50"
+                        app:boxCornerRadiusTopStart="@dimen/card_radius"
+                        app:boxCornerRadiusTopEnd="@dimen/card_radius"
+                        app:boxCornerRadiusBottomStart="@dimen/card_radius"
+                        app:boxCornerRadiusBottomEnd="@dimen/card_radius"
+                        app:boxStrokeWidth="0dp"
+                        app:boxStrokeWidthFocused="2dp"
+                        app:boxStrokeColor="@color/emerald_500">
+
+                        <com.google.android.material.textfield.TextInputEditText
+                            android:id="@+id/etActivityLevel"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:inputType="none"
+                            android:textSize="@dimen/text_size_lg"
+                            android:textStyle="bold"
+                            android:padding="@dimen/spacing_16"
+                            android:focusable="false"
+                            android:clickable="true" />
+                    </com.google.android.material.textfield.TextInputLayout>
+
+                    <!-- Target Weight and Goal Period Grid -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:layout_marginBottom="@dimen/spacing_24">
+
+                        <!-- Target Weight -->
+                        <LinearLayout
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:layout_marginEnd="@dimen/spacing_8"
+                            android:orientation="vertical">
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="@string/target_weight"
+                                android:textColor="@color/text_primary"
+                                android:textSize="@dimen/text_size_base"
+                                android:textStyle="bold"
+                                android:layout_marginBottom="@dimen/spacing_8" />
+
+                            <com.google.android.material.textfield.TextInputLayout
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                app:boxBackgroundMode="filled"
+                                app:boxBackgroundColor="@color/slate_50"
+                                app:boxCornerRadiusTopStart="@dimen/card_radius"
+                                app:boxCornerRadiusTopEnd="@dimen/card_radius"
+                                app:boxCornerRadiusBottomStart="@dimen/card_radius"
+                                app:boxCornerRadiusBottomEnd="@dimen/card_radius"
+                                app:boxStrokeWidth="0dp"
+                                app:boxStrokeWidthFocused="2dp"
+                                app:boxStrokeColor="@color/emerald_500">
+
+                                <com.google.android.material.textfield.TextInputEditText
+                                    android:id="@+id/etTargetWeight"
+                                    android:layout_width="match_parent"
+                                    android:layout_height="wrap_content"
+                                    android:inputType="none"
+                                    android:textSize="@dimen/text_size_lg"
+                                    android:textStyle="bold"
+                                    android:padding="@dimen/spacing_16"
+                                    android:focusable="false"
+                                    android:clickable="true" />
+                            </com.google.android.material.textfield.TextInputLayout>
+                        </LinearLayout>
+
+                        <!-- Goal Period -->
+                        <LinearLayout
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:layout_marginStart="@dimen/spacing_8"
+                            android:orientation="vertical">
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="@string/goal_period_weeks"
+                                android:textColor="@color/text_primary"
+                                android:textSize="@dimen/text_size_base"
+                                android:textStyle="bold"
+                                android:layout_marginBottom="@dimen/spacing_8" />
+
+                            <com.google.android.material.textfield.TextInputLayout
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                app:boxBackgroundMode="filled"
+                                app:boxBackgroundColor="@color/slate_50"
+                                app:boxCornerRadiusTopStart="@dimen/card_radius"
+                                app:boxCornerRadiusTopEnd="@dimen/card_radius"
+                                app:boxCornerRadiusBottomStart="@dimen/card_radius"
+                                app:boxCornerRadiusBottomEnd="@dimen/card_radius"
+                                app:boxStrokeWidth="0dp"
+                                app:boxStrokeWidthFocused="2dp"
+                                app:boxStrokeColor="@color/emerald_500">
+
+                                <com.google.android.material.textfield.TextInputEditText
+                                    android:id="@+id/etGoalPeriod"
+                                    android:layout_width="match_parent"
+                                    android:layout_height="wrap_content"
+                                    android:inputType="none"
+                                    android:textSize="@dimen/text_size_lg"
+                                    android:textStyle="bold"
+                                    android:padding="@dimen/spacing_16"
+                                    android:focusable="false"
+                                    android:clickable="true" />
+                            </com.google.android.material.textfield.TextInputLayout>
+                        </LinearLayout>
+                    </LinearLayout>
+                </LinearLayout>
+            </LinearLayout>
+        </LinearLayout>
+    </androidx.core.widget.NestedScrollView>
+
+    <!-- Save Button -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom"
+        android:orientation="vertical"
+        android:background="@color/white"
+        android:elevation="8dp"
+        android:padding="@dimen/spacing_24"
+        android:paddingTop="@dimen/spacing_16">
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnSave"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/save_changes"
+            android:textSize="@dimen/text_size_lg"
+            android:textStyle="bold"
+            android:padding="@dimen/spacing_16"
+            android:backgroundTint="@color/slate_900"
+            app:cornerRadius="@dimen/card_radius" />
+    </LinearLayout>
+
+</androidx.coordinatorlayout.widget.CoordinatorLayout>
+
