@@ -1,0 +1,95 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="horizontal"
+    android:gravity="top"
+    android:paddingTop="@dimen/spacing_8"
+    android:paddingBottom="@dimen/spacing_8"
+    android:paddingStart="@dimen/spacing_16"
+    android:paddingEnd="@dimen/spacing_16">
+
+    <!-- User Message (Right Aligned) -->
+    <LinearLayout
+        android:id="@+id/layoutUserMessage"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="end"
+        android:visibility="gone">
+
+        <TextView
+            android:id="@+id/tvUserMessage"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:maxWidth="250dp"
+            android:background="@drawable/bg_slate_800"
+            android:paddingStart="@dimen/spacing_16"
+            android:paddingEnd="@dimen/spacing_16"
+            android:paddingTop="@dimen/spacing_12"
+            android:paddingBottom="@dimen/spacing_12"
+            android:textColor="@color/white"
+            android:textSize="@dimen/text_size_base"
+            android:lineSpacingExtra="4dp"
+            tools:text="How can I increase my protein intake?" />
+
+        <FrameLayout
+            android:layout_width="32dp"
+            android:layout_height="32dp"
+            android:layout_marginStart="@dimen/spacing_8"
+            android:background="@drawable/bg_slate_800_circle"
+            android:gravity="center">
+
+            <ImageView
+                android:layout_width="16dp"
+                android:layout_height="16dp"
+                android:layout_gravity="center"
+                android:src="@drawable/ic_user"
+                android:tint="@color/white" />
+        </FrameLayout>
+    </LinearLayout>
+
+    <!-- Model Message (Left Aligned) -->
+    <LinearLayout
+        android:id="@+id/layoutModelMessage"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="start"
+        android:visibility="gone">
+
+        <FrameLayout
+            android:layout_width="32dp"
+            android:layout_height="32dp"
+            android:layout_marginEnd="@dimen/spacing_8"
+            android:background="@drawable/bg_white_circle"
+            android:gravity="center">
+
+            <ImageView
+                android:layout_width="18dp"
+                android:layout_height="18dp"
+                android:layout_gravity="center"
+                android:src="@drawable/ic_bot"
+                android:tint="@color/indigo_600" />
+        </FrameLayout>
+
+        <TextView
+            android:id="@+id/tvModelMessage"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:maxWidth="250dp"
+            android:background="@drawable/bg_white"
+            android:paddingStart="@dimen/spacing_16"
+            android:paddingEnd="@dimen/spacing_16"
+            android:paddingTop="@dimen/spacing_12"
+            android:paddingBottom="@dimen/spacing_12"
+            android:textColor="@color/text_primary"
+            android:textSize="@dimen/text_size_base"
+            android:lineSpacingExtra="4dp"
+            tools:text="Great question! Here are some protein-rich options..." />
+    </LinearLayout>
+
+</LinearLayout>
+

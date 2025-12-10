@@ -1,0 +1,179 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.cardview.widget.CardView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_marginBottom="@dimen/spacing_16"
+    app:cardCornerRadius="@dimen/card_radius_small"
+    app:cardElevation="@dimen/card_elevation"
+    app:cardBackgroundColor="@color/white">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="@dimen/spacing_16">
+
+        <!-- Header: Image, Name, Unit Switcher, Delete -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:layout_marginBottom="@dimen/spacing_12">
+
+            <ImageView
+                android:id="@+id/ivCartFoodImage"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:layout_marginEnd="@dimen/spacing_12"
+                android:scaleType="centerCrop"
+                android:background="@color/slate_100"
+                android:contentDescription="Food image" />
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:orientation="vertical">
+
+                <TextView
+                    android:id="@+id/tvCartFoodName"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:textColor="@color/text_primary"
+                    android:textSize="@dimen/text_size_base"
+                    android:textStyle="bold" />
+
+                <!-- Unit Switcher -->
+                <LinearLayout
+                    android:id="@+id/layoutUnitSwitcher"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="@dimen/spacing_4"
+                    android:orientation="horizontal"
+                    android:background="@color/slate_100"
+                    android:padding="2dp">
+
+                    <TextView
+                        android:id="@+id/tvUnitButton"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:paddingStart="@dimen/spacing_8"
+                        android:paddingEnd="@dimen/spacing_8"
+                        android:paddingTop="@dimen/spacing_4"
+                        android:paddingBottom="@dimen/spacing_4"
+                        android:textSize="@dimen/text_size_xs"
+                        android:textStyle="bold"
+                        android:clickable="true"
+                        android:focusable="true"
+                        android:background="?attr/selectableItemBackground" />
+
+                    <TextView
+                        android:id="@+id/tvGramButton"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:paddingStart="@dimen/spacing_8"
+                        android:paddingEnd="@dimen/spacing_8"
+                        android:paddingTop="@dimen/spacing_4"
+                        android:paddingBottom="@dimen/spacing_4"
+                        android:text="Grams (g)"
+                        android:textSize="@dimen/text_size_xs"
+                        android:textStyle="bold"
+                        android:clickable="true"
+                        android:focusable="true"
+                        android:background="?attr/selectableItemBackground" />
+                </LinearLayout>
+            </LinearLayout>
+
+            <ImageButton
+                android:id="@+id/btnRemove"
+                android:layout_width="32dp"
+                android:layout_height="32dp"
+                android:src="@android:drawable/ic_menu_delete"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:contentDescription="删除"
+                android:tint="@color/slate_400" />
+        </LinearLayout>
+
+        <!-- Quantity Control: Calories, Input Control -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:background="@color/slate_50"
+            android:padding="@dimen/spacing_8"
+            app:cardCornerRadius="@dimen/card_radius_small">
+
+            <TextView
+                android:id="@+id/tvCartCalories"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:paddingStart="@dimen/spacing_8"
+                android:textColor="@color/text_secondary"
+                android:textSize="@dimen/text_size_sm"
+                android:textStyle="bold" />
+
+            <!-- Quantity Input Control -->
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:background="@color/white"
+                android:padding="2dp"
+                app:cardCornerRadius="@dimen/card_radius_small">
+
+                <ImageButton
+                    android:id="@+id/btnDecrease"
+                    android:layout_width="32dp"
+                    android:layout_height="32dp"
+                    android:src="@drawable/ic_minus"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:contentDescription="减少"
+                    android:tint="@color/text_secondary" />
+
+                <FrameLayout
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:paddingStart="@dimen/spacing_8"
+                    android:paddingEnd="@dimen/spacing_8">
+
+                    <EditText
+                        android:id="@+id/etQuantity"
+                        android:layout_width="64dp"
+                        android:layout_height="wrap_content"
+                        android:inputType="numberDecimal"
+                        android:textAlignment="center"
+                        android:textColor="@color/text_primary"
+                        android:textSize="@dimen/text_size_base"
+                        android:textStyle="bold"
+                        android:background="@android:color/transparent"
+                        android:minHeight="32dp" />
+
+                    <TextView
+                        android:id="@+id/tvUnitSuffix"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_gravity="center_vertical|end"
+                        android:paddingEnd="@dimen/spacing_4"
+                        android:textColor="@color/text_tertiary"
+                        android:textSize="@dimen/text_size_xs"
+                        android:visibility="gone" />
+                </FrameLayout>
+
+                <ImageButton
+                    android:id="@+id/btnIncrease"
+                    android:layout_width="32dp"
+                    android:layout_height="32dp"
+                    android:src="@drawable/ic_plus"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:contentDescription="增加"
+                    android:tint="@color/text_secondary" />
+            </LinearLayout>
+        </LinearLayout>
+    </LinearLayout>
+</androidx.cardview.widget.CardView>
+
