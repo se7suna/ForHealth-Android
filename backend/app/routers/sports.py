@@ -188,10 +188,11 @@ async def get_all_sports_sports(current_user: str = Depends(get_current_user)):
     """
     获取用户全部运动记录
     """
-    search_request = type('obj', (object,), {})()
-    search_request.start_date = None
-    search_request.end_date = None
-    search_request.sport_name = None
+    search_request = SearchSportRecordsRequest(
+        start_date=None,
+        end_date=None,
+        sport_name=None
+    )
     return await sports_service.search_sports_record(search_request,current_user)
 
 
