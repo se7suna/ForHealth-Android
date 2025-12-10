@@ -1,0 +1,201 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Diet Manager AI</string>
+    
+    <!-- Main Screen -->
+    <string name="hello_user">Hello, Alex</string>
+    <string name="daily_net">Today</string>
+    <string name="target">Target</string>
+    <string name="timeline">Records</string>
+    <string name="analytics">Analytics</string>
+    <string name="no_activity">No activity yet.\nStart your day!</string>
+    
+    <!-- Nutrition -->
+    <string name="carbs">Carbs</string>
+    <string name="fat">Fat</string>
+    <string name="protein">Protein</string>
+    <string name="calories">Calories</string>
+    <string name="kcal">kcal</string>
+    <string name="grams">g</string>
+    
+    <!-- Meal Types -->
+    <string name="breakfast">Breakfast</string>
+    <string name="lunch">Lunch</string>
+    <string name="dinner">Dinner</string>
+    <string name="snack">Snack</string>
+    
+    <!-- Exercise Types -->
+    <string name="cardio">Cardio</string>
+    <string name="strength">Strength</string>
+    <string name="flexibility">Flexibility</string>
+    <string name="sports">Sports</string>
+    
+    <!-- Add Meal Screen -->
+    <string name="add_food">Add Food</string>
+    <string name="add_meal">Add Meal</string>
+    <string name="delete_record">Delete Record</string>
+    <string name="scan_code">Scan Code</string>
+    <string name="take_photo">Take Photo</string>
+    <string name="scanning">Scanning...</string>
+    <string name="scan_success">Scan Success</string>
+    <string name="scan_failed">Scan Failed</string>
+    <string name="camera_permission_required">Camera permission is required</string>
+    <string name="search_food">Search…</string>
+    <string name="create_custom_food">Create Custom Food</string>
+    <string name="create_custom_sport">Create Custom Sport</string>
+    <string name="selected">Selected</string>
+    <string name="add_now">Add Meal</string>
+    <string name="confirm_add_items">Confirm &amp; Add %1$d items</string>
+    <string name="no_food_found">No food found matching \"%1$s\"</string>
+    
+    <!-- Add Exercise Screen -->
+    <string name="log_workout">Add Exercise</string>
+    <string name="search_exercises">Search…</string>
+    <string name="create_custom_exercise">Create Custom Exercise</string>
+    <string name="est_burn">Est. Burn</string>
+    <string name="confirm_workout">Add Exercise</string>
+    <string name="calories_per_min">kcal/min</string>
+    <string name="minutes">min</string>
+    
+    <!-- Profile Screen -->
+    <string name="daily_goals">Daily Goals</string>
+    <string name="health_goals">Health Goals</string>
+    <string name="edit">Edit</string>
+    <string name="calories_limit">Calories Limit</string>
+    <string name="protein_goal">Protein Goal</string>
+    <string name="carbs_goal">Carbs Goal</string>
+    <string name="activity_level">Activity Level</string>
+    <string name="target_weight">Target Weight</string>
+    <string name="goal_period_weeks">Goal Period</string>
+    <string name="weeks">weeks</string>
+    <string name="burned_today">Burned Today</string>
+    <string name="keep_moving">Keep moving to reach your goals!</string>
+    <string name="activity_log">Activity Log</string>
+    <string name="settings">Settings</string>
+    <string name="edit_account">Edit Account</string>
+    <string name="account">Account</string>
+    <string name="edit_data">Edit Data</string>
+    <string name="record_changes">Record Changes</string>
+    <string name="log_out">Log Out</string>
+    <string name="edit_profile">Edit Profile</string>
+    <string name="update_data">Update Data</string>
+    <string name="kg">kg</string>
+    <string name="cm">cm</string>
+    <string name="years">Years</string>
+    <string name="display_name">Display Name</string>
+    <string name="age">Age</string>
+    <string name="birthdate">Birthdate</string>
+    <string name="height_cm">Height (cm)</string>
+    <string name="gender">Gender</string>
+    <string name="male">Male</string>
+    <string name="female">Female</string>
+    <string name="save_changes">Save Changes</string>
+    <string name="tap_to_change_avatar">Tap to change avatar</string>
+    
+    <!-- Custom Food Form -->
+    <string name="food_name">Food Name</string>
+    <string name="serving_unit">Serving Unit</string>
+    <string name="weight_g">Weight (g)</string>
+    <string name="nutrition_per_serving">Nutrition per Serving (or Unit)</string>
+    <string name="save_add_cart">Save &amp; Add to Cart</string>
+    <string name="auto_fill_ai">Auto-fill with AI</string>
+    <string name="ai_magic_fill">AI Magic Fill</string>
+    <string name="auto_fill_form">Auto-fill Form</string>
+    
+    <!-- Custom Exercise Form -->
+    <string name="exercise_name">Exercise Name</string>
+    <string name="calories_per_minute">Calories per Minute</string>
+    <string name="save_add">Save &amp; Add</string>
+    
+    <!-- Stats View -->
+    <string name="calorie_balance">Calorie Balance</string>
+    <string name="in_food">In (Food)</string>
+    <string name="out_exercise">Out (Exercise)</string>
+    <string name="macro_ratio">Macro Ratio</string>
+    <string name="caloric_split">Caloric Split</string>
+    <string name="sources">Sources</string>
+    
+    <!-- Analytics -->
+    <string name="day">Day</string>
+    <string name="week">Week</string>
+    <string name="month">Month</string>
+    <string name="activity_trend">Activity Trend</string>
+    <string name="todays_activity">Today\'s Activity</string>
+    <string name="intake">Intake</string>
+    <string name="burned">Burned</string>
+    <string name="calories_in_vs_out">Calories In vs Out</string>
+    <string name="nutrition">Nutrition</string>
+    <string name="total_intake">Total Intake</string>
+    <string name="total_burn">Total Burn</string>
+    <string name="avg_intake">Avg Intake</string>
+    <string name="avg_burn">Avg Burn</string>
+    <string name="sum">Sum</string>
+    <string name="avg_sum">Avg Sum</string>
+    
+    <!-- AI Insight -->
+    <string name="ai_insight">AI健康助手</string>
+    <string name="ready_to_track">Ready to track! Add your first meal to get AI insights.</string>
+    <string name="click_to_chat">Click to chat</string>
+    <string name="refresh_ai_insight">Refresh AI Insight</string>
+    <string name="ai_nutritionist">AI Nutritionist</string>
+    <string name="online">Online</string>
+    <string name="ask_about_diet">Ask about your diet…</string>
+    <string name="talking_about">Talking about: \"%1$s\"</string>
+    
+    <!-- Weight Tracker -->
+    <string name="weight_tracker">Weight Tracker</string>
+    <string name="history_progress">History &amp; Progress</string>
+    <string name="overview">Overview</string>
+    <string name="log_weight">Log Weight</string>
+    <string name="current_weight">Current Weight</string>
+    <string name="start">Start</string>
+    <string name="goal">Goal</string>
+    <string name="bmi_status">BMI Status</string>
+    <string name="bmi">BMI</string>
+    <string name="based_on_height">Based on %1$dcm height</string>
+    <string name="weight_added_successfully">Weight added successfully</string>
+    <string name="new_entry">New Entry</string>
+    <string name="slide_to_adjust">Slide to adjust</string>
+    <string name="log_new_weight">Log New Weight</string>
+    <string name="confirm_weight">Confirm Weight</string>
+    <string name="confirm">Confirm</string>
+    <string name="not_enough_data">Not enough data for trend</string>
+    <string name="underweight">Underweight</string>
+    <string name="healthy_weight">Healthy Weight</string>
+    <string name="overweight">Overweight</string>
+    <string name="obese">Obese</string>
+    <string name="date">Date</string>
+    <string name="weight_history">Weight History</string>
+    
+    <!-- Auth -->
+    <string name="welcome">欢迎来到</string>
+    <string name="app_name_display">For Health</string>
+    <string name="hint_email">邮箱</string>
+    <string name="hint_password">密码</string>
+    <string name="hint_username">用户名</string>
+    <string name="hint_password_confirm">确认密码</string>
+    <string name="hint_verification_code">验证码</string>
+    <string name="btn_login">登录</string>
+    <string name="btn_register">注册</string>
+    <string name="btn_back_to_login">返回登录</string>
+    <string name="register_title">注册账号</string>
+    <string name="send_verification_code">发送验证码</string>
+    <string name="login_success">登录成功</string>
+    <string name="register_success">注册成功，请填写个人信息</string>
+    <string name="login_failed">登录失败，请检查邮箱和密码</string>
+    <string name="register_failed">注册失败</string>
+    <string name="fill_complete_info">请填写完整信息</string>
+    <string name="username_too_short">用户名至少2个字符</string>
+    <string name="invalid_email">请输入有效的邮箱地址</string>
+    <string name="password_too_short">密码长度至少6位</string>
+    <string name="password_mismatch">两次密码输入不一致</string>
+    <string name="network_error">网络错误</string>
+    
+    <!-- Common -->
+    <string name="close">Close</string>
+    <string name="save">Save</string>
+    <string name="cancel">Cancel</string>
+    <string name="delete">Delete</string>
+    <string name="add">Add</string>
+</resources>
+
