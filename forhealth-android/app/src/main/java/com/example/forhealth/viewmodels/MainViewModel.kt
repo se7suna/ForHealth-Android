@@ -1227,8 +1227,6 @@ class MainViewModel : ViewModel() {
                     
                     // 异步重新加载今日记录以确保数据同步
                     loadTodayExercises()
-                    // 重新加载每日卡路里摘要以更新圆环
-                    loadDailyCalorieSummary(null)
 
                     // 更新时间线
                     updateTimeline()
@@ -1258,8 +1256,6 @@ class MainViewModel : ViewModel() {
                     
                     // 异步重新加载今日记录以确保与后端数据完全同步
                     loadTodayExercises()
-                    // 重新加载每日卡路里摘要以更新圆环和统计数据
-                    loadDailyCalorieSummary(null)
                     
                     onResult(ApiResult.Success(true))
                 }

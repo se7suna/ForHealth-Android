@@ -465,7 +465,7 @@ class HomeFragment : Fragment() {
         val endDate = calendar.clone() as java.util.Calendar
         
         // 开始日期：28天前
-        calendar.add(java.util.Calendar.DAY_OF_MONTH, -30) // -29 因为包含今天，所以是28天
+        calendar.add(java.util.Calendar.DAY_OF_MONTH, -29) // -29 因为包含今天，所以是28天
         
         val startYear = calendar.get(java.util.Calendar.YEAR)
         val startMonth = calendar.get(java.util.Calendar.MONTH) + 1
