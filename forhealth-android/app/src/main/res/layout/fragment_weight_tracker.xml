@@ -1,0 +1,490 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.coordinatorlayout.widget.CoordinatorLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/white">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical">
+
+        <!-- Header -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="@color/white"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:paddingTop="@dimen/spacing_48"
+            android:paddingBottom="@dimen/spacing_16"
+            android:paddingStart="@dimen/spacing_24"
+            android:paddingEnd="@dimen/spacing_24"
+            android:elevation="4dp">
+
+            <ImageButton
+                android:id="@+id/btnBack"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:src="@drawable/ic_chevron_left"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:contentDescription="@string/close"
+                android:tint="@color/text_secondary" />
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:layout_marginStart="@dimen/spacing_12"
+                android:orientation="horizontal"
+                android:gravity="center">
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnTabOverview"
+                    style="@style/Widget.Material3.Button.TextButton"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/overview"
+                    android:textSize="@dimen/text_size_base"
+                    android:textStyle="bold" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnTabLog"
+                    style="@style/Widget.Material3.Button.TextButton"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/log_weight"
+                    android:textSize="@dimen/text_size_base"
+                    android:textStyle="bold" />
+            </LinearLayout>
+
+            <View
+                android:layout_width="48dp"
+                android:layout_height="48dp" />
+        </LinearLayout>
+
+        <!-- Content Area -->
+        <androidx.core.widget.NestedScrollView
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:fillViewport="true">
+
+            <!-- Container for both tabs -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical">
+
+            <!-- Overview Tab Content -->
+            <LinearLayout
+                android:id="@+id/layoutOverview"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="@dimen/spacing_24">
+
+                <!-- Summary Card -->
+                <androidx.cardview.widget.CardView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="@dimen/spacing_24"
+                    android:background="@drawable/bg_white"
+                    app:cardCornerRadius="@dimen/card_radius_large"
+                    app:cardElevation="8dp">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:padding="@dimen/spacing_24">
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal"
+                            android:gravity="center_vertical"
+                            android:layout_marginBottom="@dimen/spacing_16">
+
+                            <LinearLayout
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:orientation="vertical">
+
+                                <TextView
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="@string/current_weight"
+                                    android:textColor="@color/black"
+                                    android:textSize="@dimen/text_size_base"
+                                    android:textStyle="bold"
+                                    android:letterSpacing="0.1" />
+
+                                <LinearLayout
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:orientation="horizontal"
+                                    android:gravity="center_vertical"
+                                    android:layout_marginTop="@dimen/spacing_4">
+
+                                    <TextView
+                                        android:id="@+id/tvCurrentWeight"
+                                        android:layout_width="wrap_content"
+                                        android:layout_height="wrap_content"
+                                        android:text="72.0"
+                                        android:textColor="@color/black"
+                                        android:textSize="36sp"
+                                        android:textStyle="bold" />
+
+                                    <TextView
+                                        android:layout_width="wrap_content"
+                                        android:layout_height="wrap_content"
+                                        android:text="@string/kg"
+                                        android:textColor="@color/black"
+                                        android:textSize="@dimen/text_size_2xl"
+                                        android:layout_marginStart="@dimen/spacing_4" />
+                                </LinearLayout>
+                            </LinearLayout>
+
+                            <TextView
+                                android:id="@+id/tvWeightChange"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:background="@drawable/bg_white_20_rounded"
+                                android:paddingStart="@dimen/spacing_12"
+                                android:paddingEnd="@dimen/spacing_12"
+                                android:paddingTop="@dimen/spacing_6"
+                                android:paddingBottom="@dimen/spacing_6"
+                                android:text="+3.0 kg"
+                                android:textColor="@color/emerald_300"
+                                android:textSize="@dimen/text_size_base"
+                                android:textStyle="bold"
+                                android:layout_marginEnd="@dimen/spacing_8" />
+                        </LinearLayout>
+
+                        <View
+                            android:layout_width="match_parent"
+                            android:layout_height="1dp"
+                            android:background="@color/slate_200"
+                            android:layout_marginBottom="@dimen/spacing_16" />
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal">
+
+                            <LinearLayout
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:orientation="vertical">
+
+                                <TextView
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="@string/start"
+                                    android:textColor="@color/black"
+                                    android:textSize="@dimen/text_size_sm"
+                                    android:textStyle="bold"
+                                    android:letterSpacing="0.1"
+                                    android:layout_marginBottom="@dimen/spacing_4" />
+
+                                <TextView
+                                    android:id="@+id/tvStartWeight"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="75.0 kg"
+                                    android:textColor="@color/black"
+                                    android:textSize="@dimen/text_size_lg"
+                                    android:textStyle="bold" />
+                            </LinearLayout>
+
+                            <LinearLayout
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:orientation="vertical">
+
+                                <TextView
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="@string/goal"
+                                    android:textColor="@color/black"
+                                    android:textSize="@dimen/text_size_sm"
+                                    android:textStyle="bold"
+                                    android:letterSpacing="0.1"
+                                    android:layout_marginBottom="@dimen/spacing_4" />
+
+                                <TextView
+                                    android:id="@+id/tvGoalWeight"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="68.0 kg"
+                                    android:textColor="@color/black"
+                                    android:textSize="@dimen/text_size_lg"
+                                    android:textStyle="bold" />
+                            </LinearLayout>
+
+                            <LinearLayout
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:orientation="vertical">
+
+                                <TextView
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="@string/bmi"
+                                    android:textColor="@color/black"
+                                    android:textSize="@dimen/text_size_sm"
+                                    android:textStyle="bold"
+                                    android:letterSpacing="0.1"
+                                    android:layout_marginBottom="@dimen/spacing_4" />
+
+                                <TextView
+                                    android:id="@+id/tvBMI"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="24.9"
+                                    android:textColor="@color/emerald_600"
+                                    android:textSize="@dimen/text_size_lg"
+                                    android:textStyle="bold" />
+                            </LinearLayout>
+                        </LinearLayout>
+                    </LinearLayout>
+                </androidx.cardview.widget.CardView>
+
+                <!-- Chart Section -->
+                <androidx.cardview.widget.CardView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="@dimen/spacing_24"
+                    app:cardCornerRadius="@dimen/card_radius"
+                    app:cardElevation="@dimen/card_elevation">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:padding="@dimen/spacing_16">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="@string/weight_history"
+                            android:textColor="@color/text_primary"
+                            android:textSize="@dimen/text_size_xl"
+                            android:textStyle="bold"
+                            android:layout_marginBottom="@dimen/spacing_12" />
+
+                        <!-- Placeholder for Weight Chart -->
+                        <FrameLayout
+                            android:id="@+id/viewWeightChart"
+                            android:layout_width="match_parent"
+                            android:layout_height="160dp"
+                            android:background="@drawable/bg_slate_100"
+                            android:gravity="center">
+
+                            <TextView
+                                android:id="@+id/tvNoData"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="@string/not_enough_data"
+                                android:textColor="@color/text_secondary"
+                                android:textSize="@dimen/text_size_sm"
+                                android:textStyle="italic"
+                                android:gravity="center"
+                                android:visibility="gone" />
+                        </FrameLayout>
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal"
+                            android:gravity="center_vertical"
+                            android:layout_marginTop="@dimen/spacing_8">
+
+                            <TextView
+                                android:id="@+id/tvChartStartDate"
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:text="Oct 1"
+                                android:textColor="@color/text_secondary"
+                                android:textSize="@dimen/text_size_sm"
+                                android:textStyle="bold"
+                                android:letterSpacing="0.1"
+                                android:clickable="true"
+                                android:focusable="true"
+                                android:background="?attr/selectableItemBackground" />
+
+                            <TextView
+                                android:id="@+id/tvChartEndDate"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="Today"
+                                android:textColor="@color/text_secondary"
+                                android:textSize="@dimen/text_size_sm"
+                                android:textStyle="bold"
+                                android:letterSpacing="0.1"
+                                android:clickable="true"
+                                android:focusable="true"
+                                android:background="?attr/selectableItemBackground" />
+                        </LinearLayout>
+                    </LinearLayout>
+                </androidx.cardview.widget.CardView>
+
+            </LinearLayout>
+
+            <!-- Log Tab Content -->
+            <LinearLayout
+                android:id="@+id/layoutLog"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="@dimen/spacing_24"
+                android:gravity="center"
+                android:visibility="gone">
+
+                <!-- Weight Display with +/- Buttons -->
+                <LinearLayout
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:layout_marginBottom="@dimen/spacing_48">
+
+                    <Button
+                        android:id="@+id/btnDecrease"
+                        android:layout_width="56dp"
+                        android:layout_height="56dp"
+                        android:text="-" 
+                        android:textSize="@dimen/text_size_3xl"
+                        android:textStyle="bold"
+                        android:background="@drawable/bg_emerald_500"
+                        android:layout_marginEnd="@dimen/spacing_16" />
+
+                    <TextView
+                        android:id="@+id/tvWeightInput"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="72.0"
+                        android:textColor="@color/text_primary"
+                        android:textSize="@dimen/text_size_4xl"
+                        android:textStyle="bold"
+                        android:letterSpacing="-0.02" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/kg"
+                        android:textColor="@color/text_secondary"
+                        android:textSize="@dimen/text_size_xl"
+                        android:layout_marginStart="@dimen/spacing_8" />
+
+                    <Button
+                        android:id="@+id/btnIncrease"
+                        android:layout_width="56dp"
+                        android:layout_height="56dp"
+                        android:text="+"
+                        android:textSize="@dimen/text_size_3xl"
+                        android:textStyle="bold"
+                        android:background="@drawable/bg_emerald_500"
+                        android:layout_marginStart="@dimen/spacing_16" />
+                </LinearLayout>
+
+                <!-- Weight Slider -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:layout_marginBottom="@dimen/spacing_48">
+
+                    <com.google.android.material.slider.Slider
+                        android:id="@+id/sliderWeight"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:valueFrom="30"
+                        android:valueTo="150"
+                        android:value="72.0"
+                        app:thumbColor="@color/emerald_500"
+                        app:trackColorActive="@color/emerald_500"
+                        app:trackColorInactive="@color/slate_100" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_gravity="center"
+                        android:layout_marginTop="@dimen/spacing_24"
+                        android:text="@string/slide_to_adjust"
+                        android:textColor="@color/text_tertiary"
+                        android:textSize="@dimen/text_size_sm" />
+                </LinearLayout>
+
+                <!-- Date Info -->
+                <androidx.cardview.widget.CardView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:background="@drawable/bg_slate_50"
+                    app:cardCornerRadius="@dimen/card_radius"
+                    app:cardElevation="0dp">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical"
+                        android:padding="@dimen/spacing_16">
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="@string/date"
+                            android:textColor="@color/text_secondary"
+                            android:textSize="@dimen/text_size_base" />
+
+                        <TextView
+                            android:id="@+id/tvLogDate"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Nov 14, 2024"
+                            android:textColor="@color/text_primary"
+                            android:textSize="@dimen/text_size_base"
+                            android:textStyle="bold" />
+                    </LinearLayout>
+                </androidx.cardview.widget.CardView>
+            </LinearLayout>
+            </LinearLayout>
+        </androidx.core.widget.NestedScrollView>
+
+        <!-- Bottom Action Button (Only shown in Log tab) -->
+        <LinearLayout
+            android:id="@+id/layoutBottomButton"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="@color/white"
+            android:orientation="vertical"
+            android:padding="@dimen/spacing_24"
+            android:paddingBottom="@dimen/spacing_40"
+            android:elevation="8dp"
+            android:visibility="gone">
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnAction"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/confirm"
+                android:textSize="@dimen/text_size_lg"
+                android:textStyle="bold"
+                android:paddingVertical="@dimen/spacing_16"
+                app:backgroundTint="@color/emerald_600"
+                app:cornerRadius="@dimen/card_radius" />
+        </LinearLayout>
+    </LinearLayout>
+
+</androidx.coordinatorlayout.widget.CoordinatorLayout>
+

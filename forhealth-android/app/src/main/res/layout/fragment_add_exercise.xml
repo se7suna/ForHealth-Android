@@ -1,0 +1,347 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.coordinatorlayout.widget.CoordinatorLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/orange_50">
+
+    <androidx.core.widget.NestedScrollView
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:fillViewport="true">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
+
+            <!-- Header -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:background="@color/white"
+                android:paddingTop="@dimen/spacing_48"
+                android:paddingBottom="@dimen/spacing_16"
+                android:paddingStart="@dimen/spacing_24"
+                android:paddingEnd="@dimen/spacing_24">
+
+                <!-- Close Button and Title -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:layout_marginBottom="@dimen/spacing_24">
+
+                    <ImageButton
+                        android:id="@+id/btnClose"
+                        android:layout_width="48dp"
+                        android:layout_height="48dp"
+                        android:src="@android:drawable/ic_menu_close_clear_cancel"
+                        android:background="?attr/selectableItemBackgroundBorderless"
+                        android:contentDescription="关闭"
+                        android:tint="@color/text_secondary" />
+
+                    <TextView
+                        android:id="@+id/tvTitle"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="@string/log_workout"
+                        android:textColor="@color/text_primary"
+                        android:textSize="@dimen/text_size_2xl"
+                        android:textStyle="bold"
+                        android:gravity="center" />
+
+                    <View
+                        android:layout_width="48dp"
+                        android:layout_height="48dp" />
+                </LinearLayout>
+
+                <!-- Search Bar -->
+                <EditText
+                    android:id="@+id/etSearch"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="@dimen/spacing_16"
+                    android:hint="Search..."
+                    android:paddingStart="@dimen/spacing_48"
+                    android:paddingEnd="@dimen/spacing_16"
+                    android:paddingTop="@dimen/spacing_12"
+                    android:paddingBottom="@dimen/spacing_12"
+                    android:background="@drawable/bg_orange_50"
+                    android:textColorHint="@color/text_secondary"
+                    android:textColor="@color/text_primary"
+                    android:textSize="@dimen/text_size_base" />
+
+                <!-- Exercise Category Tabs -->
+                <HorizontalScrollView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:scrollbars="none">
+
+                    <LinearLayout
+                        android:id="@+id/layoutCategories"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal" />
+                </HorizontalScrollView>
+            </LinearLayout>
+
+            <!-- Create Custom Sport Button and Camera Button -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginHorizontal="@dimen/spacing_24"
+                android:layout_marginBottom="@dimen/spacing_16"
+                android:orientation="horizontal"
+                android:gravity="center_vertical">
+
+                <LinearLayout
+                    android:id="@+id/btnCreateCustomSport"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center"
+                    android:background="@drawable/bg_orange_50"
+                    android:paddingTop="@dimen/spacing_16"
+                    android:paddingBottom="@dimen/spacing_16"
+                    android:paddingStart="@dimen/spacing_16"
+                    android:paddingEnd="@dimen/spacing_16"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:foreground="?attr/selectableItemBackground">
+
+                    <ImageView
+                        android:layout_width="18dp"
+                        android:layout_height="18dp"
+                        android:src="@drawable/ic_plus"
+                        android:background="@drawable/bg_orange_100_solid"
+                        android:tint="@color/orange_600"
+                        android:layout_marginEnd="@dimen/spacing_8" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/create_custom_sport"
+                        android:background="@drawable/bg_orange_100_solid"
+                        android:textColor="@color/orange_600"
+                        android:textSize="@dimen/text_size_sm"
+                        android:textStyle="bold" />
+                </LinearLayout>
+            </LinearLayout>
+
+            <!-- Exercise List -->
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/rvExerciseList"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:padding="@dimen/spacing_24"
+                android:background="@color/white"
+                android:clipToPadding="false" />
+        </LinearLayout>
+    </androidx.core.widget.NestedScrollView>
+
+    <!-- Cart Bottom Sheet -->
+    <LinearLayout
+        android:id="@+id/layoutCart"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom"
+        android:orientation="vertical"
+        android:background="@color/white"
+        android:visibility="gone"
+        android:elevation="8dp"
+        android:minHeight="96dp">
+
+        <!-- Cart Summary Bar (Clickable to expand/collapse) -->
+        <LinearLayout
+            android:id="@+id/layoutCartHeader"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:padding="@dimen/spacing_16"
+            android:clickable="true"
+            android:focusable="true"
+            android:background="@android:color/transparent">
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:orientation="horizontal"
+                android:gravity="center_vertical">
+
+                <FrameLayout
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginEnd="@dimen/spacing_12">
+
+                    <LinearLayout
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:background="@drawable/bg_orange_50"
+                        android:padding="@dimen/spacing_8"
+                        android:orientation="horizontal">
+
+                        <ImageView
+                            android:layout_width="24dp"
+                            android:layout_height="24dp"
+                            android:src="@drawable/ic_dumbbell"
+                            android:tint="@color/orange_600"
+                            android:contentDescription="运动" />
+                    </LinearLayout>
+
+                    <TextView
+                        android:id="@+id/tvCartBadge"
+                        android:layout_width="20dp"
+                        android:layout_height="20dp"
+                        android:layout_gravity="top|end"
+                        android:background="@drawable/bg_rose_500"
+                        android:text="0"
+                        android:textColor="@color/white"
+                        android:textSize="10sp"
+                        android:textStyle="bold"
+                        android:gravity="center"
+                        android:visibility="gone" />
+                </FrameLayout>
+
+                <LinearLayout
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/selected"
+                        android:textColor="@color/text_secondary"
+                        android:textSize="@dimen/text_size_xs" />
+
+                    <TextView
+                        android:id="@+id/tvCartTotalCalories"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="0 kcal"
+                        android:textColor="@color/text_primary"
+                        android:textSize="@dimen/text_size_lg"
+                        android:textStyle="bold" />
+                </LinearLayout>
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical">
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnLogWorkoutCollapsed"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginEnd="@dimen/spacing_12"
+                    android:text="@string/log_workout"
+                    android:textColor="@color/white"
+                    android:textSize="@dimen/text_size_sm"
+                    android:textStyle="bold"
+                    android:paddingStart="@dimen/spacing_20"
+                    android:paddingEnd="@dimen/spacing_20"
+                    android:paddingTop="@dimen/spacing_10"
+                    android:paddingBottom="@dimen/spacing_10"
+                    app:backgroundTint="@color/orange_500"
+                    app:cornerRadius="@dimen/button_corner_radius"
+                    app:rippleColor="@android:color/transparent"
+                    android:stateListAnimator="@null"
+                    android:visibility="gone" />
+
+                <ImageView
+                    android:id="@+id/ivCartChevron"
+                    android:layout_width="24dp"
+                    android:layout_height="24dp"
+                    android:src="@drawable/ic_chevron_up"
+                    android:tint="@color/text_secondary"
+                    android:contentDescription="展开/收起" />
+            </LinearLayout>
+        </LinearLayout>
+
+        <!-- Expanded Cart Content -->
+        <androidx.core.widget.NestedScrollView
+            android:id="@+id/scrollCartContent"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:maxHeight="400dp"
+            android:visibility="gone">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:background="@color/slate_50"
+                android:padding="@dimen/spacing_24">
+
+                <androidx.recyclerview.widget.RecyclerView
+                    android:id="@+id/rvCartItems"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:nestedScrollingEnabled="false" />
+            </LinearLayout>
+        </androidx.core.widget.NestedScrollView>
+
+        <!-- Expanded Bottom Action Button -->
+        <LinearLayout
+            android:id="@+id/layoutCartFooter"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:background="@color/white"
+            android:padding="@dimen/spacing_24"
+            android:visibility="gone">
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnSave"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/confirm_workout"
+                android:textColor="@color/white"
+                android:textSize="@dimen/text_size_lg"
+                android:textStyle="bold"
+                android:paddingTop="@dimen/spacing_16"
+                android:paddingBottom="@dimen/spacing_16"
+                app:backgroundTint="@color/orange_500"
+                app:cornerRadius="@dimen/button_corner_radius"
+                app:rippleColor="@android:color/transparent"
+                android:stateListAnimator="@null" />
+        </LinearLayout>
+    </LinearLayout>
+
+    <!-- Delete Record Button (Independent from Cart) -->
+    <LinearLayout
+        android:id="@+id/layoutDeleteButton"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom"
+        android:orientation="vertical"
+        android:background="@color/white"
+        android:visibility="gone"
+        android:elevation="8dp"
+        android:padding="@dimen/spacing_24">
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnDeleteRecord"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/delete_record"
+            android:textColor="@color/white"
+            android:textSize="@dimen/text_size_lg"
+            android:textStyle="bold"
+            android:paddingTop="@dimen/spacing_16"
+            android:paddingBottom="@dimen/spacing_16"
+            app:backgroundTint="@color/rose_500"
+            app:cornerRadius="@dimen/button_corner_radius"
+            app:rippleColor="@android:color/transparent"
+            android:stateListAnimator="@null" />
+    </LinearLayout>
+</androidx.coordinatorlayout.widget.CoordinatorLayout>
