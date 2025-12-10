@@ -303,11 +303,10 @@ async def delete_sport_image(image_url:str) -> bool:
         )
 
 
-<<<<<<< HEAD
 def get_recipe_image_storage_path() -> Path:
     """
     获取食谱图片存储路径
-    
+
     Returns:
         食谱图片存储目录的Path对象（uploads/recipe_images）
     """
@@ -317,27 +316,27 @@ def get_recipe_image_storage_path() -> Path:
     storage_path = backend_dir / base_path / "recipe_images"
 
     storage_path.mkdir(parents=True, exist_ok=True)
-    
+
     return storage_path
 
 
 async def save_recipe_image(file: UploadFile, recipe_id: Optional[str] = None) -> str:
     """
     保存食谱图片文件
-    
+
     Args:
         file: 上传的图片文件
         recipe_id: 食谱ID（可选，用于生成文件名）
-        
+
     Returns:
         保存后的图片相对路径（用于生成访问URL）
-        
+
     Raises:
         HTTPException: 如果保存失败
     """
     # 验证文件
     validate_image_file(file)
-    
+
     # 生成唯一文件名
     if recipe_id:
         # 如果有食谱ID，使用食谱ID作为文件名的一部分
@@ -347,22 +346,22 @@ async def save_recipe_image(file: UploadFile, recipe_id: Optional[str] = None) -
         # 否则使用UUID生成文件名
         file_ext = Path(file.filename).suffix.lower() if file.filename else ".jpg"
         filename = f"{uuid.uuid4().hex}{file_ext}"
-    
+
     # 获取存储路径
     storage_path = get_recipe_image_storage_path()
     file_path = storage_path / filename
-    
+
     try:
         # 读取文件内容
         content = await file.read()
-        
+
         # 检查文件大小
         if len(content) > MAX_FILE_SIZE:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=f"图片文件过大。最大允许大小：{MAX_FILE_SIZE / 1024 / 1024}MB"
             )
-        
+
         # 验证图片格式（使用PIL）
         try:
             image = Image.open(io.BytesIO(content))
@@ -372,22 +371,22 @@ async def save_recipe_image(file: UploadFile, recipe_id: Optional[str] = None) -
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=f"无效的图片文件：{str(e)}"
             )
-        
+
         # 重新打开图片（verify后需要重新打开）
         image = Image.open(io.BytesIO(content))
-        
+
         # 可选：压缩图片（如果太大）
         # 限制最大尺寸为2000x2000
         max_size = (2000, 2000)
         if image.size[0] > max_size[0] or image.size[1] > max_size[1]:
             image.thumbnail(max_size, Image.Resampling.LANCZOS)
-        
+
         # 保存图片
         image.save(file_path, quality=85, optimize=True)
-        
+
         # 返回相对路径（相对于项目根目录）
         return f"recipe_images/{filename}"
-        
+
     except HTTPException:
         raise
     except Exception as e:
@@ -400,20 +399,20 @@ async def save_recipe_image(file: UploadFile, recipe_id: Optional[str] = None) -
 def delete_recipe_image(image_url: Optional[str]) -> bool:
     """
     删除食谱图片文件
-    
+
     Args:
         image_url: 图片URL或相对路径
-        
+
     Returns:
         是否删除成功
     """
     if not image_url:
         return False
-    
+
     try:
         # 从配置中获取静态文件基础路径（去掉开头的斜杠）
         static_base_path = settings.IMAGE_BASE_URL.lstrip("/")
-        
+
         # 从URL中提取相对路径
         if image_url.startswith("http://") or image_url.startswith("https://"):
             # 如果是完整URL，提取路径部分
@@ -435,7 +434,7 @@ def delete_recipe_image(image_url: Optional[str]) -> bool:
         else:
             # 假设已经是相对路径（如：recipe_images/xxx.jpg）
             relative_path = image_url
-        
+
         # 构建完整文件路径
         # 如果 relative_path 已经包含 recipe_images/，直接使用
         # 否则需要添加 recipe_images/ 前缀
@@ -446,12 +445,12 @@ def delete_recipe_image(image_url: Optional[str]) -> bool:
             # 如果只是文件名，需要添加 recipe_images/ 前缀
             storage_path = get_recipe_image_storage_path()
             file_path = storage_path / relative_path
-        
+
         # 删除文件
         if file_path.exists() and file_path.is_file():
             file_path.unlink()
             return True
-        
+
         return False
     except Exception as e:
         # 打印错误信息以便调试
@@ -459,7 +458,3 @@ def delete_recipe_image(image_url: Optional[str]) -> bool:
         print(f"删除图片失败: {image_url}, 错误: {str(e)}")
         print(traceback.format_exc())
         return False
-
-
-=======
->>>>>>> ae889bb28242f0130d0c3f5443913acc3cd385b0
