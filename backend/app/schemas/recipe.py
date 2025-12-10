@@ -177,7 +177,6 @@ class RecipeUpdateRequest(BaseModel):
     category: Optional[str] = Field(None, max_length=50, description="分类")
     foods: Optional[List[RecipeFoodItem]] = Field(None, min_items=1, description="食物列表")
     tags: Optional[List[str]] = Field(None, description="标签")
-    image_url: Optional[str] = Field(None, description="食谱图片URL")
     prep_time: Optional[int] = Field(None, gt=0, description="准备时间（分钟）")
 
 

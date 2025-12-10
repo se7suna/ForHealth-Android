@@ -10,6 +10,7 @@ import sys
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
+import json
 import pytest
 from httpx import AsyncClient
 
@@ -55,7 +56,6 @@ def sample_recipe_data():
         "category": "早餐",
         "foods": [],  # 需要在测试中添加真实的食物
         "tags": ["早餐", "健康", "简单"],
-        "image_url": "https://example.com/breakfast.jpg",
         "prep_time": 15
     }
 
@@ -85,6 +85,26 @@ def convert_food_data_to_form(food_data):
         form_data["sugar"] = nutrition["sugar"]
     if "sodium" in nutrition:
         form_data["sodium"] = nutrition["sodium"]
+    
+    return form_data
+
+
+def convert_recipe_data_to_form(recipe_data):
+    """将食谱数据转换为表单格式（multipart/form-data）"""
+    form_data = {
+        "name": recipe_data["name"],
+        "foods": json.dumps(recipe_data["foods"], ensure_ascii=False)
+    }
+    
+    # 可选字段
+    if "description" in recipe_data and recipe_data["description"]:
+        form_data["description"] = recipe_data["description"]
+    if "category" in recipe_data and recipe_data["category"]:
+        form_data["category"] = recipe_data["category"]
+    if "tags" in recipe_data and recipe_data["tags"]:
+        form_data["tags"] = json.dumps(recipe_data["tags"], ensure_ascii=False)
+    if "prep_time" in recipe_data and recipe_data["prep_time"]:
+        form_data["prep_time"] = recipe_data["prep_time"]
     
     return form_data
 
@@ -137,7 +157,8 @@ async def test_create_recipe_success(auth_client, sample_recipe_data):
         }
     }]
     
-    response = await auth_client.post("/api/recipe/", json=recipe_data)
+    form_data = convert_recipe_data_to_form(recipe_data)
+    response = await auth_client.post("/api/recipe/", data=form_data)
     
     assert response.status_code == expected_success["status_code"]
     if response.status_code == 201:
@@ -247,7 +268,8 @@ async def test_get_recipe(auth_client, sample_recipe_data):
         }
     }]
     
-    recipe_response = await auth_client.post("/api/recipe/", json=recipe_data)
+    form_data = convert_recipe_data_to_form(recipe_data)
+    recipe_response = await auth_client.post("/api/recipe/", data=form_data)
     if recipe_response.status_code == 201:
         recipe_id = recipe_response.json().get("id")
         
@@ -313,7 +335,8 @@ async def test_update_recipe(auth_client, sample_recipe_data):
         }
     }]
     
-    recipe_response = await auth_client.post("/api/recipe/", json=recipe_data)
+    form_data = convert_recipe_data_to_form(recipe_data)
+    recipe_response = await auth_client.post("/api/recipe/", data=form_data)
     if recipe_response.status_code == 201:
         recipe_id = recipe_response.json().get("id")
         
@@ -328,6 +351,8 @@ async def test_update_recipe(auth_client, sample_recipe_data):
         if response.status_code == 200:
             data = response.json()
             assert data["name"] == update_data["name"]
+            # 注意：update_recipe 返回的 RecipeResponse 可能包含 image_url（如果数据库中有），
+            # 但 update_recipe 接口本身不处理 image_url 字段的更新
         
         # 清理食谱
         if recipe_id:
@@ -336,6 +361,108 @@ async def test_update_recipe(auth_client, sample_recipe_data):
     # 清理食物
     if food_id:
         await auth_client.delete(f"/api/food/{food_id}")
+
+
+@pytest.mark.asyncio
+async def test_update_recipe_image(auth_client, sample_recipe_data):
+    """测试更新食谱图片 - 成功"""
+    expected_success = {
+        "status_code": 200
+    }
+    
+    # 先创建测试食物和食谱
+    food_data = {
+        "name": "测试食物_更新图片用",
+        "category": "主食",
+        "serving_size": 100,
+        "serving_unit": "克",
+        "nutrition_per_serving": {
+            "calories": 100,
+            "protein": 5,
+            "carbohydrates": 20,
+            "fat": 2
+        }
+    }
+    
+    form_data = convert_food_data_to_form(food_data)
+    food_response = await auth_client.post("/api/food/", data=form_data)
+    if food_response.status_code != 201:
+        pytest.skip("无法创建测试食物")
+    
+    food_id = food_response.json().get("id")
+    
+    # 创建食谱
+    recipe_data = sample_recipe_data.copy()
+    recipe_data["foods"] = [{
+        "food_id": food_id,
+        "food_name": "测试食物_更新图片用",
+        "serving_amount": 1.0,
+        "serving_size": 100,
+        "serving_unit": "克",
+        "nutrition": {
+            "calories": 100,
+            "protein": 5,
+            "carbohydrates": 20,
+            "fat": 2
+        }
+    }]
+    
+    form_data = convert_recipe_data_to_form(recipe_data)
+    recipe_response = await auth_client.post("/api/recipe/", data=form_data)
+    if recipe_response.status_code != 201:
+        pytest.skip("无法创建测试食谱")
+    
+    recipe_id = recipe_response.json().get("id")
+    
+    # 读取测试图片文件
+    from pathlib import Path
+    test_image_path = Path(__file__).parent / "test_picture" / "image2.jpg"
+    
+    # 更新食谱图片
+    with open(test_image_path, "rb") as image_file:
+        files = {
+            "image": ("image2.jpg", image_file, "image/jpeg")
+        }
+        response = await auth_client.put(f"/api/recipe/{recipe_id}/image", files=files)
+    
+    assert response.status_code == expected_success["status_code"]
+    if response.status_code == 200:
+        data = response.json()
+        assert "image_url" in data
+        assert data["image_url"] is not None
+        assert data["id"] == recipe_id
+    
+    # 清理食谱
+    if recipe_id:
+        await auth_client.delete(f"/api/recipe/{recipe_id}")
+    
+    # 清理食物
+    if food_id:
+        await auth_client.delete(f"/api/food/{food_id}")
+
+
+@pytest.mark.asyncio
+async def test_update_recipe_image_not_found(auth_client):
+    """测试更新不存在的食谱图片 - 应该返回404"""
+    expected_error = {
+        "status_code": 404
+    }
+    
+    # 使用一个不存在的食谱ID
+    fake_recipe_id = "507f1f77bcf86cd799439011"
+    
+    # 读取测试图片文件
+    from pathlib import Path
+    test_image_path = Path(__file__).parent / "test_picture" / "image2.jpg"
+    
+    # 尝试更新不存在的食谱的图片
+    with open(test_image_path, "rb") as image_file:
+        files = {
+            "image": ("image2.jpg", image_file, "image/jpeg")
+        }
+        response = await auth_client.put(f"/api/recipe/{fake_recipe_id}/image", files=files)
+    
+    assert response.status_code == expected_error["status_code"]
 
 
 @pytest.mark.asyncio
@@ -382,7 +509,8 @@ async def test_delete_recipe(auth_client, sample_recipe_data):
         }
     }]
     
-    recipe_response = await auth_client.post("/api/recipe/", json=recipe_data)
+    form_data = convert_recipe_data_to_form(recipe_data)
+    recipe_response = await auth_client.post("/api/recipe/", data=form_data)
     if recipe_response.status_code == 201:
         recipe_id = recipe_response.json().get("id")
         
@@ -442,7 +570,8 @@ async def test_create_recipe_record(auth_client, sample_recipe_data):
         }
     }]
     
-    recipe_response = await auth_client.post("/api/recipe/", json=recipe_data)
+    form_data = convert_recipe_data_to_form(recipe_data)
+    recipe_response = await auth_client.post("/api/recipe/", data=form_data)
     if recipe_response.status_code == 201:
         recipe_id = recipe_response.json().get("id")
         
@@ -536,7 +665,8 @@ async def test_update_recipe_record(auth_client, sample_recipe_data):
         }
     }]
     
-    recipe_response = await auth_client.post("/api/recipe/", json=recipe_data)
+    form_data = convert_recipe_data_to_form(recipe_data)
+    recipe_response = await auth_client.post("/api/recipe/", data=form_data)
     if recipe_response.status_code == 201:
         recipe_id = recipe_response.json().get("id")
         
@@ -618,7 +748,8 @@ async def test_delete_recipe_record(auth_client, sample_recipe_data):
         }
     }]
     
-    recipe_response = await auth_client.post("/api/recipe/", json=recipe_data)
+    form_data = convert_recipe_data_to_form(recipe_data)
+    recipe_response = await auth_client.post("/api/recipe/", data=form_data)
     if recipe_response.status_code == 201:
         recipe_id = recipe_response.json().get("id")
         

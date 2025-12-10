@@ -313,7 +313,6 @@ async def update_food(
     - **full_nutrition**: 完整营养信息（与测试脚本格式一致）
     - **brand**: 品牌
     - **barcode**: 条形码
-    - **image_url**: 食物图片URL（注意：更新图片请使用 PUT /api/food/{food_id}/image 端点）
     
     只能更新自己创建的食物
     """
@@ -341,7 +340,6 @@ async def update_food(
         full_nutrition=updated_food.get("full_nutrition"),
         brand=updated_food.get("brand"),
         barcode=updated_food.get("barcode"),
-        image_url=updated_food.get("image_url"),
         created_by=updated_food.get("created_by"),
         created_at=updated_food["created_at"],
         source=updated_food.get("source"),
@@ -463,7 +461,6 @@ async def create_food_record(
     记录食物摄入（通过食物ID选择）
     
     - **food_id**: 食物ID（本地库 ObjectId）
-    - **source**: 数据来源（local / auto），默认 auto
     - **serving_amount**: 食用份量数（如：1.5 表示 1.5 份）
     - **recorded_at**: 摄入时间（用户实际食用的时间）
     - **meal_type**: 餐次类型（可选，如：早餐、午餐、晚餐、加餐）

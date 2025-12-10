@@ -8,6 +8,7 @@ from app.schemas.user import (
     PasswordResetRequest,
     PasswordResetVerify,
     SendRegistrationCodeRequest,
+    RefreshTokenRequest,
 )
 from app.services import user_service, auth_service
 from app.utils.security import (
@@ -15,6 +16,8 @@ from app.utils.security import (
     verify_password,
     create_access_token,
     decode_access_token,
+    create_refresh_token,
+    decode_refresh_token,
 )
 
 router = APIRouter(prefix="/auth", tags=["认证"])
@@ -100,7 +103,7 @@ async def login(login_data: UserLoginRequest):
     - **email**: 注册时使用的邮箱
     - **password**: 密码
 
-    返回 JWT access token
+    返回 JWT access token 和 refresh token
     """
     # 获取用户
     user = await user_service.get_user_by_email(login_data.email)
@@ -115,10 +118,15 @@ async def login(login_data: UserLoginRequest):
             status_code=status.HTTP_401_UNAUTHORIZED, detail="邮箱或密码错误"
         )
 
-    # 生成 token
+    # 生成 access token (短期有效)
     access_token = create_access_token(data={"sub": user["email"]})
+    # 生成 refresh token (长期有效)
+    refresh_token = create_refresh_token(data={"sub": user["email"]})
 
-    return TokenResponse(access_token=access_token)
+    return TokenResponse(
+        access_token=access_token,
+        refresh_token=refresh_token
+    )
 
 
 @router.post("/password-reset/send-code", response_model=MessageResponse)
@@ -180,6 +188,49 @@ async def reset_password(reset_data: PasswordResetVerify):
     auth_service.invalidate_code(reset_data.email)
 
     return MessageResponse(message="密码重置成功，请使用新密码登录")
+
+
+@router.post("/refresh", response_model=TokenResponse)
+async def refresh_token(refresh_request: RefreshTokenRequest):
+    """
+    刷新 access token
+
+    - **refresh_token**: 长期有效的 refresh token
+
+    返回新的 access token 和 refresh token
+    """
+    # 验证 refresh token
+    payload = decode_refresh_token(refresh_request.refresh_token)
+
+    if payload is None:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="无效的 refresh token",
+        )
+
+    email = payload.get("sub")
+    if email is None:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="无效的 refresh token",
+        )
+
+    # 验证用户是否存在
+    user = await user_service.get_user_by_email(email)
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="用户不存在",
+        )
+
+    # 生成新的 tokens
+    new_access_token = create_access_token(data={"sub": email})
+    new_refresh_token = create_refresh_token(data={"sub": email})
+
+    return TokenResponse(
+        access_token=new_access_token,
+        refresh_token=new_refresh_token
+    )
 
 
 # 依赖项：获取当前登录用户
