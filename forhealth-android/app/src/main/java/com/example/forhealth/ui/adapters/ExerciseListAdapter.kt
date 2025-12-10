@@ -40,7 +40,8 @@ class ExerciseListAdapter(
         val selected = selectedItems.find { it.exerciseItem.id == exercise.id }
 
         // 加载图片
-        var image_url = exercise.image.replace("127.0.0.1", "10.0.2.2")
+        var image_url = exercise.image
+        // var image_url = exercise.image.replace("127.0.0.1", "10.0.2.2")
         holder.ivExerciseImage.load(image_url) {
             decoderFactory { result, options, _ -> SvgDecoder(result.source, options) }
             placeholder(R.color.slate_100)

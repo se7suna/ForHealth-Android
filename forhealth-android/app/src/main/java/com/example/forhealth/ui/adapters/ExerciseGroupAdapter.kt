@@ -36,7 +36,8 @@ class ExerciseGroupAdapter(
         holder.tvExerciseDetails.text = "${activity.duration} min"
         
         activity.image?.let {
-            val imageUrl = it.replace("127.0.0.1", "10.0.2.2")
+            val imageUrl = it
+            // val imageUrl = it.replace("127.0.0.1", "10.0.2.2")
             holder.ivExerciseImage.load(imageUrl) {
                 decoderFactory { result, options, _ -> SvgDecoder(result.source, options) }
                 placeholder(R.color.orange_100)

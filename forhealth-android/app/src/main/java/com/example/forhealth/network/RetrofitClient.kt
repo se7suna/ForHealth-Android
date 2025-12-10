@@ -13,7 +13,7 @@ import java.util.concurrent.TimeUnit
 object RetrofitClient {
     
     // TODO: 从配置文件或环境变量读取
-    private const val BASE_URL = "http://10.0.2.2:8000/api/"
+    private const val BASE_URL = "http://124.70.161.90:8000/api/"
     
     // Token提供者（从SharedPreferences或其他存储中获取）
     private var tokenProvider: (() -> String?)? = null

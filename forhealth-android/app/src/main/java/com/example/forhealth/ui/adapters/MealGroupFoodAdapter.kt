@@ -36,7 +36,8 @@ class MealGroupFoodAdapter(
         
         meal.image?.let {
             // 加载图片（将 127.0.0.1 映射为 Android 模拟器可访问的 10.0.2.2）
-            val imageUrl = it.replace("127.0.0.1", "10.0.2.2")
+            val imageUrl = it
+            // val imageUrl = it.replace("127.0.0.1", "10.0.2.2")
             holder.ivFoodImage.load(imageUrl) {
                 placeholder(R.color.slate_100)
                 error(R.color.slate_100)
