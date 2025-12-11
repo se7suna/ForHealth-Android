@@ -14,11 +14,12 @@ services:
       - ./backend/.env.production
     depends_on:
       - mongodb
-      - mailhog
+      - postfix
     networks:
       - for_health_network
-    volumes:
-      - ./backend/app:/app/app
+    # 生产环境移除 volumes 挂载，使用镜像中打包的代码和依赖
+    # volumes:
+    #   - ./backend/app:/app/app
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
       interval: 30s
@@ -40,7 +41,26 @@ services:
     environment:
       MONGO_INITDB_DATABASE: for_health_prod
 
-  #MailHog 邮件服务器
+  # Postfix SMTP 邮件服务器（真实发送）
+  postfix:
+    image: mwader/postfix-relay
+    container_name: for_health_postfix
+    restart: always
+    ports:
+      - "25:25"     # SMTP 端口
+    networks:
+      - for_health_network
+    environment:
+      # 设置主机名（使用你的域名或服务器IP）
+      - POSTFIX_myhostname=mail.forhealth.com
+      # 允许的网络（允许内网容器发送）
+      - POSTFIX_mynetworks=127.0.0.0/8 10.0.0.0/8 172.16.0.0/12 192.168.0.0/16
+      # 可选：如果有上游中继服务器（如企业邮箱）
+      # - POSTFIX_relayhost=[smtp.example.com]:587
+      # - POSTFIX_relayhost_username=your_email@example.com
+      # - POSTFIX_relayhost_password=your_password
+
+  # MailHog 邮件服务器（保留用于开发测试，可选）
   mailhog:
     image: axllent/mailpit:latest
     container_name: for_health_mailhog
@@ -53,6 +73,8 @@ services:
     environment:
       MP_SMTP_BIND_ADDR: 0.0.0.0:1025
       MP_UI_BIND_ADDR: 0.0.0.0:8025
+    profiles:
+      - dev  # 只在开发环境启动
 
   # Nginx 反向代理（可选）
   nginx:
