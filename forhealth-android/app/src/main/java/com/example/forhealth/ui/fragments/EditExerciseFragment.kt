@@ -23,24 +23,24 @@ import kotlinx.coroutines.launch
 import java.util.*
 
 class EditExerciseFragment : DialogFragment() {
-    
+
     private var _binding: FragmentAddExerciseBinding? = null
     private val binding get() = _binding!!
-    
+
     private var onExerciseUpdatedListener: ((ActivityItem) -> Unit)? = null
     private var onExerciseDeletedListener: ((String) -> Unit)? = null
-    
+
     private val selectedItems = mutableListOf<SelectedExerciseItem>()
     private var selectedCategory: ExerciseType = ExerciseType.CARDIO
     private var allExercises: List<ExerciseItem> = emptyList()
     private var filteredExercises: List<ExerciseItem> = emptyList()
     private var isCartExpanded = false
     private var originalActivity: ActivityItem? = null
-    
+
     private lateinit var exerciseAdapter: ExerciseListAdapter
     private lateinit var cartAdapter: CartExerciseAdapter
     private lateinit var mainViewModel: MainViewModel
-    
+
     fun setExerciseLibrary(exercises: List<ExerciseItem>) {
         allExercises = exercises
         filteredExercises = exercises.filter { it.category == selectedCategory }
@@ -48,19 +48,19 @@ class EditExerciseFragment : DialogFragment() {
             updateExerciseList()
         }
     }
-    
+
     fun setOnExerciseUpdatedListener(listener: (ActivityItem) -> Unit) {
         onExerciseUpdatedListener = listener
     }
-    
+
     fun setOnExerciseDeletedListener(listener: (String) -> Unit) {
         onExerciseDeletedListener = listener
     }
-    
+
     fun setActivity(activity: ActivityItem) {
         originalActivity = activity
         selectedCategory = activity.type
-        
+
         // 将ActivityItem转换为SelectedExerciseItem（从运动库中查找）
         val exerciseItem = allExercises.find { it.name == activity.name }
         if (exerciseItem != null) {
@@ -71,12 +71,12 @@ class EditExerciseFragment : DialogFragment() {
             ))
         }
     }
-    
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setStyle(STYLE_NORMAL, android.R.style.Theme_NoTitleBar_Fullscreen)
     }
-    
+
     override fun onCreateView(
         inflater: LayoutInflater,
         container: ViewGroup?,
@@ -85,7 +85,7 @@ class EditExerciseFragment : DialogFragment() {
         _binding = FragmentAddExerciseBinding.inflate(inflater, container, false)
         return binding.root
     }
-    
+
     override fun onStart() {
         super.onStart()
         dialog?.window?.let { window ->
@@ -93,27 +93,23 @@ class EditExerciseFragment : DialogFragment() {
             window.setBackgroundDrawableResource(android.R.color.transparent)
         }
     }
-    
+
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        
+
         // 更新标题
         val titleView = binding.root.findViewById<android.widget.TextView>(R.id.tvTitle)
         titleView?.text = "Edit Exercise"
-        
-        // 复用父Fragment的MainViewModel（若失败则退回Activity作用域）
-        mainViewModel = try {
-            ViewModelProvider(requireParentFragment())[MainViewModel::class.java]
-        } catch (e: Exception) {
-            ViewModelProvider(requireActivity())[MainViewModel::class.java]
-        }
-        
+
+        // 与宿主 Activity 共享同一个 MainViewModel，确保删除/更新能同步到外层列表
+        mainViewModel = ViewModelProvider(requireActivity())[MainViewModel::class.java]
+
         setupCloseButton()
         setupSearchBar()
         setupCategoryTabs()
         setupExerciseList()
         setupCart()
-        
+
         // 初始显示购物车
         if (selectedItems.isNotEmpty()) {
             updateCart()
@@ -121,13 +117,13 @@ class EditExerciseFragment : DialogFragment() {
             toggleCartExpansion()
         }
     }
-    
+
     private fun setupCloseButton() {
         binding.btnClose.setOnClickListener {
             dismiss()
         }
     }
-    
+
     private fun setupSearchBar() {
         binding.etSearch.addTextChangedListener(object : TextWatcher {
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
@@ -137,7 +133,7 @@ class EditExerciseFragment : DialogFragment() {
             }
         })
     }
-    
+
     private fun setupCategoryTabs() {
         val categories = listOf(
             ExerciseType.CARDIO to "Cardio",
@@ -145,9 +141,9 @@ class EditExerciseFragment : DialogFragment() {
             ExerciseType.FLEXIBILITY to "Flexibility",
             ExerciseType.SPORTS to "Sports"
         )
-        
+
         binding.layoutCategories.removeAllViews()
-        
+
         categories.forEach { (type, label) ->
             val button = MaterialButton(requireContext()).apply {
                 text = label
@@ -161,10 +157,10 @@ class EditExerciseFragment : DialogFragment() {
             }
             binding.layoutCategories.addView(button)
         }
-        
+
         updateCategoryButtons()
     }
-    
+
     private fun updateCategoryButtons() {
         for (i in 0 until binding.layoutCategories.childCount) {
             val button = binding.layoutCategories.getChildAt(i) as MaterialButton
@@ -175,7 +171,7 @@ class EditExerciseFragment : DialogFragment() {
                 else -> ExerciseType.SPORTS
             }
             button.isChecked = type == selectedCategory
-            
+
             if (type == selectedCategory) {
                 button.setBackgroundColor(resources.getColor(R.color.orange_500, null))
                 button.setTextColor(resources.getColor(R.color.white, null))
@@ -185,30 +181,30 @@ class EditExerciseFragment : DialogFragment() {
             }
         }
     }
-    
+
     private fun setupExerciseList() {
         exerciseAdapter = ExerciseListAdapter(
             exerciseList = filteredExercises,
             selectedItems = selectedItems,
             onAddClick = { exercise -> addToCart(exercise) }
         )
-        
+
         binding.rvExerciseList.layoutManager = LinearLayoutManager(requireContext())
         binding.rvExerciseList.adapter = exerciseAdapter
     }
-    
+
     private fun filterExercises(query: String) {
         filteredExercises = if (query.isBlank()) {
             allExercises.filter { it.category == selectedCategory }
         } else {
             allExercises.filter {
                 it.name.contains(query, ignoreCase = true) &&
-                (query.isNotBlank() || it.category == selectedCategory)
+                        (query.isNotBlank() || it.category == selectedCategory)
             }
         }
         updateExerciseList()
     }
-    
+
     private fun updateExerciseList() {
         exerciseAdapter = ExerciseListAdapter(
             exerciseList = filteredExercises,
@@ -217,10 +213,10 @@ class EditExerciseFragment : DialogFragment() {
         )
         binding.rvExerciseList.adapter = exerciseAdapter
     }
-    
+
     private fun addToCart(exercise: ExerciseItem) {
         val existing = selectedItems.find { it.exerciseItem.id == exercise.id }
-        
+
         if (existing != null) {
             existing.count += 15.0
         } else {
@@ -229,24 +225,24 @@ class EditExerciseFragment : DialogFragment() {
                 count = 30.0
             ))
         }
-        
+
         updateExerciseList()
         updateCart()
     }
-    
+
     private fun setupCart() {
         binding.layoutCartHeader.setOnClickListener {
             toggleCartExpansion()
         }
-        
+
         binding.btnLogWorkoutCollapsed.setOnClickListener {
             saveExercise()
         }
-        
+
         binding.btnSave.setOnClickListener {
             saveExercise()
         }
-        
+
         binding.btnDeleteRecord.setOnClickListener {
             originalActivity?.id?.let { recordId ->
                 // 通过ViewModel删除（会调用API）
@@ -269,7 +265,7 @@ class EditExerciseFragment : DialogFragment() {
                 dismiss()
             }
         }
-        
+
         cartAdapter = CartExerciseAdapter(
             items = selectedItems,
             onDurationChange = { exerciseId, delta -> updateDuration(exerciseId, delta) },
@@ -278,16 +274,16 @@ class EditExerciseFragment : DialogFragment() {
             onRemove = { exerciseId -> removeItem(exerciseId) },
             calculateCalories = { item -> item.exerciseItem.caloriesPerUnit * item.count }
         )
-        
+
         binding.rvCartItems.layoutManager = LinearLayoutManager(requireContext())
         binding.rvCartItems.adapter = cartAdapter
-        
+
         updateCart()
     }
-    
+
     private fun toggleCartExpansion() {
         isCartExpanded = !isCartExpanded
-        
+
         if (isCartExpanded) {
             binding.scrollCartContent.visibility = View.VISIBLE
             binding.layoutCartFooter.visibility = View.VISIBLE
@@ -300,17 +296,17 @@ class EditExerciseFragment : DialogFragment() {
             binding.ivCartChevron.setImageResource(R.drawable.ic_chevron_up)
         }
     }
-    
+
     private fun updateDuration(exerciseId: String, delta: Double) {
         val item = selectedItems.find { it.exerciseItem.id == exerciseId } ?: return
         val minVal = 5.0
         val newCount = maxOf(minVal, item.count + delta)
         item.count = newCount
-        
+
         updateCartAdapter()
         updateCart()
     }
-    
+
     private fun handleDurationInput(exerciseId: String, value: String) {
         val item = selectedItems.find { it.exerciseItem.id == exerciseId } ?: return
         if (value.isBlank()) return
@@ -320,19 +316,19 @@ class EditExerciseFragment : DialogFragment() {
             updateCart()
         }
     }
-    
+
     private fun handleDurationBlur(exerciseId: String) {
         val item = selectedItems.find { it.exerciseItem.id == exerciseId } ?: return
         val minVal = 5.0
-        
+
         if (item.count <= 0) {
             item.count = minVal
         }
-        
+
         updateCartAdapter()
         updateCart()
     }
-    
+
     private fun removeItem(exerciseId: String) {
         selectedItems.removeAll { it.exerciseItem.id == exerciseId }
         if (selectedItems.isEmpty()) {
@@ -341,7 +337,7 @@ class EditExerciseFragment : DialogFragment() {
         updateExerciseList()
         updateCart()
     }
-    
+
     private fun updateCartAdapter() {
         cartAdapter = CartExerciseAdapter(
             items = selectedItems,
@@ -353,7 +349,7 @@ class EditExerciseFragment : DialogFragment() {
         )
         binding.rvCartItems.adapter = cartAdapter
     }
-    
+
     private fun updateCart() {
         if (selectedItems.isEmpty()) {
             // 隐藏购物车
@@ -368,10 +364,10 @@ class EditExerciseFragment : DialogFragment() {
             // 显示购物车，隐藏删除按钮
             binding.layoutCart.visibility = View.VISIBLE
             binding.layoutDeleteButton.visibility = View.GONE
-            
+
             val totalBurn = selectedItems.sumOf { it.exerciseItem.caloriesPerUnit * it.count }
             binding.tvCartTotalCalories.text = "${totalBurn.toInt()} kcal"
-            
+
             if (selectedItems.size > 0) {
                 binding.tvCartBadge.text = selectedItems.size.toString()
                 binding.tvCartBadge.visibility = View.VISIBLE
@@ -380,7 +376,7 @@ class EditExerciseFragment : DialogFragment() {
             }
         }
     }
-    
+
     private fun saveExercise() {
         // 如果购物车为空，删除整个运动记录
         if (selectedItems.isEmpty()) {
@@ -408,7 +404,7 @@ class EditExerciseFragment : DialogFragment() {
             }
             return
         }
-        
+
         // 编辑模式下，只更新第一个（因为运动是单项编辑）
         val item = selectedItems.first()
         val activity = ActivityItem(
@@ -420,14 +416,15 @@ class EditExerciseFragment : DialogFragment() {
             type = item.exerciseItem.category,
             image = item.exerciseItem.image
         )
-        
+
         onExerciseUpdatedListener?.invoke(activity)
         dismiss()
     }
-    
+
     override fun onDestroyView() {
         super.onDestroyView()
         _binding = null
     }
 }
+
 

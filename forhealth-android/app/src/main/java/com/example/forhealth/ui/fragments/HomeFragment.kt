@@ -36,7 +36,7 @@ class HomeFragment : Fragment() {
         super.onViewCreated(view, savedInstanceState)
         
         // 初始化 ViewModel
-        viewModel = ViewModelProvider(this)[MainViewModel::class.java]
+        viewModel = ViewModelProvider(requireActivity())[MainViewModel::class.java]
         
         // 初始化 RecyclerView
         timelineAdapter = TimelineAdapter(
