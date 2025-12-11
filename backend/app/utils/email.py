@@ -15,14 +15,14 @@ async def send_email(to_email: str, subject: str, body: str) -> bool:
 
         message.attach(MIMEText(body, "html"))
 
-        # MailHog/Mailpit 不支持 STARTTLS，使用明文连接
+        # Postfix SMTP 发送（端口25无需认证和TLS）
         await aiosmtplib.send(
             message,
             hostname=settings.SMTP_HOST,
             port=settings.SMTP_PORT,
             username=settings.SMTP_USER or None,
             password=settings.SMTP_PASSWORD or None,
-            start_tls=False,  # MailHog/Mailpit 不需要 TLS
+            start_tls=False,  # Postfix 内网通信无需 TLS
         )
         return True
     except Exception as e:

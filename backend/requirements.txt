@@ -12,7 +12,7 @@ pymongo==4.6.1
 python-jose[cryptography]==3.3.0
 passlib[bcrypt]==1.7.4
 python-multipart==0.0.6
-bcrypt==4.1.2
+bcrypt==4.0.1  # 降级到 4.0.1 以兼容 passlib 1.7.4
 
 # 邮件发送
 aiosmtplib==3.0.1
