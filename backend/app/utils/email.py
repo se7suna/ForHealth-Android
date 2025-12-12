@@ -6,7 +6,7 @@ from app.config import settings
 
 
 async def send_email(to_email: str, subject: str, body: str) -> bool:
-    """发送邮件"""
+    """发送邮件（同时发送到真实邮箱和 MailHog 归档）"""
     try:
         message = MIMEMultipart()
         message["From"] = f"{settings.SMTP_FROM_NAME} <{settings.SMTP_FROM_EMAIL}>"
@@ -15,7 +15,7 @@ async def send_email(to_email: str, subject: str, body: str) -> bool:
 
         message.attach(MIMEText(body, "html"))
 
-        # Postfix SMTP 发送（端口25无需认证和TLS）
+        # 1. 发送到真实邮箱（Postfix）
         await aiosmtplib.send(
             message,
             hostname=settings.SMTP_HOST,
@@ -24,6 +24,20 @@ async def send_email(to_email: str, subject: str, body: str) -> bool:
             password=settings.SMTP_PASSWORD or None,
             start_tls=False,  # Postfix 内网通信无需 TLS
         )
+
+        # 2. 同时发送一份副本到 MailHog 归档（用于调试查看）
+        try:
+            await aiosmtplib.send(
+                message,
+                hostname="mailhog",  # MailHog 容器名
+                port=1025,           # MailHog SMTP 端口
+                start_tls=False,
+            )
+            print(f"✅ 邮件已归档到 MailHog: {to_email}")
+        except Exception as archive_error:
+            # MailHog 归档失败不影响主发送
+            print(f"⚠️ MailHog 归档失败（不影响实际发送）: {archive_error}")
+
         return True
     except Exception as e:
         print(f"❌ 邮件发送失败: {e}")

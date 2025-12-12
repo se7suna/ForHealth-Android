@@ -52,7 +52,7 @@ services:
       - for_health_network
     environment:
       # 设置主机名（使用你的域名或服务器IP）
-      - POSTFIX_myhostname=mail.forhealth.com
+      - POSTFIX_myhostname=124.70.161.90
       # 允许的网络（允许内网容器发送）
       - POSTFIX_mynetworks=127.0.0.0/8 10.0.0.0/8 172.16.0.0/12 192.168.0.0/16
       # 可选：如果有上游中继服务器（如企业邮箱）
@@ -60,21 +60,42 @@ services:
       # - POSTFIX_relayhost_username=your_email@example.com
       # - POSTFIX_relayhost_password=your_password
 
-  # MailHog 邮件服务器（保留用于开发测试，可选）
+  # MailHog/Mailpit 邮件查看界面（生产环境可见）
   mailhog:
     image: axllent/mailpit:latest
     container_name: for_health_mailhog
     restart: always
     ports:
-      - "1025:1025"  # SMTP 端口
+      - "1025:1025"  # SMTP 端口（可选，用于调试邮件发送）
       - "8025:8025"  # Web UI 端口
     networks:
       - for_health_network
     environment:
       MP_SMTP_BIND_ADDR: 0.0.0.0:1025
       MP_UI_BIND_ADDR: 0.0.0.0:8025
-    profiles:
-      - dev  # 只在开发环境启动
+      MP_DATA_FILE: /data/mailpit.db
+      MP_SMTP_AUTH_ACCEPT_ANY: 1
+      MP_SMTP_AUTH_ALLOW_INSECURE: 1
+    volumes:
+      - mailpit_data:/data
+
+  # Postfix WebAdmin 界面（Postfix 队列管理）
+  postfixadmin:
+    image: postfixadmin/postfixadmin:latest
+    container_name: for_health_postfixadmin
+    restart: always
+    ports:
+      - "8026:80"  # Web UI 端口（不同于 MailHog 的 8025）
+    networks:
+      - for_health_network
+    environment:
+      - POSTFIXADMIN_DB_TYPE=sqlite
+      - POSTFIXADMIN_SETUP_PASSWORD=admin123
+    volumes:
+      - postfixadmin_data:/var/www/postfixadmin
+      - postfix_admin_sqlite:/var/www/postfixadmin/sqlite
+    depends_on:
+      - postfix
 
   # Nginx 反向代理（可选）
   nginx:
@@ -94,6 +115,12 @@ services:
 
 volumes:
   mongodb_data:
+    driver: local
+  mailpit_data:
+    driver: local
+  postfixadmin_data:
+    driver: local
+  postfix_admin_sqlite:
     driver: local
 
 networks:
