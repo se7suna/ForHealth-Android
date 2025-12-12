@@ -49,8 +49,8 @@ services:
     networks:
       - for_health_network
     environment:
-      # 设置主机名（使用你的域名或服务器IP）
-      - POSTFIX_myhostname=124.70.161.90
+      # 设置主机名（必须是域名格式，不能是纯IP）
+      - POSTFIX_myhostname=mail.forhealth.local
       # 允许的网络（允许内网容器发送）
       - POSTFIX_mynetworks=127.0.0.0/8 10.0.0.0/8 172.16.0.0/12 192.168.0.0/16
       # 可选：如果有上游中继服务器（如企业邮箱）
