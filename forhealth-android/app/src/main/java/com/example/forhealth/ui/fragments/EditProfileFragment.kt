@@ -40,6 +40,8 @@ class EditProfileFragment : DialogFragment() {
     private var selectedBirthdate: String? = null
     private var selectedTargetWeight: Double? = null
     private var selectedGoalPeriod: Int? = null
+    private var selectedWeight: Double? = null
+    private var selectedGoalType: String = "maintain_weight"
 
     private val userRepository = UserRepository()
     private val activityLevels = arrayOf(
@@ -48,6 +50,11 @@ class EditProfileFragment : DialogFragment() {
         "Moderately Active",
         "Very Active",
         "Extremely Active"
+    )
+    private val goalTypes = arrayOf(
+        "减重",
+        "增重",
+        "保持体重"
     )
 
     private val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
@@ -93,6 +100,7 @@ class EditProfileFragment : DialogFragment() {
         setupAvatar()
         setupGenderButtons()
         setupActivityLevelSelector()
+        setupGoalTypeSelector()
         setupBirthdateSelector()
         setupTargetWeightSelector()
         setupGoalPeriodSelector()
@@ -165,6 +173,12 @@ class EditProfileFragment : DialogFragment() {
         }
     }
 
+    private fun setupGoalTypeSelector() {
+        binding.etGoalType.setOnClickListener {
+            showGoalTypeDialog()
+        }
+    }
+
     private fun showActivityLevelDialog() {
         val adapter = ArrayAdapter(
             requireContext(),
@@ -177,6 +191,28 @@ class EditProfileFragment : DialogFragment() {
             .setAdapter(adapter) { dialog, which ->
                 selectedActivityLevel = activityLevels[which]
                 binding.etActivityLevel.setText(selectedActivityLevel)
+                dialog.dismiss()
+            }
+            .show()
+    }
+
+    private fun showGoalTypeDialog() {
+        val adapter = ArrayAdapter(
+            requireContext(),
+            android.R.layout.simple_list_item_1,
+            goalTypes
+        )
+
+        AlertDialog.Builder(requireContext())
+            .setTitle("健康目标")
+            .setAdapter(adapter) { dialog, which ->
+                val selected = goalTypes[which]
+                selectedGoalType = when (selected) {
+                    "减重" -> "lose_weight"
+                    "增重" -> "gain_weight"
+                    else -> "maintain_weight"
+                }
+                binding.etGoalType.setText(selected)
                 dialog.dismiss()
             }
             .show()
@@ -312,6 +348,10 @@ class EditProfileFragment : DialogFragment() {
         profile.height?.toInt()?.let {
             binding.etHeight.setText(it.toString())
         }
+        profile.weight?.let {
+            selectedWeight = it
+            binding.etWeight.setText(it.toString())
+        }
 
         profile.gender?.let {
             selectedGender = when (it) {
@@ -343,11 +383,22 @@ class EditProfileFragment : DialogFragment() {
             selectedGoalPeriod = it
             binding.etGoalPeriod.setText("$it weeks")
         }
+
+        profile.health_goal_type?.let {
+            selectedGoalType = it
+            val display = when (it) {
+                "lose_weight" -> "减重"
+                "gain_weight" -> "增重"
+                else -> "保持体重"
+            }
+            binding.etGoalType.setText(display)
+        }
     }
 
     private fun saveProfile() {
         val displayName = binding.etDisplayName.text.toString().trim()
         val heightText = binding.etHeight.text.toString().trim()
+        val weightText = binding.etWeight.text.toString().trim()
 
         val profileSnapshot = currentProfile
         if (profileSnapshot == null) {
@@ -371,6 +422,7 @@ class EditProfileFragment : DialogFragment() {
         }
 
         val resolvedHeight = heightText.toDoubleOrNull() ?: profileSnapshot.height
+        val resolvedWeight = weightText.toDoubleOrNull() ?: profileSnapshot.weight
         val resolvedBirthdate = selectedBirthdate ?: profileSnapshot.birthdate
         val resolvedTargetWeight = selectedTargetWeight ?: profileSnapshot.target_weight
         val resolvedGoalPeriod = selectedGoalPeriod ?: profileSnapshot.goal_period_weeks
@@ -378,8 +430,10 @@ class EditProfileFragment : DialogFragment() {
         val requiredFieldsFilled = displayName.isNotEmpty() &&
                 !resolvedBirthdate.isNullOrBlank() &&
                 (resolvedHeight ?: 0.0) > 0 &&
+                (resolvedWeight ?: 0.0) > 0 &&
                 !genderBackend.isNullOrBlank() &&
                 !activityLevelBackend.isNullOrBlank() &&
+                selectedGoalType.isNotBlank() &&
                 (resolvedTargetWeight ?: 0.0) > 0 &&
                 (resolvedGoalPeriod ?: 0) > 0
 
@@ -391,11 +445,11 @@ class EditProfileFragment : DialogFragment() {
         val updateRequest = UserProfileUpdate(
             username = displayName.takeIf { it.isNotEmpty() } ?: profileSnapshot.username,
             height = resolvedHeight,
-            weight = profileSnapshot.weight,
+            weight = resolvedWeight,
             birthdate = resolvedBirthdate,
             gender = genderBackend,
             activity_level = activityLevelBackend,
-            health_goal_type = profileSnapshot.health_goal_type,
+            health_goal_type = selectedGoalType,
             target_weight = resolvedTargetWeight,
             goal_period_weeks = resolvedGoalPeriod,
             liked_foods = profileSnapshot.liked_foods,
