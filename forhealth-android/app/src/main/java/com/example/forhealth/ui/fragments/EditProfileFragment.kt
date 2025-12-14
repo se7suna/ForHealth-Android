@@ -1,6 +1,7 @@
 package com.example.forhealth.ui.fragments
 
 import android.app.AlertDialog
+import android.content.Intent
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
@@ -17,7 +18,7 @@ import com.example.forhealth.network.ApiResult
 import com.example.forhealth.network.dto.user.UserProfileResponse
 import com.example.forhealth.network.dto.user.UserProfileUpdate
 import com.example.forhealth.repositories.UserRepository
-import com.example.forhealth.utils.DataMapper
+import com.example.forhealth.ui.activities.MainActivity
 import com.example.forhealth.utils.ProfileManager
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
@@ -29,16 +30,18 @@ class EditProfileFragment : DialogFragment() {
     private var _binding: FragmentEditProfileBinding? = null
     private val binding get() = _binding!!
 
+    private val goMainOnSave by lazy {
+        arguments?.getBoolean(ARG_GO_MAIN_ON_SAVE, false) ?: false
+    }
+
     private var currentProfile: UserProfileResponse? = null
     private var selectedGender: String = "Male"
     private var selectedActivityLevel: String = "Moderately Active"
     private var selectedBirthdate: String? = null
     private var selectedTargetWeight: Double? = null
     private var selectedGoalPeriod: Int? = null
-    
-    // 用户数据仓库
-    private val userRepository = UserRepository()
 
+    private val userRepository = UserRepository()
     private val activityLevels = arrayOf(
         "Sedentary",
         "Lightly Active",
@@ -48,6 +51,18 @@ class EditProfileFragment : DialogFragment() {
     )
 
     private val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
+
+    companion object {
+        private const val ARG_GO_MAIN_ON_SAVE = "arg_go_main_on_save"
+
+        fun newInstance(goMainOnSave: Boolean = false): EditProfileFragment {
+            return EditProfileFragment().apply {
+                arguments = Bundle().apply {
+                    putBoolean(ARG_GO_MAIN_ON_SAVE, goMainOnSave)
+                }
+            }
+        }
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -92,9 +107,7 @@ class EditProfileFragment : DialogFragment() {
     }
 
     private fun setupAvatar() {
-        // 设置默认头像
         binding.ivAvatar.setImageResource(R.drawable.ic_user)
-        // 使用 dicebear API 生成头像
         binding.ivAvatar.load("https://api.dicebear.com/9.x/avataaars/svg?seed=Felix") {
             placeholder(R.drawable.ic_user)
             error(R.drawable.ic_user)
@@ -102,7 +115,6 @@ class EditProfileFragment : DialogFragment() {
         }
 
         binding.flAvatar.setOnClickListener {
-            // TODO: 实现头像更换功能（可能需要图片选择器）
             Toast.makeText(requireContext(), "头像更换功能待实现", Toast.LENGTH_SHORT).show()
         }
     }
@@ -121,8 +133,7 @@ class EditProfileFragment : DialogFragment() {
 
     private fun updateGenderButtonStyles() {
         val isMaleSelected = selectedGender == "Male"
-        
-        // Male button
+
         if (isMaleSelected) {
             binding.btnGenderMale.setBackgroundTintList(resources.getColorStateList(R.color.emerald_50, null))
             binding.btnGenderMale.setTextColor(resources.getColor(R.color.emerald_700, null))
@@ -135,7 +146,6 @@ class EditProfileFragment : DialogFragment() {
             binding.btnGenderMale.strokeColor = resources.getColorStateList(R.color.slate_200, null)
         }
 
-        // Female button
         if (!isMaleSelected) {
             binding.btnGenderFemale.setBackgroundTintList(resources.getColorStateList(R.color.emerald_50, null))
             binding.btnGenderFemale.setTextColor(resources.getColor(R.color.emerald_700, null))
@@ -179,7 +189,6 @@ class EditProfileFragment : DialogFragment() {
     }
 
     private fun showBirthdatePicker() {
-        // 解析当前日期
         val calendar = Calendar.getInstance()
         selectedBirthdate?.let { dateStr ->
             try {
@@ -187,8 +196,7 @@ class EditProfileFragment : DialogFragment() {
                 if (date != null) {
                     calendar.time = date
                 }
-            } catch (e: Exception) {
-                // 解析失败，使用默认值
+            } catch (_: Exception) {
                 calendar.set(Calendar.YEAR, calendar.get(Calendar.YEAR) - 25)
             }
         } ?: run {
@@ -264,14 +272,12 @@ class EditProfileFragment : DialogFragment() {
     }
 
     private fun loadProfileData() {
-        // 先从本地获取数据
         val localProfile = ProfileManager.getProfile(requireContext())
         if (localProfile != null) {
             currentProfile = localProfile
             populateFields(localProfile)
         }
 
-        // 尝试从API获取最新数据
         lifecycleScope.launch {
             val result = userRepository.getProfile()
             when (result) {
@@ -280,7 +286,6 @@ class EditProfileFragment : DialogFragment() {
                     populateFields(result.data)
                 }
                 is ApiResult.Error -> {
-                    // 如果获取失败，使用本地数据（如果存在）
                     if (currentProfile == null) {
                         Toast.makeText(
                             requireContext(),
@@ -297,21 +302,17 @@ class EditProfileFragment : DialogFragment() {
     }
 
     private fun populateFields(profile: UserProfileResponse) {
-        // Display Name (使用username)
         binding.etDisplayName.setText(profile.username ?: "")
 
-        // Birthdate
         profile.birthdate?.let {
             selectedBirthdate = it
             binding.etBirthdate.setText(it)
         }
 
-        // Height
         profile.height?.toInt()?.let {
             binding.etHeight.setText(it.toString())
         }
 
-        // Gender
         profile.gender?.let {
             selectedGender = when (it) {
                 "male" -> "Male"
@@ -321,7 +322,6 @@ class EditProfileFragment : DialogFragment() {
             updateGenderButtonStyles()
         }
 
-        // Activity Level
         profile.activity_level?.let {
             selectedActivityLevel = when (it) {
                 "sedentary" -> "Sedentary"
@@ -334,13 +334,11 @@ class EditProfileFragment : DialogFragment() {
             binding.etActivityLevel.setText(selectedActivityLevel)
         }
 
-        // Target Weight
         profile.target_weight?.let {
             selectedTargetWeight = it
             binding.etTargetWeight.setText("${it.toInt()} kg")
         }
 
-        // Goal Period
         profile.goal_period_weeks?.let {
             selectedGoalPeriod = it
             binding.etGoalPeriod.setText("$it weeks")
@@ -351,23 +349,16 @@ class EditProfileFragment : DialogFragment() {
         val displayName = binding.etDisplayName.text.toString().trim()
         val heightText = binding.etHeight.text.toString().trim()
 
-        // 验证输入
-        if (displayName.isEmpty()) {
-            Toast.makeText(requireContext(), "请输入用户名", Toast.LENGTH_SHORT).show()
-            return
-        }
-
-        // 确保从后端读取了数据
-        if (currentProfile == null) {
+        val profileSnapshot = currentProfile
+        if (profileSnapshot == null) {
             Toast.makeText(requireContext(), "正在加载用户数据，请稍候...", Toast.LENGTH_SHORT).show()
             return
         }
 
-        // 转换数据格式
         val genderBackend = when (selectedGender) {
             "Male" -> "male"
             "Female" -> "female"
-            else -> currentProfile?.gender
+            else -> profileSnapshot.gender
         }
 
         val activityLevelBackend = when (selectedActivityLevel) {
@@ -376,31 +367,47 @@ class EditProfileFragment : DialogFragment() {
             "Moderately Active" -> "moderately_active"
             "Very Active" -> "very_active"
             "Extremely Active" -> "extremely_active"
-            else -> currentProfile?.activity_level
+            else -> profileSnapshot.activity_level
         }
 
-        // 使用从后端读取的数据填充未修改的字段
+        val resolvedHeight = heightText.toDoubleOrNull() ?: profileSnapshot.height
+        val resolvedBirthdate = selectedBirthdate ?: profileSnapshot.birthdate
+        val resolvedTargetWeight = selectedTargetWeight ?: profileSnapshot.target_weight
+        val resolvedGoalPeriod = selectedGoalPeriod ?: profileSnapshot.goal_period_weeks
+
+        val requiredFieldsFilled = displayName.isNotEmpty() &&
+                !resolvedBirthdate.isNullOrBlank() &&
+                (resolvedHeight ?: 0.0) > 0 &&
+                !genderBackend.isNullOrBlank() &&
+                !activityLevelBackend.isNullOrBlank() &&
+                (resolvedTargetWeight ?: 0.0) > 0 &&
+                (resolvedGoalPeriod ?: 0) > 0
+
+        if (!requiredFieldsFilled) {
+            Toast.makeText(requireContext(), "请完整填写所有字段", Toast.LENGTH_SHORT).show()
+            return
+        }
+
         val updateRequest = UserProfileUpdate(
-            username = displayName.takeIf { it.isNotEmpty() } ?: currentProfile?.username,
-            height = heightText.toDoubleOrNull() ?: currentProfile?.height,
-            weight = currentProfile?.weight, // 使用读取到的数据
-            birthdate = selectedBirthdate ?: currentProfile?.birthdate,
+            username = displayName.takeIf { it.isNotEmpty() } ?: profileSnapshot.username,
+            height = resolvedHeight,
+            weight = profileSnapshot.weight,
+            birthdate = resolvedBirthdate,
             gender = genderBackend,
             activity_level = activityLevelBackend,
-            health_goal_type = currentProfile?.health_goal_type, // 使用读取到的数据
-            target_weight = selectedTargetWeight ?: currentProfile?.target_weight,
-            goal_period_weeks = selectedGoalPeriod ?: currentProfile?.goal_period_weeks,
-            liked_foods = currentProfile?.liked_foods, // 使用读取到的数据
-            disliked_foods = currentProfile?.disliked_foods, // 使用读取到的数据
-            allergies = currentProfile?.allergies, // 使用读取到的数据
-            dietary_restrictions = currentProfile?.dietary_restrictions, // 使用读取到的数据
-            preferred_tastes = currentProfile?.preferred_tastes, // 使用读取到的数据
-            cooking_skills = currentProfile?.cooking_skills, // 使用读取到的数据
-            budget_per_day = currentProfile?.budget_per_day, // 使用读取到的数据
-            include_budget = currentProfile?.include_budget // 使用读取到的数据
+            health_goal_type = profileSnapshot.health_goal_type,
+            target_weight = resolvedTargetWeight,
+            goal_period_weeks = resolvedGoalPeriod,
+            liked_foods = profileSnapshot.liked_foods,
+            disliked_foods = profileSnapshot.disliked_foods,
+            allergies = profileSnapshot.allergies,
+            dietary_restrictions = profileSnapshot.dietary_restrictions,
+            preferred_tastes = profileSnapshot.preferred_tastes,
+            cooking_skills = profileSnapshot.cooking_skills,
+            budget_per_day = profileSnapshot.budget_per_day,
+            include_budget = profileSnapshot.include_budget
         )
 
-        // 尝试保存到后端
         lifecycleScope.launch {
             val loadingToast = Toast.makeText(requireContext(), "正在保存...", Toast.LENGTH_SHORT)
             loadingToast.show()
@@ -411,14 +418,18 @@ class EditProfileFragment : DialogFragment() {
 
             when (result) {
                 is ApiResult.Success -> {
-                    // 更新本地缓存
                     currentProfile = result.data
                     ProfileManager.saveProfile(requireContext(), result.data)
-                    
+
                     Toast.makeText(requireContext(), "保存成功", Toast.LENGTH_SHORT).show()
-                    // 通知父Fragment刷新数据
-                    (parentFragment as? ProfileFragment)?.refreshProfile()
-                    dismiss()
+                    if (goMainOnSave) {
+                        val intent = Intent(requireContext(), MainActivity::class.java)
+                        startActivity(intent)
+                        requireActivity().finish()
+                    } else {
+                        (parentFragment as? ProfileFragment)?.refreshProfile()
+                        dismiss()
+                    }
                 }
                 is ApiResult.Error -> {
                     Toast.makeText(
