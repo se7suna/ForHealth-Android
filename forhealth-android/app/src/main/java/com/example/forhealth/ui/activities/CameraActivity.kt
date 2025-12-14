@@ -8,7 +8,9 @@ import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.camera.core.*
+import androidx.camera.core.ExperimentalGetImage
 import androidx.camera.lifecycle.ProcessCameraProvider
+import android.content.res.ColorStateList
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
 import com.example.forhealth.R
@@ -27,20 +29,20 @@ import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.MultipartBody
 import okhttp3.RequestBody.Companion.asRequestBody
 import java.io.File
-import java.io.FileOutputStream
 import java.util.concurrent.Executors
 
+@OptIn(ExperimentalGetImage::class)
 class CameraActivity : AppCompatActivity() {
-    
+
     private lateinit var binding: ActivityCameraBinding
     private var cameraProvider: ProcessCameraProvider? = null
     private var imageCapture: ImageCapture? = null
     private var imageAnalysis: ImageAnalysis? = null
     private var isScanMode = true // true = 扫码模式, false = 拍照模式
     private var isProcessing = false // 防止重复处理
-    
+
     private val cameraExecutor = Executors.newSingleThreadExecutor()
-    
+
     private val requestPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestPermission()
     ) { isGranted: Boolean ->
@@ -51,30 +53,31 @@ class CameraActivity : AppCompatActivity() {
             finish()
         }
     }
-    
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivityCameraBinding.inflate(layoutInflater)
         setContentView(binding.root)
-        
+
         setupClickListeners()
+        applyDarkModeButtons()
         updateUI()
         checkCameraPermission()
     }
-    
+
     private fun setupClickListeners() {
         binding.btnClose.setOnClickListener {
             finish()
         }
-        
+
         binding.btnScanMode.setOnClickListener {
             switchToScanMode()
         }
-        
+
         binding.btnPhotoMode.setOnClickListener {
             switchToPhotoMode()
         }
-        
+
         binding.btnCapture.setOnClickListener {
             if (isScanMode) {
                 // 扫码模式下，点击按钮可以手动触发识别（可选功能）
@@ -85,7 +88,7 @@ class CameraActivity : AppCompatActivity() {
             }
         }
     }
-    
+
     private fun checkCameraPermission() {
         when {
             ContextCompat.checkSelfPermission(
@@ -99,27 +102,27 @@ class CameraActivity : AppCompatActivity() {
             }
         }
     }
-    
+
     private fun startCamera() {
         val cameraProviderFuture = ProcessCameraProvider.getInstance(this)
-        
+
         cameraProviderFuture.addListener({
             cameraProvider = cameraProviderFuture.get()
             bindCameraUseCases()
         }, ContextCompat.getMainExecutor(this))
     }
-    
+
     private fun bindCameraUseCases() {
         val cameraProvider = cameraProvider ?: return
-        
+
         val preview = Preview.Builder().build().also {
             it.setSurfaceProvider(binding.previewView.surfaceProvider)
         }
-        
+
         imageCapture = ImageCapture.Builder()
             .setCaptureMode(ImageCapture.CAPTURE_MODE_MINIMIZE_LATENCY)
             .build()
-        
+
         // 只在扫码模式下启用图像分析
         if (isScanMode) {
             imageAnalysis = ImageAnalysis.Builder()
@@ -131,17 +134,17 @@ class CameraActivity : AppCompatActivity() {
         } else {
             imageAnalysis = null
         }
-        
+
         val cameraSelector = CameraSelector.DEFAULT_BACK_CAMERA
-        
+
         try {
             cameraProvider.unbindAll()
-            
+
             val useCases = mutableListOf<UseCase>(preview, imageCapture!!)
             if (imageAnalysis != null) {
                 useCases.add(imageAnalysis!!)
             }
-            
+
             cameraProvider.bindToLifecycle(
                 this,
                 cameraSelector,
@@ -152,7 +155,7 @@ class CameraActivity : AppCompatActivity() {
             Toast.makeText(this, "相机启动失败: ${e.message}", Toast.LENGTH_SHORT).show()
         }
     }
-    
+
     private fun switchToScanMode() {
         if (isProcessing) return
         isScanMode = true
@@ -160,7 +163,7 @@ class CameraActivity : AppCompatActivity() {
         updateUI()
         bindCameraUseCases()
     }
-    
+
     private fun switchToPhotoMode() {
         if (isProcessing) return
         isScanMode = false
@@ -168,35 +171,41 @@ class CameraActivity : AppCompatActivity() {
         updateUI()
         bindCameraUseCases()
     }
-    
+
     private fun updateUI() {
+        applyDarkModeButtons()
         if (isScanMode) {
             // 扫码模式
-            binding.btnScanMode.setBackgroundResource(R.drawable.bg_white_20_rounded)
-            binding.btnPhotoMode.background = null
             binding.layoutScanFrame.visibility = android.view.View.VISIBLE
             binding.btnCapture.visibility = android.view.View.VISIBLE
             binding.tvHint.text = "将条形码放入框内"
         } else {
             // 拍照模式
-            binding.btnScanMode.background = null
-            binding.btnPhotoMode.setBackgroundResource(R.drawable.bg_white_20_rounded)
             binding.layoutScanFrame.visibility = android.view.View.GONE
             binding.btnCapture.visibility = android.view.View.VISIBLE
             binding.tvHint.text = "点击按钮拍照识别食物"
         }
     }
-    
+
+    private fun applyDarkModeButtons() {
+        val dark = ContextCompat.getColor(this, android.R.color.black)
+        val white = ContextCompat.getColor(this, android.R.color.white)
+        listOf(binding.btnScanMode, binding.btnPhotoMode).forEach { btn ->
+            btn.backgroundTintList = ColorStateList.valueOf(dark)
+            btn.setTextColor(white)
+        }
+    }
+
     private fun capturePhoto() {
         if (isProcessing) return
-        
+
         val imageCapture = imageCapture ?: return
-        
+
         // 创建临时文件保存照片
         val photoFile = File(getExternalFilesDir(null), "temp_food_photo_${System.currentTimeMillis()}.jpg")
-        
+
         val outputFileOptions = ImageCapture.OutputFileOptions.Builder(photoFile).build()
-        
+
         imageCapture.takePicture(
             outputFileOptions,
             ContextCompat.getMainExecutor(this),
@@ -205,7 +214,7 @@ class CameraActivity : AppCompatActivity() {
                     // 拍照成功，调用AI识别API
                     recognizeFoodFromImage(photoFile)
                 }
-                
+
                 override fun onError(exception: ImageCaptureException) {
                     isProcessing = false
                     hideLoading()
@@ -214,17 +223,17 @@ class CameraActivity : AppCompatActivity() {
             }
         )
     }
-    
+
     private fun recognizeFoodFromImage(imageFile: File) {
         showLoading("识别中...")
         isProcessing = true
-        
+
         lifecycleScope.launch {
             try {
                 // 创建MultipartBody.Part
                 val requestFile = imageFile.asRequestBody("image/jpeg".toMediaTypeOrNull())
                 val body = MultipartBody.Part.createFormData("file", imageFile.name, requestFile)
-                
+
                 val result = safeApiCall {
                     RetrofitClient.apiService.recognizeFood(
                         file = body,
@@ -233,7 +242,7 @@ class CameraActivity : AppCompatActivity() {
                         recordedAt = null
                     )
                 }
-                
+
                 when (result) {
                     is ApiResult.Success -> {
                         val response = result.data
@@ -279,7 +288,7 @@ class CameraActivity : AppCompatActivity() {
             }
         }
     }
-    
+
     private fun convertToFoodItems(processedFoods: List<ProcessedFoodItem>): List<FoodItem> {
         return processedFoods.map { processed ->
             FoodItem(
@@ -295,7 +304,7 @@ class CameraActivity : AppCompatActivity() {
             )
         }
     }
-    
+
     private inner class BarcodeAnalyzer : ImageAnalysis.Analyzer {
         private val reader = MultiFormatReader().apply {
             val hints = mapOf(
@@ -311,13 +320,14 @@ class CameraActivity : AppCompatActivity() {
             )
             setHints(hints)
         }
-        
+
+        @OptIn(ExperimentalGetImage::class)
         override fun analyze(imageProxy: ImageProxy) {
             if (!isScanMode || isProcessing) {
                 imageProxy.close()
                 return
             }
-            
+
             val mediaImage = imageProxy.image
             if (mediaImage != null) {
                 try {
@@ -326,10 +336,10 @@ class CameraActivity : AppCompatActivity() {
                     val ySize = yBuffer.remaining()
                     val yArray = ByteArray(ySize)
                     yBuffer.get(yArray)
-                    
+
                     val width = mediaImage.width
                     val height = mediaImage.height
-                    
+
                     // 创建YUV源（只使用Y平面）
                     val source = PlanarYUVLuminanceSource(
                         yArray,
@@ -341,10 +351,10 @@ class CameraActivity : AppCompatActivity() {
                         height,
                         false
                     )
-                    
+
                     val bitmap = BinaryBitmap(HybridBinarizer(source))
                     val result = reader.decode(bitmap)
-                    
+
                     runOnUiThread {
                         handleScanResult(result.text)
                     }
@@ -354,22 +364,22 @@ class CameraActivity : AppCompatActivity() {
                     // 忽略其他错误，继续扫描
                 }
             }
-            
+
             imageProxy.close()
         }
     }
-    
+
     private fun handleScanResult(barcode: String) {
         if (isProcessing) return
-        
+
         isProcessing = true
         showLoading("查询中...")
-        
+
         lifecycleScope.launch {
             val result = safeApiCall {
                 RetrofitClient.apiService.scanBarcode(barcode)
             }
-            
+
             when (result) {
                 is ApiResult.Success -> {
                     val response = result.data
@@ -403,7 +413,7 @@ class CameraActivity : AppCompatActivity() {
             }
         }
     }
-    
+
     private fun convertFoodResponseToFoodItem(foodResponse: FoodResponse): FoodItem {
         return FoodItem(
             id = foodResponse.id,
@@ -417,15 +427,15 @@ class CameraActivity : AppCompatActivity() {
             image = foodResponse.image_url ?: ""
         )
     }
-    
+
     private fun returnFoodItemsToParent(foodItems: List<FoodItem>) {
         hideLoading()
         isProcessing = false
-        
+
         // 使用 JSON 序列化传递食物列表
         val gson = com.google.gson.Gson()
         val foodItemsJson = gson.toJson(foodItems)
-        
+
         val resultIntent = Intent().apply {
             putExtra("mode", if (isScanMode) "scan" else "photo")
             putExtra("food_items_json", foodItemsJson)
@@ -434,16 +444,16 @@ class CameraActivity : AppCompatActivity() {
         setResult(RESULT_OK, resultIntent)
         finish()
     }
-    
+
     private fun showLoading(text: String) {
         binding.layoutLoading.visibility = android.view.View.VISIBLE
         binding.tvLoadingText.text = text
     }
-    
+
     private fun hideLoading() {
         binding.layoutLoading.visibility = android.view.View.GONE
     }
-    
+
     override fun onDestroy() {
         super.onDestroy()
         cameraExecutor.shutdown()
