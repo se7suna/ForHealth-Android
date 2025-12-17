@@ -5,6 +5,7 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Bundle
 import android.widget.Toast
+import android.util.Log
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.camera.core.*
@@ -46,11 +47,49 @@ class CameraActivity : AppCompatActivity() {
     private val requestPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestPermission()
     ) { isGranted: Boolean ->
+        Log.d("CameraActivity", "Permission request result: $isGranted")
         if (isGranted) {
+            Log.d("CameraActivity", "Camera permission granted by user, starting camera")
+            Toast.makeText(this, "相机权限已获得", Toast.LENGTH_SHORT).show()
             startCamera()
         } else {
-            Toast.makeText(this, "需要相机权限才能使用此功能", Toast.LENGTH_LONG).show()
-            finish()
+            Log.w("CameraActivity", "Camera permission denied by user")
+            
+            // 检查是否是永久拒绝
+            if (!shouldShowRequestPermissionRationale(Manifest.permission.CAMERA)) {
+                Log.w("CameraActivity", "Permission permanently denied")
+                showPermanentlyDeniedDialog()
+            } else {
+                Log.w("CameraActivity", "Permission denied, show retry option")
+                showPermissionDeniedUI()
+            }
+        }
+    }
+
+    private fun showPermanentlyDeniedDialog() {
+        androidx.appcompat.app.AlertDialog.Builder(this)
+            .setTitle("需要相机权限")
+            .setMessage("相机权限被永久拒绝。请前往应用设置中手动开启相机权限。")
+            .setPositiveButton("前往设置") { _, _ ->
+                openAppSettings()
+            }
+            .setNegativeButton("取消") { dialog, _ ->
+                dialog.dismiss()
+                showPermissionDeniedUI()
+            }
+            .setCancelable(false)
+            .show()
+    }
+
+    private fun openAppSettings() {
+        try {
+            val intent = android.content.Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS)
+            val uri = android.net.Uri.fromParts("package", packageName, null)
+            intent.data = uri
+            startActivity(intent)
+        } catch (e: Exception) {
+            Log.e("CameraActivity", "Failed to open app settings", e)
+            Toast.makeText(this, "无法打开设置页面", Toast.LENGTH_SHORT).show()
         }
     }
 
@@ -59,10 +98,29 @@ class CameraActivity : AppCompatActivity() {
         binding = ActivityCameraBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
+        Log.d("CameraActivity", "onCreate called")
+        
+        // 检查设备是否有摄像头
+        if (!checkCameraHardware()) {
+            Toast.makeText(this, "设备没有摄像头", Toast.LENGTH_LONG).show()
+            finish()
+            return
+        }
+
+        // 确保 PreviewView 可见
+        binding.previewView.visibility = android.view.View.VISIBLE
+        Log.d("CameraActivity", "PreviewView visibility set to VISIBLE")
+
         setupClickListeners()
         applyDarkModeButtons()
         updateUI()
+        
+        // 立即检查并请求权限
         checkCameraPermission()
+    }
+
+    private fun checkCameraHardware(): Boolean {
+        return packageManager.hasSystemFeature(PackageManager.FEATURE_CAMERA_ANY)
     }
 
     private fun setupClickListeners() {
@@ -90,70 +148,117 @@ class CameraActivity : AppCompatActivity() {
     }
 
     private fun checkCameraPermission() {
-        when {
-            ContextCompat.checkSelfPermission(
-                this,
-                Manifest.permission.CAMERA
-            ) == PackageManager.PERMISSION_GRANTED -> {
+        Log.d("CameraActivity", "Checking camera permission...")
+        
+        val permission = Manifest.permission.CAMERA
+        val permissionStatus = ContextCompat.checkSelfPermission(this, permission)
+        
+        Log.d("CameraActivity", "Current permission status: $permissionStatus")
+        Log.d("CameraActivity", "PERMISSION_GRANTED = ${PackageManager.PERMISSION_GRANTED}")
+        
+        when (permissionStatus) {
+            PackageManager.PERMISSION_GRANTED -> {
+                Log.d("CameraActivity", "Camera permission already granted")
                 startCamera()
             }
             else -> {
-                requestPermissionLauncher.launch(Manifest.permission.CAMERA)
+                Log.d("CameraActivity", "Camera permission not granted, requesting permission...")
+                
+                if (shouldShowRequestPermissionRationale(permission)) {
+                    Log.d("CameraActivity", "Should show permission rationale")
+                    // 显示解释为什么需要权限
+                    showPermissionRationaleDialog()
+                } else {
+                    Log.d("CameraActivity", "Directly requesting camera permission")
+                    requestCameraPermission()
+                }
             }
         }
+    }
+
+    private fun showPermissionRationaleDialog() {
+        androidx.appcompat.app.AlertDialog.Builder(this)
+            .setTitle("需要相机权限")
+            .setMessage("本应用需要相机权限来扫描条形码和拍照识别食物。请允许应用使用相机。")
+            .setPositiveButton("允许") { _, _ ->
+                requestCameraPermission()
+            }
+            .setNegativeButton("拒绝") { dialog, _ ->
+                dialog.dismiss()
+                showPermissionDeniedUI()
+            }
+            .setCancelable(false)
+            .show()
+    }
+
+    private fun requestCameraPermission() {
+        Log.d("CameraActivity", "Launching permission request")
+        requestPermissionLauncher.launch(Manifest.permission.CAMERA)
+    }
+
+    private fun showPermissionDeniedUI() {
+        binding.tvHint.text = "需要相机权限才能使用此功能，请点击下方按钮重新申请"
+        binding.btnCapture.setOnClickListener {
+            checkCameraPermission()
+        }
+        Toast.makeText(this, "没有相机权限无法使用扫码和拍照功能", Toast.LENGTH_LONG).show()
     }
 
     private fun startCamera() {
+        Log.d("CameraActivity", "Starting camera with simplified approach...")
+        
         val cameraProviderFuture = ProcessCameraProvider.getInstance(this)
-
+        
         cameraProviderFuture.addListener({
-            cameraProvider = cameraProviderFuture.get()
-            bindCameraUseCases()
-        }, ContextCompat.getMainExecutor(this))
-    }
-
-    private fun bindCameraUseCases() {
-        val cameraProvider = cameraProvider ?: return
-
-        val preview = Preview.Builder().build().also {
-            it.setSurfaceProvider(binding.previewView.surfaceProvider)
-        }
-
-        imageCapture = ImageCapture.Builder()
-            .setCaptureMode(ImageCapture.CAPTURE_MODE_MINIMIZE_LATENCY)
-            .build()
-
-        // 只在扫码模式下启用图像分析
-        if (isScanMode) {
-            imageAnalysis = ImageAnalysis.Builder()
-                .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
-                .build()
-                .also {
-                    it.setAnalyzer(cameraExecutor, BarcodeAnalyzer())
+            try {
+                val cameraProvider = cameraProviderFuture.get()
+                this.cameraProvider = cameraProvider
+                
+                // 解绑之前的用例
+                cameraProvider.unbindAll()
+                
+                // 创建Preview用例
+                val preview = Preview.Builder().build()
+                
+                // 创建ImageCapture用例
+                imageCapture = ImageCapture.Builder().build()
+                
+                // 选择摄像头
+                val cameraSelector = CameraSelector.DEFAULT_BACK_CAMERA
+                
+                try {
+                    // 绑定预览到PreviewView
+                    preview.setSurfaceProvider(binding.previewView.surfaceProvider)
+                    
+                    // 准备用例列表
+                    val useCases = mutableListOf<UseCase>(preview, imageCapture!!)
+                    
+                    // 在扫码模式下添加图像分析
+                    if (isScanMode) {
+                        imageAnalysis = ImageAnalysis.Builder()
+                            .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
+                            .build()
+                        imageAnalysis?.setAnalyzer(cameraExecutor, BarcodeAnalyzer())
+                        useCases.add(imageAnalysis!!)
+                    }
+                    
+                    // 绑定用例到生命周期
+                    val camera = cameraProvider.bindToLifecycle(
+                        this, cameraSelector, *useCases.toTypedArray()
+                    )
+                    
+                    Log.d("CameraActivity", "Camera bound successfully")
+                    
+                } catch (exc: Exception) {
+                    Log.e("CameraActivity", "Use case binding failed", exc)
+                    Toast.makeText(this, "摄像头绑定失败: ${exc.message}", Toast.LENGTH_SHORT).show()
                 }
-        } else {
-            imageAnalysis = null
-        }
-
-        val cameraSelector = CameraSelector.DEFAULT_BACK_CAMERA
-
-        try {
-            cameraProvider.unbindAll()
-
-            val useCases = mutableListOf<UseCase>(preview, imageCapture!!)
-            if (imageAnalysis != null) {
-                useCases.add(imageAnalysis!!)
+                
+            } catch (exc: Exception) {
+                Log.e("CameraActivity", "Camera provider failed", exc)
+                Toast.makeText(this, "摄像头初始化失败: ${exc.message}", Toast.LENGTH_SHORT).show()
             }
-
-            cameraProvider.bindToLifecycle(
-                this,
-                cameraSelector,
-                *useCases.toTypedArray()
-            )
-        } catch (e: Exception) {
-            e.printStackTrace()
-            Toast.makeText(this, "相机启动失败: ${e.message}", Toast.LENGTH_SHORT).show()
-        }
+        }, ContextCompat.getMainExecutor(this))
     }
 
     private fun switchToScanMode() {
@@ -161,7 +266,8 @@ class CameraActivity : AppCompatActivity() {
         isScanMode = true
         isProcessing = false
         updateUI()
-        bindCameraUseCases()
+        // 重新绑定摄像头用例
+        startCamera()
     }
 
     private fun switchToPhotoMode() {
@@ -169,7 +275,8 @@ class CameraActivity : AppCompatActivity() {
         isScanMode = false
         isProcessing = false
         updateUI()
-        bindCameraUseCases()
+        // 重新绑定摄像头用例
+        startCamera()
     }
 
     private fun updateUI() {
@@ -454,8 +561,34 @@ class CameraActivity : AppCompatActivity() {
         binding.layoutLoading.visibility = android.view.View.GONE
     }
 
+    override fun onResume() {
+        super.onResume()
+        Log.d("CameraActivity", "onResume called")
+        
+        // 检查权限状态并相应地启动摄像头或显示权限请求UI
+        val permissionStatus = ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA)
+        Log.d("CameraActivity", "onResume - permission status: $permissionStatus")
+        
+        if (permissionStatus == PackageManager.PERMISSION_GRANTED) {
+            if (cameraProvider == null) {
+                Log.d("CameraActivity", "Permission granted but camera provider is null, restarting camera")
+                startCamera()
+            }
+        } else {
+            Log.d("CameraActivity", "Permission not granted in onResume")
+            showPermissionDeniedUI()
+        }
+    }
+
+    override fun onPause() {
+        super.onPause()
+        Log.d("CameraActivity", "onPause called")
+    }
+
     override fun onDestroy() {
         super.onDestroy()
+        Log.d("CameraActivity", "onDestroy called")
         cameraExecutor.shutdown()
+        cameraProvider?.unbindAll()
     }
 }

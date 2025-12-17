@@ -6,13 +6,13 @@ plugins {
 
 android {
     namespace = "com.example.forhealth"
-    compileSdk = 36
-    buildToolsVersion = "36.1.0"
+    compileSdk = 34
+    buildToolsVersion = "34.0.0"
 
     defaultConfig {
         applicationId = "com.example.forhealth"
         minSdk = 24
-        targetSdk = 36
+        targetSdk = 34
         versionCode = 1
         versionName = "1.0"
 
@@ -83,11 +83,11 @@ dependencies {
     // Gson
     implementation("com.google.code.gson:gson:2.10.1")
     
-    // Camera & Barcode Scanning
-    implementation("androidx.camera:camera-core:1.3.1")
-    implementation("androidx.camera:camera-camera2:1.3.1")
-    implementation("androidx.camera:camera-lifecycle:1.3.1")
-    implementation("androidx.camera:camera-view:1.3.1")
+    // Camera & Barcode Scanning - 降级到更稳定的版本
+    implementation("androidx.camera:camera-core:1.2.3")
+    implementation("androidx.camera:camera-camera2:1.2.3")
+    implementation("androidx.camera:camera-lifecycle:1.2.3")
+    implementation("androidx.camera:camera-view:1.2.3")
     implementation("com.google.zxing:core:3.5.2")
     implementation("com.journeyapps:zxing-android-embedded:4.3.0")
     
