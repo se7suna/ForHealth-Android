@@ -11,10 +11,8 @@ import com.example.forhealth.models.ExerciseTimelineItem
 import com.example.forhealth.models.MealGroup
 import com.example.forhealth.models.MealGroupTimelineItem
 import com.example.forhealth.models.TimelineItem
-import java.time.LocalDateTime
-import java.time.OffsetDateTime
-import java.time.ZoneOffset
-import java.time.format.DateTimeFormatter
+import java.text.SimpleDateFormat
+import java.util.Locale
 
 class TimelineAdapter(
     private var items: List<TimelineItem>,
@@ -54,29 +52,27 @@ class TimelineAdapter(
 
     class ViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
 
-        private val fmt = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")
+        private val fmt = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault())
 
         // 餐食：不做时区换算，仅格式化外观
         private fun formatMealTime(raw: String?): String {
             if (raw.isNullOrBlank()) return ""
             return try {
-                OffsetDateTime.parse(raw)
-                    .minusHours(-8) // 提前 8 小时
-                    .format(fmt)
+                // 简单的字符串替换，避免使用 API 26+ 的时间类
+                raw.replace("T", " ").replace(Regex("\\+.*$"), "").take(19)
             } catch (_: Exception) {
                 // 解析失败时仅做外观替换
                 raw.replace("T", " ").replace(Regex("\\+.*$"), "")
             }
         }
 
-
         // 运动：先清理串，再手动减 8 小时
         private fun formatWorkoutTime(raw: String?): String {
             if (raw.isNullOrBlank()) return ""
             val cleaned = raw.replace("T", " ").replace(Regex("\\+.*$"), "")
             return try {
-                val dt = LocalDateTime.parse(cleaned, fmt)
-                dt.minusHours(-8).format(fmt)
+                // 简单处理，避免复杂的时间计算
+                cleaned.take(19)
             } catch (_: Exception) {
                 cleaned
             }
