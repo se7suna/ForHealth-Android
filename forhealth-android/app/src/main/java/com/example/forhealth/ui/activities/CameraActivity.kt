@@ -54,7 +54,7 @@ class CameraActivity : AppCompatActivity() {
             startCamera()
         } else {
             Log.w("CameraActivity", "Camera permission denied by user")
-            
+
             // 检查是否是永久拒绝
             if (!shouldShowRequestPermissionRationale(Manifest.permission.CAMERA)) {
                 Log.w("CameraActivity", "Permission permanently denied")
@@ -99,7 +99,7 @@ class CameraActivity : AppCompatActivity() {
         setContentView(binding.root)
 
         Log.d("CameraActivity", "onCreate called")
-        
+
         // 检查设备是否有摄像头
         if (!checkCameraHardware()) {
             Toast.makeText(this, "设备没有摄像头", Toast.LENGTH_LONG).show()
@@ -114,7 +114,7 @@ class CameraActivity : AppCompatActivity() {
         setupClickListeners()
         applyDarkModeButtons()
         updateUI()
-        
+
         // 立即检查并请求权限
         checkCameraPermission()
     }
@@ -149,13 +149,13 @@ class CameraActivity : AppCompatActivity() {
 
     private fun checkCameraPermission() {
         Log.d("CameraActivity", "Checking camera permission...")
-        
+
         val permission = Manifest.permission.CAMERA
         val permissionStatus = ContextCompat.checkSelfPermission(this, permission)
-        
+
         Log.d("CameraActivity", "Current permission status: $permissionStatus")
         Log.d("CameraActivity", "PERMISSION_GRANTED = ${PackageManager.PERMISSION_GRANTED}")
-        
+
         when (permissionStatus) {
             PackageManager.PERMISSION_GRANTED -> {
                 Log.d("CameraActivity", "Camera permission already granted")
@@ -163,7 +163,7 @@ class CameraActivity : AppCompatActivity() {
             }
             else -> {
                 Log.d("CameraActivity", "Camera permission not granted, requesting permission...")
-                
+
                 if (shouldShowRequestPermissionRationale(permission)) {
                     Log.d("CameraActivity", "Should show permission rationale")
                     // 显示解释为什么需要权限
@@ -206,33 +206,33 @@ class CameraActivity : AppCompatActivity() {
 
     private fun startCamera() {
         Log.d("CameraActivity", "Starting camera with simplified approach...")
-        
+
         val cameraProviderFuture = ProcessCameraProvider.getInstance(this)
-        
+
         cameraProviderFuture.addListener({
             try {
                 val cameraProvider = cameraProviderFuture.get()
                 this.cameraProvider = cameraProvider
-                
+
                 // 解绑之前的用例
                 cameraProvider.unbindAll()
-                
+
                 // 创建Preview用例
                 val preview = Preview.Builder().build()
-                
+
                 // 创建ImageCapture用例
                 imageCapture = ImageCapture.Builder().build()
-                
+
                 // 选择摄像头
                 val cameraSelector = CameraSelector.DEFAULT_BACK_CAMERA
-                
+
                 try {
                     // 绑定预览到PreviewView
                     preview.setSurfaceProvider(binding.previewView.surfaceProvider)
-                    
+
                     // 准备用例列表
                     val useCases = mutableListOf<UseCase>(preview, imageCapture!!)
-                    
+
                     // 在扫码模式下添加图像分析
                     if (isScanMode) {
                         imageAnalysis = ImageAnalysis.Builder()
@@ -241,19 +241,19 @@ class CameraActivity : AppCompatActivity() {
                         imageAnalysis?.setAnalyzer(cameraExecutor, BarcodeAnalyzer())
                         useCases.add(imageAnalysis!!)
                     }
-                    
+
                     // 绑定用例到生命周期
                     val camera = cameraProvider.bindToLifecycle(
                         this, cameraSelector, *useCases.toTypedArray()
                     )
-                    
+
                     Log.d("CameraActivity", "Camera bound successfully")
-                    
+
                 } catch (exc: Exception) {
                     Log.e("CameraActivity", "Use case binding failed", exc)
                     Toast.makeText(this, "摄像头绑定失败: ${exc.message}", Toast.LENGTH_SHORT).show()
                 }
-                
+
             } catch (exc: Exception) {
                 Log.e("CameraActivity", "Camera provider failed", exc)
                 Toast.makeText(this, "摄像头初始化失败: ${exc.message}", Toast.LENGTH_SHORT).show()
@@ -421,7 +421,8 @@ class CameraActivity : AppCompatActivity() {
                     BarcodeFormat.EAN_13,
                     BarcodeFormat.EAN_8,
                     BarcodeFormat.CODE_128,
-                    BarcodeFormat.CODE_39
+                    BarcodeFormat.CODE_39,
+                    BarcodeFormat.QR_CODE
                 ),
                 DecodeHintType.TRY_HARDER to true
             )
@@ -430,49 +431,70 @@ class CameraActivity : AppCompatActivity() {
 
         @OptIn(ExperimentalGetImage::class)
         override fun analyze(imageProxy: ImageProxy) {
-            if (!isScanMode || isProcessing) {
-                imageProxy.close()
-                return
-            }
+            try {
+                if (!isScanMode || isProcessing) return
 
-            val mediaImage = imageProxy.image
-            if (mediaImage != null) {
-                try {
-                    // 获取Y平面数据（灰度数据）
-                    val yBuffer = mediaImage.planes[0].buffer
-                    val ySize = yBuffer.remaining()
-                    val yArray = ByteArray(ySize)
-                    yBuffer.get(yArray)
+                val mediaImage = imageProxy.image ?: return
+                val width = imageProxy.width
+                val height = imageProxy.height
 
-                    val width = mediaImage.width
-                    val height = mediaImage.height
+                // Y 平面并不一定是紧凑的 width*height，需要考虑 rowStride/pixelStride
+                val yPlane = mediaImage.planes[0]
+                val yBuffer = yPlane.buffer.duplicate()
+                val rowStride = yPlane.rowStride
+                val pixelStride = yPlane.pixelStride
 
-                    // 创建YUV源（只使用Y平面）
-                    val source = PlanarYUVLuminanceSource(
-                        yArray,
-                        width,
-                        height,
-                        0,
-                        0,
-                        width,
-                        height,
-                        false
-                    )
-
-                    val bitmap = BinaryBitmap(HybridBinarizer(source))
-                    val result = reader.decode(bitmap)
-
-                    runOnUiThread {
-                        handleScanResult(result.text)
+                val yData = ByteArray(width * height)
+                if (pixelStride == 1 && rowStride == width) {
+                    yBuffer.rewind()
+                    yBuffer.get(yData, 0, yData.size)
+                } else {
+                    var outputIndex = 0
+                    for (row in 0 until height) {
+                        var inputIndex = row * rowStride
+                        for (col in 0 until width) {
+                            yData[outputIndex++] = yBuffer.get(inputIndex)
+                            inputIndex += pixelStride
+                        }
                     }
-                } catch (e: NotFoundException) {
-                    // 未找到条形码，继续扫描
-                } catch (e: Exception) {
-                    // 忽略其他错误，继续扫描
                 }
-            }
 
-            imageProxy.close()
+                var source: LuminanceSource = PlanarYUVLuminanceSource(
+                    yData,
+                    width,
+                    height,
+                    0,
+                    0,
+                    width,
+                    height,
+                    false
+                )
+
+                // rotationDegrees: 顺时针旋转多少度才是正向；PlanarYUVLuminanceSource 支持逆时针旋转
+                val rotation = imageProxy.imageInfo.rotationDegrees
+                if (rotation != 0 && source.isRotateSupported) {
+                    source = when (rotation) {
+                        90 -> source.rotateCounterClockwise()
+                            .rotateCounterClockwise()
+                            .rotateCounterClockwise()
+                        180 -> source.rotateCounterClockwise().rotateCounterClockwise()
+                        270 -> source.rotateCounterClockwise()
+                        else -> source
+                    }
+                }
+
+                val bitmap = BinaryBitmap(HybridBinarizer(source))
+                val result = reader.decodeWithState(bitmap)
+
+                runOnUiThread { handleScanResult(result.text) }
+            } catch (e: NotFoundException) {
+                // 未找到条形码/二维码，继续扫描
+            } catch (e: Exception) {
+                Log.w("CameraActivity", "Decode failed", e)
+            } finally {
+                reader.reset()
+                imageProxy.close()
+            }
         }
     }
 
@@ -564,11 +586,11 @@ class CameraActivity : AppCompatActivity() {
     override fun onResume() {
         super.onResume()
         Log.d("CameraActivity", "onResume called")
-        
+
         // 检查权限状态并相应地启动摄像头或显示权限请求UI
         val permissionStatus = ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA)
         Log.d("CameraActivity", "onResume - permission status: $permissionStatus")
-        
+
         if (permissionStatus == PackageManager.PERMISSION_GRANTED) {
             if (cameraProvider == null) {
                 Log.d("CameraActivity", "Permission granted but camera provider is null, restarting camera")
