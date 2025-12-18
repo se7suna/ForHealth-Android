@@ -7,7 +7,7 @@ services:
     container_name: for_health_backend
     restart: always
     ports:
-      - "8000:8000"
+      - "127.0.0.1:8000:8000"
     env_file:
       - ./backend/.env.production
     depends_on:
@@ -29,8 +29,10 @@ services:
     image: mongo:latest
     container_name: for_health_mongodb
     restart: always
+    # ports:
+    #   - "27017:27017"
     ports:
-      - "27017:27017"
+    - "127.0.0.1:27017:27017"
     volumes:
       - mongodb_data:/data/db
       - ./backup:/backup  # 备份目录
@@ -50,7 +52,7 @@ services:
       - for_health_network
     environment:
       # 设置主机名（使用你的域名或服务器IP）
-      - POSTFIX_myhostname=124.70.161.90
+      - POSTFIX_myhostname=mail.forhealth.local #124.70.161.90
       # 允许的网络（允许内网容器发送）
       - POSTFIX_mynetworks=127.0.0.0/8 10.0.0.0/8 172.16.0.0/12 192.168.0.0/16
       # 可选：如果有上游中继服务器（如企业邮箱）
@@ -64,8 +66,8 @@ services:
     container_name: for_health_mailhog
     restart: always
     ports:
-      - "1025:1025"  # SMTP 端口（可选，用于调试邮件发送）
-      - "8025:8025"  # Web UI 端口
+      - "127.0.0.1:1025:1025"  # SMTP 端口（可选，用于调试邮件发送）
+      - "127.0.0.1:8025:8025"  # Web UI 端口
     networks:
       - for_health_network
     environment:

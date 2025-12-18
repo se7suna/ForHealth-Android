@@ -45,7 +45,7 @@ class Settings(BaseSettings):
         protocol = "https" if self.PORT == 443 else "http"
         # 去掉 IMAGE_BASE_URL 开头的斜杠（如果有）
         base_url_path = self.IMAGE_BASE_URL.lstrip("/")
-        return f"{protocol}://{self.HOST}:{self.PORT}/{base_url_path}"
+        return f"{protocol}://{self.HOST}/{base_url_path}"
 
 
     ## 管理员账户 （现在与普通用户没有任何区别）
