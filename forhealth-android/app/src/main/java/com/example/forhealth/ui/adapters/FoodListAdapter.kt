@@ -48,14 +48,23 @@ class FoodListAdapter(
 
         // 设置名称和信息
         holder.tvFoodName.text = food.name
-        holder.tvFoodInfo.text = "${food.calories.toInt()} kcal • ${food.unit}"
+        // 后端计算的值是每百克或每百毫升，所以显示为 "100 kcal / 100g" 或 "100 kcal / 100ml"
+        // 但对于自定义食物（单位不是标准"克"或"毫升"），保持原单位显示
+        val unitDisplay = if (food.gramsPerUnit == 100.0 && (food.unit == "克" || food.unit == "毫升")) {
+            // 标准格式：每100g或100ml
+            "100${food.unit}"
+        } else {
+            // 自定义食物，保持原单位显示（如 "1 serving"）
+            food.unit
+        }
+        holder.tvFoodInfo.text = "${food.calories.toInt()} 千卡 / $unitDisplay"
 
         // 根据是否已选择显示不同的UI
         if (selected != null) {
             holder.fabAdd.visibility = View.GONE
             holder.layoutCount.visibility = View.VISIBLE
             val countText = if (selected.mode == com.example.forhealth.models.QuantityMode.GRAM) {
-                "x${selected.count.toInt()}g"
+                "x${selected.count.toInt()}克"
             } else {
                 "x${selected.count}"
             }

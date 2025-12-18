@@ -12,6 +12,7 @@ import com.example.forhealth.models.MealGroup
 import com.example.forhealth.models.MealGroupTimelineItem
 import com.example.forhealth.models.TimelineItem
 import java.text.SimpleDateFormat
+import java.util.Date
 import java.util.Locale
 
 class TimelineAdapter(
@@ -53,29 +54,57 @@ class TimelineAdapter(
     class ViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
 
         private val fmt = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault())
+        private val isoDateFormat = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.getDefault())
+        private val isoDateFormatWithTimezone = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ssXXX", Locale.getDefault())
 
-        // 餐食：不做时区换算，仅格式化外观
-        private fun formatMealTime(raw: String?): String {
+        // 将UTC时间转换为本地时间（UTC+8），然后格式化显示
+        private fun formatTimeWithTimezone(raw: String?): String {
             if (raw.isNullOrBlank()) return ""
             return try {
-                // 简单的字符串替换，避免使用 API 26+ 的时间类
-                raw.replace("T", " ").replace(Regex("\\+.*$"), "").take(19)
+                // 先尝试解析带时区的时间格式（如 2025-01-01T12:00:00+08:00）
+                val date = try {
+                    isoDateFormatWithTimezone.parse(raw)
+                } catch (e: Exception) {
+                    // 如果失败，尝试处理Z结尾的UTC时间（如 2025-01-01T12:00:00Z）
+                    try {
+                        if (raw.endsWith("Z")) {
+                            val utcString = raw.replace("Z", "+00:00")
+                            val utcDate = isoDateFormatWithTimezone.parse(utcString)
+                            // UTC时间加8小时转换为中国时间
+                            utcDate?.let { Date(it.time + 8 * 60 * 60 * 1000) }
+                        } else {
+                            // 如果不包含时区信息，假设是UTC时间，加8小时转换为中国时间
+                            val cleaned = raw.replace(Regex("\\+.*$"), "")
+                            val utcDate = isoDateFormat.parse(cleaned)
+                            // UTC时间加8小时转换为中国时间
+                            utcDate?.let { Date(it.time + 8 * 60 * 60 * 1000) }
+                        }
+                    } catch (e2: Exception) {
+                        null
+                    }
+                }
+                
+                if (date != null) {
+                    // 格式化为显示格式
+                    fmt.format(date)
+                } else {
+                    // 解析失败时，简单替换格式
+                    raw.replace("T", " ").replace(Regex("\\+.*$"), "").replace("Z", "").take(19)
+                }
             } catch (_: Exception) {
                 // 解析失败时仅做外观替换
-                raw.replace("T", " ").replace(Regex("\\+.*$"), "")
+                raw.replace("T", " ").replace(Regex("\\+.*$"), "").replace("Z", "").take(19)
             }
         }
 
-        // 运动：先清理串，再手动减 8 小时
+        // 餐食：格式化时间（带时区转换）
+        private fun formatMealTime(raw: String?): String {
+            return formatTimeWithTimezone(raw)
+        }
+
+        // 运动：格式化时间（带时区转换）
         private fun formatWorkoutTime(raw: String?): String {
-            if (raw.isNullOrBlank()) return ""
-            val cleaned = raw.replace("T", " ").replace(Regex("\\+.*$"), "")
-            return try {
-                // 简单处理，避免复杂的时间计算
-                cleaned.take(19)
-            } catch (_: Exception) {
-                cleaned
-            }
+            return formatTimeWithTimezone(raw)
         }
 
         fun bindMealGroup(mealGroup: MealGroup, onClick: (MealGroup) -> Unit) {

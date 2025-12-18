@@ -29,11 +29,27 @@ class LoginActivity : AppCompatActivity() {
 
         // 检查是否已登录
         if (TokenManager.isLoggedIn(this)) {
-            navigateToMain()
+            // 初始化RetrofitClient的TokenProvider
+            RetrofitClient.setTokenProvider {
+                TokenManager.getAccessToken(this)
+            }
+            // 检查个人信息是否完整
+            checkProfileAndNavigate()
             return
         }
 
         setupClickListeners()
+    }
+    
+    override fun onResume() {
+        super.onResume()
+        // 重置登录按钮状态，确保从其他页面返回后可以重新登录
+        resetLoginButton()
+    }
+    
+    private fun resetLoginButton() {
+        binding.btnLogin.isEnabled = true
+        binding.btnLogin.text = getString(R.string.btn_login)
     }
 
     private fun setupClickListeners() {
@@ -103,7 +119,7 @@ class LoginActivity : AppCompatActivity() {
         }
     }
 
-    private fun handlePostLogin(userKey: String) {
+    private fun checkProfileAndNavigate() {
         lifecycleScope.launch {
             val profileResult = userRepository.getProfile()
             val profile = (profileResult as? ApiResult.Success)?.data
@@ -117,6 +133,11 @@ class LoginActivity : AppCompatActivity() {
 
             navigateToMain()
         }
+    }
+
+    private fun handlePostLogin(userKey: String) {
+        // 登录成功后检查个人信息是否完整
+        checkProfileAndNavigate()
     }
 
     private fun isProfileIncomplete(profile: UserProfileResponse): Boolean {

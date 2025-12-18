@@ -7,14 +7,19 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import androidx.fragment.app.DialogFragment
+import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.example.forhealth.R
 import com.example.forhealth.databinding.FragmentAddExerciseBinding
 import com.example.forhealth.models.*
+import com.example.forhealth.network.ApiResult
 import com.example.forhealth.ui.adapters.CartExerciseAdapter
 import com.example.forhealth.ui.adapters.ExerciseListAdapter
 import com.example.forhealth.utils.DateUtils
+import com.example.forhealth.viewmodels.MainViewModel
 import com.google.android.material.button.MaterialButton
+import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -33,6 +38,7 @@ class AddExerciseFragment : DialogFragment() {
     
     private lateinit var exerciseAdapter: ExerciseListAdapter
     private lateinit var cartAdapter: CartExerciseAdapter
+    private lateinit var mainViewModel: MainViewModel
 
     fun setExerciseLibrary(exercises: List<ExerciseItem>) {
         allExercises = exercises
@@ -70,6 +76,13 @@ class AddExerciseFragment : DialogFragment() {
     
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+        
+        // 获取MainViewModel
+        mainViewModel = try {
+            ViewModelProvider(requireParentFragment())[MainViewModel::class.java]
+        } catch (e: Exception) {
+            ViewModelProvider(requireActivity())[MainViewModel::class.java]
+        }
         
         // 清空购物车，确保每次打开都是全新的状态
         selectedItems.clear()
@@ -151,14 +164,20 @@ class AddExerciseFragment : DialogFragment() {
         binding.btnCreateCustomSport.setOnClickListener {
             val customSportFragment = CustomSportFragment().apply {
                 setOnCustomSportCreatedListener { exerciseItem ->
-                    // 将自定义运动添加到列表
-                    // 注意：这里暂时不添加到Constants.EXERCISE_DB，因为它是常量
-                    // 如果需要持久化，应该保存到本地数据库或后端
-                    // 现在直接添加到购物车
-                    addToCart(exerciseItem)
-                    // 展开购物车
-                    if (!isCartExpanded) {
-                        toggleCartExpansion()
+                    // 创建成功后，刷新运动库，仅更新列表，不自动添加到购物车
+                    lifecycleScope.launch {
+                        mainViewModel.loadExerciseLibrary { result ->
+                            when (result) {
+                                is ApiResult.Success -> {
+                                    // 更新运动列表
+                                    setExerciseLibrary(result.data)
+                                }
+                                is ApiResult.Error -> {
+                                    // 刷新失败，但列表仍然可用
+                                }
+                                is ApiResult.Loading -> {}
+                            }
+                        }
                     }
                 }
             }
