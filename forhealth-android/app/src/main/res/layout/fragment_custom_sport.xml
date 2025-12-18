@@ -92,6 +92,28 @@
                         android:textStyle="bold"
                         android:layout_marginBottom="@dimen/spacing_20" />
 
+                    <!-- Description -->
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="运动描述"
+                        android:textColor="@color/text_secondary"
+                        android:textSize="@dimen/text_size_sm"
+                        android:textStyle="bold"
+                        android:layout_marginBottom="@dimen/spacing_8" />
+
+                    <EditText
+                        android:id="@+id/etDescribe"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:hint="e.g. 户外跑步运动"
+                        android:background="@drawable/bg_rounded_search_input"
+                        android:padding="@dimen/spacing_12"
+                        android:textColor="@color/text_primary"
+                        android:textColorHint="@color/text_secondary"
+                        android:textSize="@dimen/text_size_base"
+                        android:layout_marginBottom="@dimen/spacing_20" />
+
                     <!-- Calories Per Minute -->
                     <TextView
                         android:layout_width="wrap_content"

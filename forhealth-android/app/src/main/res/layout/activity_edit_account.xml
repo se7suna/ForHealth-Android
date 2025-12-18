@@ -75,24 +75,37 @@
             android:inputType="text" />
     </com.google.android.material.textfield.TextInputLayout>
 
-    <!-- Current Password -->
+    <!-- Verification Code -->
     <com.google.android.material.textfield.TextInputLayout
-        android:id="@+id/tilCurrentPassword"
+        android:id="@+id/tilVerificationCode"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_marginTop="16dp"
-        android:hint="当前密码"
-        app:passwordToggleEnabled="true"
+        android:hint="@string/hint_verification_code"
         app:layout_constraintTop_toBottomOf="@id/tilUsername"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent">
+        app:layout_constraintEnd_toStartOf="@id/btnSendCode">
 
         <com.google.android.material.textfield.TextInputEditText
-            android:id="@+id/etCurrentPassword"
+            android:id="@+id/etVerificationCode"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:inputType="textPassword" />
+            android:inputType="number"
+            android:maxLength="6" />
     </com.google.android.material.textfield.TextInputLayout>
+
+    <!-- Send Verification Code Button -->
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/btnSendCode"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/send_verification_code"
+        android:layout_marginStart="8dp"
+        app:layout_constraintTop_toTopOf="@id/tilVerificationCode"
+        app:layout_constraintBottom_toBottomOf="@id/tilVerificationCode"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:cornerRadius="8dp"
+        style="@style/Widget.Material3.Button.OutlinedButton" />
 
     <!-- New Password -->
     <com.google.android.material.textfield.TextInputLayout
@@ -102,7 +115,7 @@
         android:layout_marginTop="16dp"
         android:hint="新密码（留空则不修改）"
         app:passwordToggleEnabled="true"
-        app:layout_constraintTop_toBottomOf="@id/tilCurrentPassword"
+        app:layout_constraintTop_toBottomOf="@id/tilVerificationCode"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent">
 

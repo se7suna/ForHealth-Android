@@ -276,6 +276,18 @@ class EditDataActivity : AppCompatActivity() {
     }
 
     private fun saveAllData() {
+        // 验证身高值是否合理（50-250厘米）
+        if (height < 50 || height > 250) {
+            Toast.makeText(this, "身高值不合理，请输入50-250厘米之间的值", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        // 验证体重值是否合理（20-300公斤）
+        if (weight < 20 || weight > 300) {
+            Toast.makeText(this, "体重值不合理，请输入20-300公斤之间的值", Toast.LENGTH_SHORT).show()
+            return
+        }
+
         val loadingToast = Toast.makeText(this, "正在保存...", Toast.LENGTH_SHORT)
         loadingToast.show()
 

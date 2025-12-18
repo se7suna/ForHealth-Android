@@ -8,6 +8,7 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.ArrayAdapter
 import android.widget.Toast
+import androidx.activity.OnBackPressedCallback
 import androidx.fragment.app.DialogFragment
 import androidx.lifecycle.lifecycleScope
 import coil.load
@@ -74,6 +75,9 @@ class EditProfileFragment : DialogFragment() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setStyle(STYLE_NORMAL, android.R.style.Theme_NoTitleBar_Fullscreen)
+        // 如果是从登录页面跳转过来的，不允许通过返回键关闭
+        val shouldGoMainOnSave = arguments?.getBoolean(ARG_GO_MAIN_ON_SAVE, false) ?: false
+        isCancelable = !shouldGoMainOnSave
     }
 
     override fun onCreateView(
@@ -97,6 +101,7 @@ class EditProfileFragment : DialogFragment() {
         super.onViewCreated(view, savedInstanceState)
 
         setupBackButton()
+        setupSystemBackButton()
         setupAvatar()
         setupGenderButtons()
         setupActivityLevelSelector()
@@ -107,11 +112,66 @@ class EditProfileFragment : DialogFragment() {
         setupSaveButton()
         loadProfileData()
     }
+    
+    private fun setupSystemBackButton() {
+        // 处理系统返回键
+        if (goMainOnSave) {
+            val callback = object : OnBackPressedCallback(true) {
+                override fun handleOnBackPressed() {
+                    // 显示提示对话框
+                    showBackPressDialog()
+                }
+            }
+            requireActivity().onBackPressedDispatcher.addCallback(viewLifecycleOwner, callback)
+        }
+    }
+    
+    private fun showBackPressDialog() {
+        AlertDialog.Builder(requireContext())
+            .setTitle("提示")
+            .setMessage("请填写完整的个人信息后才能进入软件主页")
+            .setPositiveButton("继续填写") { _, _ ->
+                // 不关闭对话框，继续填写
+            }
+            .setNegativeButton("退出登录") { _, _ ->
+                // 退出登录，清除token
+                com.example.forhealth.utils.TokenManager.clearTokens(requireContext())
+                val intent = Intent(requireContext(), com.example.forhealth.ui.activities.LoginActivity::class.java)
+                intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+                startActivity(intent)
+                requireActivity().finish()
+            }
+            .setCancelable(false)
+            .show()
+    }
 
     private fun setupBackButton() {
         binding.btnBack.setOnClickListener {
-            dismiss()
+            if (goMainOnSave) {
+                // 如果是从登录页面跳转过来的，提示用户需要填写个人信息
+                AlertDialog.Builder(requireContext())
+                    .setTitle("提示")
+                    .setMessage("请填写完整的个人信息后才能进入软件主页")
+                    .setPositiveButton("继续填写") { _, _ ->
+                        // 不关闭对话框，继续填写
+                    }
+                    .setNegativeButton("退出登录") { _, _ ->
+                        // 退出登录，清除token
+                        com.example.forhealth.utils.TokenManager.clearTokens(requireContext())
+                        val intent = Intent(requireContext(), com.example.forhealth.ui.activities.LoginActivity::class.java)
+                        intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+                        startActivity(intent)
+                        requireActivity().finish()
+                    }
+                    .setCancelable(false)
+                    .show()
+            } else {
+                dismiss()
+            }
         }
+        
+        // 处理系统返回键
+        isCancelable = !goMainOnSave
     }
 
     private fun setupAvatar() {
@@ -426,6 +486,22 @@ class EditProfileFragment : DialogFragment() {
         val resolvedBirthdate = selectedBirthdate ?: profileSnapshot.birthdate
         val resolvedTargetWeight = selectedTargetWeight ?: profileSnapshot.target_weight
         val resolvedGoalPeriod = selectedGoalPeriod ?: profileSnapshot.goal_period_weeks
+
+        // 验证身高值是否合理（50-250厘米）
+        if (resolvedHeight != null) {
+            if (resolvedHeight < 50 || resolvedHeight > 250) {
+                Toast.makeText(requireContext(), "身高值不合理，请输入50-250厘米之间的值", Toast.LENGTH_SHORT).show()
+                return
+            }
+        }
+
+        // 验证体重值是否合理（20-300公斤）
+        if (resolvedWeight != null) {
+            if (resolvedWeight < 20 || resolvedWeight > 300) {
+                Toast.makeText(requireContext(), "体重值不合理，请输入20-300公斤之间的值", Toast.LENGTH_SHORT).show()
+                return
+            }
+        }
 
         val requiredFieldsFilled = displayName.isNotEmpty() &&
                 !resolvedBirthdate.isNullOrBlank() &&
