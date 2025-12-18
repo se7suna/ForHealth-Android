@@ -12,7 +12,7 @@ class Settings(BaseSettings):
     DEBUG: bool = True
 
     # 服务器配置
-    HOST: str = "124.70.161.90"
+    HOST: str = "127.0.0.1"
     PORT: int = 8000
 
     # 数据库配置
