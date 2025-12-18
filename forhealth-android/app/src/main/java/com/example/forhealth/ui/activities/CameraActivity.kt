@@ -3,13 +3,15 @@ package com.example.forhealth.ui.activities
 import android.Manifest
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
+import android.graphics.Matrix
 import android.os.Bundle
 import android.widget.Toast
 import android.util.Log
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.camera.core.*
-import androidx.camera.core.ExperimentalGetImage
 import androidx.camera.lifecycle.ProcessCameraProvider
 import android.content.res.ColorStateList
 import androidx.core.content.ContextCompat
@@ -24,6 +26,7 @@ import com.example.forhealth.network.dto.food.BarcodeScanResponse
 import com.example.forhealth.network.dto.food.FoodResponse
 import com.example.forhealth.network.safeApiCall
 import com.google.zxing.*
+import com.google.zxing.RGBLuminanceSource
 import com.google.zxing.common.HybridBinarizer
 import kotlinx.coroutines.launch
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
@@ -32,13 +35,11 @@ import okhttp3.RequestBody.Companion.asRequestBody
 import java.io.File
 import java.util.concurrent.Executors
 
-@OptIn(ExperimentalGetImage::class)
 class CameraActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityCameraBinding
     private var cameraProvider: ProcessCameraProvider? = null
     private var imageCapture: ImageCapture? = null
-    private var imageAnalysis: ImageAnalysis? = null
     private var isScanMode = true // true = 扫码模式, false = 拍照模式
     private var isProcessing = false // 防止重复处理
 
@@ -138,8 +139,8 @@ class CameraActivity : AppCompatActivity() {
 
         binding.btnCapture.setOnClickListener {
             if (isScanMode) {
-                // 扫码模式下，点击按钮可以手动触发识别（可选功能）
-                Toast.makeText(this, "请将条形码对准扫描框", Toast.LENGTH_SHORT).show()
+                // 扫码模式：用 ImageCapture 拍一张，再本地识别二维码/条形码（更稳定）
+                captureAndDecodeCode()
             } else {
                 // 拍照模式下，点击按钮拍照
                 capturePhoto()
@@ -230,17 +231,8 @@ class CameraActivity : AppCompatActivity() {
                     // 绑定预览到PreviewView
                     preview.setSurfaceProvider(binding.previewView.surfaceProvider)
 
-                    // 准备用例列表
+                    // 准备用例列表：扫码/拍照都只用 Preview + ImageCapture，避免 ImageAnalysis 在部分机型上导致预览异常
                     val useCases = mutableListOf<UseCase>(preview, imageCapture!!)
-
-                    // 在扫码模式下添加图像分析
-                    if (isScanMode) {
-                        imageAnalysis = ImageAnalysis.Builder()
-                            .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
-                            .build()
-                        imageAnalysis?.setAnalyzer(cameraExecutor, BarcodeAnalyzer())
-                        useCases.add(imageAnalysis!!)
-                    }
 
                     // 绑定用例到生命周期
                     val camera = cameraProvider.bindToLifecycle(
@@ -283,9 +275,10 @@ class CameraActivity : AppCompatActivity() {
         applyDarkModeButtons()
         if (isScanMode) {
             // 扫码模式
-            binding.layoutScanFrame.visibility = android.view.View.VISIBLE
+            // 去掉绿幕/扫描框覆盖层
+            binding.layoutScanFrame.visibility = android.view.View.GONE
             binding.btnCapture.visibility = android.view.View.VISIBLE
-            binding.tvHint.text = "将条形码放入框内"
+            binding.tvHint.text = "点击按钮扫描二维码/条形码"
         } else {
             // 拍照模式
             binding.layoutScanFrame.visibility = android.view.View.GONE
@@ -329,6 +322,147 @@ class CameraActivity : AppCompatActivity() {
                 }
             }
         )
+    }
+
+    private fun captureAndDecodeCode() {
+        if (isProcessing) return
+
+        val imageCapture = imageCapture ?: run {
+            Toast.makeText(this, "摄像头未就绪", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        showLoading("扫描中...")
+        isProcessing = true
+
+        val photoFile = File(getExternalFilesDir(null), "temp_code_scan_${System.currentTimeMillis()}.jpg")
+        val outputFileOptions = ImageCapture.OutputFileOptions.Builder(photoFile).build()
+
+        imageCapture.takePicture(
+            outputFileOptions,
+            ContextCompat.getMainExecutor(this),
+            object : ImageCapture.OnImageSavedCallback {
+                override fun onImageSaved(output: ImageCapture.OutputFileResults) {
+                    lifecycleScope.launch {
+                        try {
+                            val decoded = decodeCodeFromFile(photoFile)
+                            if (decoded.isNullOrBlank()) {
+                                hideLoading()
+                                isProcessing = false
+                                Toast.makeText(
+                                    this@CameraActivity,
+                                    "未识别到二维码/条形码，请重试",
+                                    Toast.LENGTH_SHORT
+                                ).show()
+                            } else {
+                                // 进入查询前先放开 isProcessing，避免 handleScanResult 直接 return
+                                isProcessing = false
+                                runOnUiThread { handleScanResult(decoded) }
+                            }
+                        } catch (e: Exception) {
+                            hideLoading()
+                            isProcessing = false
+                            Toast.makeText(
+                                this@CameraActivity,
+                                "识别失败: ${e.message}",
+                                Toast.LENGTH_SHORT
+                            ).show()
+                        } finally {
+                            photoFile.delete()
+                        }
+                    }
+                }
+
+                override fun onError(exception: ImageCaptureException) {
+                    hideLoading()
+                    isProcessing = false
+                    photoFile.delete()
+                    Toast.makeText(
+                        this@CameraActivity,
+                        "拍照失败: ${exception.message}",
+                        Toast.LENGTH_SHORT
+                    ).show()
+                }
+            }
+        )
+    }
+
+    private fun decodeCodeFromFile(file: File): String? {
+        if (!file.exists()) return null
+
+        // 先读取尺寸，做一个简单的 downsample，避免大图 OOM
+        val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+        BitmapFactory.decodeFile(file.absolutePath, bounds)
+
+        val targetMax = 1280
+        val sampleSize = run {
+            var s = 1
+            val w = bounds.outWidth
+            val h = bounds.outHeight
+            while (w / s > targetMax || h / s > targetMax) s *= 2
+            s
+        }
+
+        val options = BitmapFactory.Options().apply {
+            inSampleSize = sampleSize
+            inPreferredConfig = Bitmap.Config.ARGB_8888
+        }
+
+        val bitmap = BitmapFactory.decodeFile(file.absolutePath, options) ?: return null
+        return try {
+            decodeWithRotations(bitmap)
+        } finally {
+            bitmap.recycle()
+        }
+    }
+
+    private fun decodeWithRotations(original: Bitmap): String? {
+        val reader = MultiFormatReader().apply {
+            setHints(
+                mapOf(
+                    DecodeHintType.POSSIBLE_FORMATS to listOf(
+                        BarcodeFormat.QR_CODE,
+                        BarcodeFormat.UPC_A,
+                        BarcodeFormat.UPC_E,
+                        BarcodeFormat.EAN_13,
+                        BarcodeFormat.EAN_8,
+                        BarcodeFormat.CODE_128,
+                        BarcodeFormat.CODE_39
+                    ),
+                    DecodeHintType.TRY_HARDER to true
+                )
+            )
+        }
+
+        val angles = listOf(0, 90, 180, 270)
+        for (angle in angles) {
+            val bitmap = if (angle == 0) original else rotateBitmap(original, angle)
+            try {
+                val result = decodeFromBitmap(reader, bitmap)
+                if (!result.isNullOrBlank()) return result
+            } catch (_: NotFoundException) {
+                // try next rotation
+            } finally {
+                if (bitmap !== original) bitmap.recycle()
+                reader.reset()
+            }
+        }
+        return null
+    }
+
+    private fun decodeFromBitmap(reader: MultiFormatReader, bitmap: Bitmap): String? {
+        val width = bitmap.width
+        val height = bitmap.height
+        val pixels = IntArray(width * height)
+        bitmap.getPixels(pixels, 0, width, 0, 0, width, height)
+        val source = RGBLuminanceSource(width, height, pixels)
+        val binaryBitmap = BinaryBitmap(HybridBinarizer(source))
+        return reader.decodeWithState(binaryBitmap).text
+    }
+
+    private fun rotateBitmap(src: Bitmap, degrees: Int): Bitmap {
+        val matrix = Matrix().apply { postRotate(degrees.toFloat()) }
+        return Bitmap.createBitmap(src, 0, 0, src.width, src.height, matrix, true)
     }
 
     private fun recognizeFoodFromImage(imageFile: File) {
@@ -412,91 +546,7 @@ class CameraActivity : AppCompatActivity() {
         }
     }
 
-    private inner class BarcodeAnalyzer : ImageAnalysis.Analyzer {
-        private val reader = MultiFormatReader().apply {
-            val hints = mapOf(
-                DecodeHintType.POSSIBLE_FORMATS to listOf(
-                    BarcodeFormat.UPC_A,
-                    BarcodeFormat.UPC_E,
-                    BarcodeFormat.EAN_13,
-                    BarcodeFormat.EAN_8,
-                    BarcodeFormat.CODE_128,
-                    BarcodeFormat.CODE_39,
-                    BarcodeFormat.QR_CODE
-                ),
-                DecodeHintType.TRY_HARDER to true
-            )
-            setHints(hints)
-        }
-
-        @OptIn(ExperimentalGetImage::class)
-        override fun analyze(imageProxy: ImageProxy) {
-            try {
-                if (!isScanMode || isProcessing) return
-
-                val mediaImage = imageProxy.image ?: return
-                val width = imageProxy.width
-                val height = imageProxy.height
-
-                // Y 平面并不一定是紧凑的 width*height，需要考虑 rowStride/pixelStride
-                val yPlane = mediaImage.planes[0]
-                val yBuffer = yPlane.buffer.duplicate()
-                val rowStride = yPlane.rowStride
-                val pixelStride = yPlane.pixelStride
-
-                val yData = ByteArray(width * height)
-                if (pixelStride == 1 && rowStride == width) {
-                    yBuffer.rewind()
-                    yBuffer.get(yData, 0, yData.size)
-                } else {
-                    var outputIndex = 0
-                    for (row in 0 until height) {
-                        var inputIndex = row * rowStride
-                        for (col in 0 until width) {
-                            yData[outputIndex++] = yBuffer.get(inputIndex)
-                            inputIndex += pixelStride
-                        }
-                    }
-                }
-
-                var source: LuminanceSource = PlanarYUVLuminanceSource(
-                    yData,
-                    width,
-                    height,
-                    0,
-                    0,
-                    width,
-                    height,
-                    false
-                )
-
-                // rotationDegrees: 顺时针旋转多少度才是正向；PlanarYUVLuminanceSource 支持逆时针旋转
-                val rotation = imageProxy.imageInfo.rotationDegrees
-                if (rotation != 0 && source.isRotateSupported) {
-                    source = when (rotation) {
-                        90 -> source.rotateCounterClockwise()
-                            .rotateCounterClockwise()
-                            .rotateCounterClockwise()
-                        180 -> source.rotateCounterClockwise().rotateCounterClockwise()
-                        270 -> source.rotateCounterClockwise()
-                        else -> source
-                    }
-                }
-
-                val bitmap = BinaryBitmap(HybridBinarizer(source))
-                val result = reader.decodeWithState(bitmap)
-
-                runOnUiThread { handleScanResult(result.text) }
-            } catch (e: NotFoundException) {
-                // 未找到条形码/二维码，继续扫描
-            } catch (e: Exception) {
-                Log.w("CameraActivity", "Decode failed", e)
-            } finally {
-                reader.reset()
-                imageProxy.close()
-            }
-        }
-    }
+    // 扫码采用“拍一张再识别”的方式，避免机型上 ImageAnalysis 无法稳定工作的问题
 
     private fun handleScanResult(barcode: String) {
         if (isProcessing) return
