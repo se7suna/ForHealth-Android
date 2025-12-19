@@ -8,6 +8,7 @@ import android.view.ViewGroup
 import android.view.Window
 import android.widget.NumberPicker
 import android.widget.TextView
+import androidx.appcompat.app.AppCompatDelegate
 import com.google.android.material.button.MaterialButton
 import androidx.fragment.app.DialogFragment
 import com.example.forhealth.R
@@ -49,6 +50,7 @@ class BirthdatePickerDialogFragment : DialogFragment() {
             selectedMonth = it.getInt(ARG_MONTH, Calendar.getInstance().get(Calendar.MONTH) + 1)
             selectedDay = it.getInt(ARG_DAY, Calendar.getInstance().get(Calendar.DAY_OF_MONTH))
         }
+        AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_NO)
     }
     
     override fun onCreateDialog(savedInstanceState: Bundle?): Dialog {

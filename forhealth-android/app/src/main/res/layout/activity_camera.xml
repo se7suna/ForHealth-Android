@@ -36,10 +36,7 @@
             android:id="@+id/maskBottom"
             android:layout_width="0dp"
             android:layout_height="0dp"
-<<<<<<< HEAD
-=======
 
->>>>>>> origin/fix/fix-frontend-exercise
             android:background="#66000000"
             app:layout_constraintTop_toBottomOf="@+id/scanWindow"
             app:layout_constraintEnd_toEndOf="parent"
@@ -51,10 +48,7 @@
             android:layout_width="0dp"
             android:layout_height="0dp"
             android:background="#66000000"
-<<<<<<< HEAD
-=======
 
->>>>>>> origin/fix/fix-frontend-exercise
             app:layout_constraintTop_toTopOf="@+id/scanWindow"
             app:layout_constraintBottom_toBottomOf="@+id/scanWindow"
             app:layout_constraintStart_toStartOf="parent"
@@ -64,10 +58,7 @@
             android:id="@+id/maskRight"
             android:layout_width="0dp"
             android:layout_height="0dp"
-<<<<<<< HEAD
-=======
 
->>>>>>> origin/fix/fix-frontend-exercise
             android:background="#66000000"
             app:layout_constraintTop_toTopOf="@+id/scanWindow"
             app:layout_constraintBottom_toBottomOf="@+id/scanWindow"
@@ -84,8 +75,6 @@
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintEnd_toEndOf="parent">
 
-<<<<<<< HEAD
-=======
 
             <!-- Transparent center area for scanning -->
             <View
@@ -150,7 +139,6 @@
                 android:background="@color/emerald_400"
                 android:alpha="0.7" />
 
->>>>>>> origin/fix/fix-frontend-exercise
             <View
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
@@ -162,10 +150,7 @@
                 android:layout_height="2dp"
                 android:layout_gravity="top"
                 android:background="@color/emerald_400" />
-<<<<<<< HEAD
-=======
 
->>>>>>> origin/fix/fix-frontend-exercise
         </FrameLayout>
 
     </androidx.constraintlayout.widget.ConstraintLayout>
