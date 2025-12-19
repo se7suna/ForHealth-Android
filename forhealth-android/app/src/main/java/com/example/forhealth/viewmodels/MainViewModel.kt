@@ -1317,7 +1317,7 @@ class MainViewModel : ViewModel() {
         val sportName = dto.sport_name ?: ""
         val duration = dto.duration_time ?: 0
         val caloriesBurned = dto.calories_burned ?: 0.0
-        val createdAt = dto.created_at ?: DateUtils.getCurrentTime()
+        val createdAt = dto.created_at ?: DateUtils.getCurrentDateTimeIso()
         val sportType = dto.sport_type?.let { sportTypeStringToEnum(it) } ?: ExerciseType.CARDIO
         
         return ActivityItem(

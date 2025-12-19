@@ -368,16 +368,15 @@ class AddExerciseFragment : DialogFragment() {
         
         // 为每条运动使用唯一的时间戳（毫秒级），确保在时间线上正确排序
         val baseTime = System.currentTimeMillis()
-        // 使用 ISO 8601 格式：2025-12-09T12:54:54
-        val isoFormat = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.getDefault())
-        val currentTimeString = isoFormat.format(Date())
+        // 使用 ISO 8601 格式带时区：2025-12-09T12:54:54+08:00
+        val currentTimeString = DateUtils.getCurrentDateTimeIso()
         val activities = selectedItems.mapIndexed { index, item ->
             ActivityItem(
                 id = "${baseTime + index}-${UUID.randomUUID()}",
                 name = item.exerciseItem.name,
                 caloriesBurned = item.exerciseItem.caloriesPerUnit * item.count,
                 duration = item.count.toInt(),
-                time = currentTimeString, // 使用 ISO 8601 格式的时间字符串
+                time = currentTimeString, // 使用 ISO 8601 格式带时区的时间字符串
                 type = item.exerciseItem.category,
                 image = item.exerciseItem.image
             )

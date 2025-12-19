@@ -412,7 +412,7 @@ class EditExerciseFragment : DialogFragment() {
             name = item.exerciseItem.name,
             caloriesBurned = item.exerciseItem.caloriesPerUnit * item.count,
             duration = item.count.toInt(),
-            time = originalActivity?.time ?: DateUtils.getCurrentTime(),
+            time = originalActivity?.time ?: DateUtils.getCurrentDateTimeIso(),
             type = item.exerciseItem.category,
             image = item.exerciseItem.image
         )
