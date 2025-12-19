@@ -16,7 +16,7 @@ import com.example.forhealth.repositories.UserRepository
 import com.example.forhealth.utils.TokenManager
 import com.example.forhealth.ui.fragments.EditProfileFragment
 import kotlinx.coroutines.launch
-
+import androidx.appcompat.app.AppCompatDelegate
 class LoginActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityLoginBinding
@@ -24,6 +24,7 @@ class LoginActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_NO)
         binding = ActivityLoginBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
