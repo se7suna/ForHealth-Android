@@ -401,7 +401,7 @@ class EditWorkoutFragment : DialogFragment() {
                 name = item.exerciseItem.name,
                 caloriesBurned = item.exerciseItem.caloriesPerUnit * item.count,
                 duration = item.count.toInt(),
-                time = originalWorkoutGroup?.time ?: DateUtils.getCurrentTime(),
+                time = originalWorkoutGroup?.time ?: DateUtils.getCurrentDateTimeIso(),
                 type = item.exerciseItem.category,
                 image = item.exerciseItem.image
             )
@@ -410,7 +410,7 @@ class EditWorkoutFragment : DialogFragment() {
         val workoutGroup = WorkoutGroup(
             id = originalWorkoutGroup?.id ?: UUID.randomUUID().toString(),
             activities = activities,
-            time = originalWorkoutGroup?.time ?: DateUtils.getCurrentTime()
+            time = originalWorkoutGroup?.time ?: DateUtils.getCurrentDateTimeIso()
         )
         
         onWorkoutUpdatedListener?.invoke(workoutGroup)
