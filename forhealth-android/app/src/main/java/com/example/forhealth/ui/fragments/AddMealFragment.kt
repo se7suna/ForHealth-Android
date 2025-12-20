@@ -382,6 +382,7 @@ class AddMealFragment : DialogFragment() {
             onQuantityInput = { foodId, value -> handleQuantityInput(foodId, value) },
             onQuantityBlur = { foodId -> handleQuantityBlur(foodId) },
             onRemove = { foodId -> removeItem(foodId) },
+            onPickImage = { /* 添加界面暂不支持改图 */ },
             calculateMacros = { item -> calculateItemMacros(item).calories }
         )
         
@@ -505,6 +506,7 @@ class AddMealFragment : DialogFragment() {
             onQuantityInput = { foodId, value -> handleQuantityInput(foodId, value) },
             onQuantityBlur = { foodId -> handleQuantityBlur(foodId) },
             onRemove = { foodId -> removeItem(foodId) },
+            onPickImage = { /* 添加界面暂不支持改图 */ },
             calculateMacros = { item -> calculateItemMacros(item).calories }
         )
         binding.rvCartItems.adapter = cartAdapter
