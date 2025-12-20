@@ -15,9 +15,9 @@ services:
       - postfix
     networks:
       - for_health_network
-    # 生产环境移除 volumes 挂载，使用镜像中打包的代码和依赖
-    # volumes:
-    #   - ./backend/app:/app/app
+    # 挂载图片文件夹到本地实现持久化
+    volumes:
+      - ./backend/uploads:/app/uploads  # 图片持久化存储
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
       interval: 30s
