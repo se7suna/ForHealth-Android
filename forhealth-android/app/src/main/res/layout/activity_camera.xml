@@ -36,6 +36,7 @@
             android:id="@+id/maskBottom"
             android:layout_width="0dp"
             android:layout_height="0dp"
+
             android:background="#66000000"
             app:layout_constraintTop_toBottomOf="@+id/scanWindow"
             app:layout_constraintEnd_toEndOf="parent"
@@ -47,6 +48,7 @@
             android:layout_width="0dp"
             android:layout_height="0dp"
             android:background="#66000000"
+
             app:layout_constraintTop_toTopOf="@+id/scanWindow"
             app:layout_constraintBottom_toBottomOf="@+id/scanWindow"
             app:layout_constraintStart_toStartOf="parent"
@@ -56,6 +58,7 @@
             android:id="@+id/maskRight"
             android:layout_width="0dp"
             android:layout_height="0dp"
+
             android:background="#66000000"
             app:layout_constraintTop_toTopOf="@+id/scanWindow"
             app:layout_constraintBottom_toBottomOf="@+id/scanWindow"
@@ -72,6 +75,70 @@
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintEnd_toEndOf="parent">
 
+
+            <!-- Transparent center area for scanning -->
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:background="@android:color/transparent" />
+
+            <!-- Corner borders for scan frame -->
+            <!-- Top left corner -->
+            <View
+                android:layout_width="40dp"
+                android:layout_height="3dp"
+                android:layout_gravity="top|start"
+                android:background="@color/emerald_400" />
+            <View
+                android:layout_width="3dp"
+                android:layout_height="40dp"
+                android:layout_gravity="top|start"
+                android:background="@color/emerald_400" />
+
+            <!-- Top right corner -->
+            <View
+                android:layout_width="40dp"
+                android:layout_height="3dp"
+                android:layout_gravity="top|end"
+                android:background="@color/emerald_400" />
+            <View
+                android:layout_width="3dp"
+                android:layout_height="40dp"
+                android:layout_gravity="top|end"
+                android:background="@color/emerald_400" />
+
+            <!-- Bottom left corner -->
+            <View
+                android:layout_width="40dp"
+                android:layout_height="3dp"
+                android:layout_gravity="bottom|start"
+                android:background="@color/emerald_400" />
+            <View
+                android:layout_width="3dp"
+                android:layout_height="40dp"
+                android:layout_gravity="bottom|start"
+                android:background="@color/emerald_400" />
+
+            <!-- Bottom right corner -->
+            <View
+                android:layout_width="40dp"
+                android:layout_height="3dp"
+                android:layout_gravity="bottom|end"
+                android:background="@color/emerald_400" />
+            <View
+                android:layout_width="3dp"
+                android:layout_height="40dp"
+                android:layout_gravity="bottom|end"
+                android:background="@color/emerald_400" />
+
+            <!-- Scanning line animation (optional) -->
+            <View
+                android:layout_width="240dp"
+                android:layout_height="2dp"
+                android:layout_gravity="center"
+                android:background="@color/emerald_400"
+                android:alpha="0.7" />
+
             <View
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
@@ -83,6 +150,7 @@
                 android:layout_height="2dp"
                 android:layout_gravity="top"
                 android:background="@color/emerald_400" />
+
         </FrameLayout>
 
     </androidx.constraintlayout.widget.ConstraintLayout>
