@@ -65,6 +65,18 @@ async def update_body_data(email: str, body_data: BodyDataRequest) -> Optional[d
         "updated_at": datetime.utcnow(),
     }
 
+    # 如果用户已设置活动水平,重新计算 TDEE
+    if user and user.get("activity_level"):
+        tdee = calculate_tdee(bmr, ActivityLevel(user["activity_level"]))
+        update_data["tdee"] = tdee
+
+        # 如果用户已设置健康目标,重新计算每日卡路里目标
+        if user.get("health_goal_type"):
+            daily_calorie_goal = calculate_daily_calorie_goal(
+                tdee, HealthGoalType(user["health_goal_type"])
+            )
+            update_data["daily_calorie_goal"] = daily_calorie_goal
+
     result = await db.users.find_one_and_update(
         {"email": email},
         {"$set": update_data},
