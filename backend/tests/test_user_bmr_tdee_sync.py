@@ -61,7 +61,7 @@ async def test_bmr_update_syncs_tdee(auth_client):
     activity_level_data = {
         "activity_level": ActivityLevel.MODERATELY_ACTIVE.value  # 中等活动
     }
-    response = await auth_client.put("/api/user/activity-level", json=activity_level_data)
+    response = await auth_client.post("/api/user/activity-level", json=activity_level_data)
     assert response.status_code == 200, f"设置活动水平失败: {response.status_code}"
 
     # 获取初始用户数据
@@ -88,7 +88,7 @@ async def test_bmr_update_syncs_tdee(auth_client):
         "gender": initial_profile.get("gender", "male")
     }
 
-    response = await auth_client.put("/api/user/body-data", json=body_data)
+    response = await auth_client.post("/api/user/body-data", json=body_data)
     assert response.status_code == 200, f"更新身体数据失败: {response.status_code}"
 
     # Step 3: 获取更新后的用户数据
@@ -134,7 +134,7 @@ async def test_bmr_update_syncs_daily_calorie_goal(auth_client):
     activity_level_data = {
         "activity_level": ActivityLevel.MODERATELY_ACTIVE.value
     }
-    response = await auth_client.put("/api/user/activity-level", json=activity_level_data)
+    response = await auth_client.post("/api/user/activity-level", json=activity_level_data)
     assert response.status_code == 200, f"设置活动水平失败: {response.status_code}"
 
     # 获取当前用户数据以设置健康目标
@@ -149,7 +149,7 @@ async def test_bmr_update_syncs_daily_calorie_goal(auth_client):
         "target_weight": current_weight - 5,
         "goal_period_weeks": 10
     }
-    response = await auth_client.put("/api/user/health-goal", json=health_goal_data)
+    response = await auth_client.post("/api/user/health-goal", json=health_goal_data)
     assert response.status_code == 200, f"设置健康目标失败: {response.status_code}"
 
     # 获取初始数据
@@ -177,7 +177,7 @@ async def test_bmr_update_syncs_daily_calorie_goal(auth_client):
         "gender": initial_profile.get("gender", "male")
     }
 
-    response = await auth_client.put("/api/user/body-data", json=body_data)
+    response = await auth_client.post("/api/user/body-data", json=body_data)
     assert response.status_code == 200
 
     # Step 4: 验证所有相关值都更新了
