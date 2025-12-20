@@ -59,7 +59,7 @@ async def test_bmr_update_syncs_tdee(auth_client):
 
     # Step 1: 设置活动水平
     activity_level_data = {
-        "activity_level": ActivityLevel.MODERATE.value  # 中等活动
+        "activity_level": ActivityLevel.MODERATELY_ACTIVE.value  # 中等活动
     }
     response = await auth_client.put("/api/user/activity-level", json=activity_level_data)
     assert response.status_code == 200, f"设置活动水平失败: {response.status_code}"
@@ -132,7 +132,7 @@ async def test_bmr_update_syncs_daily_calorie_goal(auth_client):
 
     # Step 1: 设置活动水平
     activity_level_data = {
-        "activity_level": ActivityLevel.MODERATE.value
+        "activity_level": ActivityLevel.MODERATELY_ACTIVE.value
     }
     response = await auth_client.put("/api/user/activity-level", json=activity_level_data)
     assert response.status_code == 200, f"设置活动水平失败: {response.status_code}"
