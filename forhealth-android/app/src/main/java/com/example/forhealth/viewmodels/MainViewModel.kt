@@ -298,165 +298,51 @@ class MainViewModel : ViewModel() {
         onResult: (ApiResult<MealGroup>) -> Unit
     ) {
         viewModelScope.launch {
-            if (originalMealGroup == null) {
-                // 如果没有原始数据，直接创建新记录
-                createMealRecords(
-                    items = selectedItems,
-                    mealType = newMealGroup.type,
-                    time = newMealGroup.time
-                ) { result ->
-                    when (result) {
-                        is ApiResult.Success<*> -> {
-                            @Suppress("UNCHECKED_CAST")
-                            val mealItems = result.data as List<MealItem>
-                            val mealGroup = MealGroup(
-                                id = mealItems.firstOrNull()?.id ?: "",
-                                meals = mealItems,
-                                time = newMealGroup.time,
-                                type = newMealGroup.type
-                            )
-                            onResult(ApiResult.Success(mealGroup))
-                        }
-                        is ApiResult.Error -> onResult(ApiResult.Error(result.message))
-                        is ApiResult.Loading -> onResult(result)
-                    }
-                }
-                return@launch
-            }
-            
-            // 获取原始meal group中的所有记录ID
-            val originalMealIds = originalMealGroup.meals.mapNotNull { it.id }.filter { it.isNotBlank() }
-            val newMealCount = selectedItems.size
-            
-            // 策略：
-            // 1. 如果新记录数量 <= 原始记录数量，更新前N条，删除剩余的
-            // 2. 如果新记录数量 > 原始记录数量，更新所有原始记录，创建新的记录
-            
-            val updatedMeals = mutableListOf<MealItem>()
-            var updateIndex = 0
-            var hasError = false
-            var errorMessage = ""
-            
-            // 先更新现有记录
-            for (i in originalMealIds.indices) {
-                if (updateIndex >= selectedItems.size) {
-                    // 新记录数量少于原始记录，删除剩余的
-                    when (val deleteResult = mealRepository.deleteFoodRecord(originalMealIds[i])) {
-                        is ApiResult.Success -> { /* 删除成功 */ }
+            // 简化策略：编辑时先删除旧的 meal 记录，再按当前选中项全量重建，避免顺序错位导致图片错乱
+            if (originalMealGroup != null) {
+                val idsToDelete = originalMealGroup.meals.mapNotNull { it.id }.filter { it.isNotBlank() }
+                for (rid in idsToDelete) {
+                    when (val del = mealRepository.deleteFoodRecord(rid)) {
                         is ApiResult.Error -> {
-                            hasError = true
-                            errorMessage = deleteResult.message
-                            break
+                            onResult(ApiResult.Error(del.message))
+                            return@launch
                         }
-                        is ApiResult.Loading -> {}
+                        else -> {}
                     }
-                } else {
-                    // 更新现有记录
-                    val item = selectedItems[updateIndex]
-                    val macros = calculateMacrosFromSelectedItem(item)
-                    val mealItem = MealItem(
-                        id = originalMealIds[i],
-                        name = item.foodItem.name,
-                        calories = macros.calories,
-                        protein = macros.protein,
-                        carbs = macros.carbs,
-                        fat = macros.fat,
-                        time = newMealGroup.time,
-                        type = newMealGroup.type,
-                        image = item.foodItem.image,
-                        foodId = item.foodItem.id,
-                        servingAmount = if (item.mode == com.example.forhealth.models.QuantityMode.GRAM) {
-                            item.count / item.foodItem.gramsPerUnit
-                        } else {
-                            item.count
-                        }
-                    )
-                    
-                    val request = mealItemToFoodRecordUpdateRequest(mealItem)
-                    when (val updateResult = mealRepository.updateFoodRecord(originalMealIds[i], request)) {
-                        is ApiResult.Success -> {
-                            val updatedMeal = foodRecordResponseToMealItemWithImage(updateResult.data)
-                            updatedMeals.add(updatedMeal)
-                        }
-                        is ApiResult.Error -> {
-                            hasError = true
-                            errorMessage = updateResult.message
-                            break
-                        }
-                        is ApiResult.Loading -> {}
-                    }
-                    updateIndex++
                 }
             }
-            
-            if (hasError) {
-                onResult(ApiResult.Error(errorMessage))
-                return@launch
-            }
-            
-            // 创建新记录（如果新记录数量 > 原始记录数量）
-            if (updateIndex < selectedItems.size) {
-                val remainingItems = selectedItems.subList(updateIndex, selectedItems.size)
-                // 先保存当前meals状态，因为createMealRecords会自动更新
-                val currentMealsBeforeCreate = _meals.value ?: emptyList()
-                val targetMeal = currentMealsBeforeCreate.find { it.id == originalMealGroup.id }
-                
-                createMealRecords(
-                    items = remainingItems,
-                    mealType = newMealGroup.type,
-                    time = newMealGroup.time
-                ) { result ->
-                    when (result) {
-                        is ApiResult.Success<*> -> {
-                            @Suppress("UNCHECKED_CAST")
-                            val newMeals = result.data as List<MealItem>
-                            updatedMeals.addAll(newMeals)
-                            val mealGroup = MealGroup(
-                                id = updatedMeals.firstOrNull()?.id ?: "",
-                                meals = updatedMeals,
-                                time = newMealGroup.time,
-                                type = newMealGroup.type
-                            )
-                            // 更新本地状态：移除旧的meal group和createMealRecords自动添加的新meals，然后添加完整的updatedMeals
-                            val currentMealsAfterCreate = _meals.value ?: emptyList()
-                            val updatedMealsList = if (targetMeal != null) {
-                                // 移除旧的meal group（按时间戳）和自动添加的新meals
-                                currentMealsAfterCreate.filterNot { meal ->
-                                    meal.time == targetMeal.time ||
-                                    newMeals.any { it.id == meal.id }
-                                } + updatedMeals
-                            } else {
-                                currentMealsAfterCreate.filterNot { meal ->
-                                    newMeals.any { it.id == meal.id }
-                                } + updatedMeals
-                            }
-                            setMeals(updatedMealsList)
-                            onResult(ApiResult.Success(mealGroup))
+
+            createMealRecords(
+                items = selectedItems,
+                mealType = newMealGroup.type,
+                time = newMealGroup.time
+            ) { result ->
+                when (result) {
+                    is ApiResult.Success<*> -> {
+                        @Suppress("UNCHECKED_CAST")
+                        val mealsCreated = result.data as List<MealItem>
+                        // 如果接口没返回图片，用选中项的图片回填（按当前选中顺序）
+                        val withImages = mealsCreated.mapIndexed { idx, meal ->
+                            val src = selectedItems.getOrNull(idx)
+                            if (meal.image.isNullOrBlank() && src != null) meal.copy(image = src.foodItem.image) else meal
                         }
-                        is ApiResult.Error -> onResult(ApiResult.Error(result.message))
-                        is ApiResult.Loading -> onResult(result)
+                        val mealGroup = MealGroup(
+                            id = withImages.firstOrNull()?.id ?: "",
+                            meals = withImages,
+                            time = newMealGroup.time,
+                            type = newMealGroup.type
+                        )
+                        // 本地状态：去掉旧时间戳的 meals，再加新建的
+                        val current = _meals.value ?: emptyList()
+                        val cleaned = if (originalMealGroup != null) {
+                            current.filterNot { it.time == originalMealGroup.time }
+                        } else current
+                        setMeals(cleaned + withImages)
+                        onResult(ApiResult.Success(mealGroup))
                     }
+                    is ApiResult.Error -> onResult(ApiResult.Error(result.message))
+                    is ApiResult.Loading -> onResult(result)
                 }
-            } else {
-                // 所有记录都已更新
-                val mealGroup = MealGroup(
-                    id = updatedMeals.firstOrNull()?.id ?: "",
-                    meals = updatedMeals,
-                    time = newMealGroup.time,
-                    type = newMealGroup.type
-                )
-                // 更新本地状态
-                val currentMeals = _meals.value ?: emptyList()
-                val targetMeal = currentMeals.find { it.id == originalMealGroup.id }
-                val updatedMealsList = if (targetMeal != null) {
-                    currentMeals.filterNot { meal ->
-                        meal.time == targetMeal.time
-                    } + updatedMeals
-                } else {
-                    currentMeals + updatedMeals
-                }
-                setMeals(updatedMealsList)
-                onResult(ApiResult.Success(mealGroup))
             }
         }
     }
@@ -1061,7 +947,10 @@ class MainViewModel : ViewModel() {
                 when (val result = mealRepository.createFoodRecord(request)) {
                     is ApiResult.Success -> {
                         val mealItem = foodRecordResponseToMealItemWithImage(result.data)
-                        createdMeals.add(mealItem)
+                        val withImage = if (mealItem.image.isNullOrBlank()) {
+                            mealItem.copy(image = item.foodItem.image)
+                        } else mealItem
+                        createdMeals.add(withImage)
                     }
                     is ApiResult.Error -> {
                         onResult(ApiResult.Error(result.message))

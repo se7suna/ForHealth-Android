@@ -22,6 +22,7 @@ class CartFoodAdapter(
     private val onQuantityInput: (String, String) -> Unit,
     private val onQuantityBlur: (String) -> Unit,
     private val onRemove: (String) -> Unit,
+    private val onPickImage: (String) -> Unit,
     private val calculateMacros: (SelectedFoodItem) -> Double
 ) : RecyclerView.Adapter<CartFoodAdapter.ViewHolder>() {
 
@@ -52,6 +53,9 @@ class CartFoodAdapter(
         holder.ivCartFoodImage.load(item.foodItem.image) {
             placeholder(R.color.slate_100)
             error(R.color.slate_100)
+        }
+        holder.ivCartFoodImage.setOnClickListener {
+            onPickImage(item.foodItem.id)
         }
         
         // 设置名称

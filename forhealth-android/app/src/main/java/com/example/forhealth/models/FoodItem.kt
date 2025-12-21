@@ -13,7 +13,7 @@ data class FoodItem(
 )
 
 data class SelectedFoodItem(
-    val foodItem: FoodItem,
+    var foodItem: FoodItem,
     var count: Double = 1.0,
     var mode: QuantityMode = QuantityMode.UNIT
 )
