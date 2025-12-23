@@ -166,9 +166,10 @@ class HomeFragment : Fragment() {
     private fun openAddMealDialog() {
         // 使用 DialogFragment 作为覆盖层，显示添加食物界面
         val dialog = AddMealFragment().apply {
-            // 设置回调，当添加成功后更新数据
+            // 设置回调，当添加成功后刷新统计数据
             setOnMealAddedListener { meals ->
-                viewModel.addMeals(meals)
+                // 重新加载今日统计数据以更新圆环和营养素统计
+                loadTodayStats()
             }
         }
         dialog.show(parentFragmentManager, "AddMealDialog")
