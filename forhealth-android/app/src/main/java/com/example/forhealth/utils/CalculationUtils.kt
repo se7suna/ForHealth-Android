@@ -26,8 +26,15 @@ object CalculationUtils {
     /**
      * 计算运动消耗的卡路里
      */
-    fun calculateExerciseCalories(exerciseItem: com.example.forhealth.models.ExerciseItem, duration: Double): Double {
-        return exerciseItem.caloriesPerUnit * duration
+    fun calculateExerciseCalories(
+        exerciseItem: com.example.forhealth.models.ExerciseItem,
+        duration: Double,
+        weightKg: Double? = null
+    ): Double {
+        // caloriesPerUnit 以 MET 作为单位：calories = MET × 体重(kg) × 时间(小时)
+        val weight = weightKg ?: 70.0
+        val hours = duration / 60.0
+        return exerciseItem.caloriesPerUnit * weight * hours
     }
     
     /**

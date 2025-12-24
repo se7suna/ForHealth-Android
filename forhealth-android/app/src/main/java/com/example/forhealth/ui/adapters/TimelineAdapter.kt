@@ -7,10 +7,12 @@ import android.widget.TextView
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.example.forhealth.R
+import com.example.forhealth.models.ExerciseItem
 import com.example.forhealth.models.ExerciseTimelineItem
 import com.example.forhealth.models.MealGroup
 import com.example.forhealth.models.MealGroupTimelineItem
 import com.example.forhealth.models.TimelineItem
+import com.example.forhealth.utils.CalculationUtils
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -18,12 +20,22 @@ import java.util.Locale
 class TimelineAdapter(
     private var items: List<TimelineItem>,
     private val onMealGroupClick: (MealGroup) -> Unit,
-    private val onExerciseClick: (com.example.forhealth.models.ActivityItem) -> Unit
+    private val onExerciseClick: (com.example.forhealth.models.ActivityItem) -> Unit,
+    private var exerciseLibrary: List<ExerciseItem> = emptyList(),
+    private var userWeight: Double? = null
 ) : RecyclerView.Adapter<TimelineAdapter.ViewHolder>() {
 
     fun updateItems(newItems: List<TimelineItem>) {
         items = newItems
         notifyDataSetChanged()
+    }
+
+    fun updateExerciseLibrary(list: List<ExerciseItem>) {
+        exerciseLibrary = list
+    }
+
+    fun updateUserWeight(weight: Double?) {
+        userWeight = weight
     }
 
     override fun getItemViewType(position: Int): Int = when (items[position].itemType) {
@@ -45,7 +57,7 @@ class TimelineAdapter(
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
         when (val item = items[position]) {
             is MealGroupTimelineItem -> holder.bindMealGroup(item.mealGroup, onMealGroupClick)
-            is ExerciseTimelineItem -> holder.bindExercise(item.activity, onExerciseClick)
+            is ExerciseTimelineItem -> holder.bindExercise(item.activity, onExerciseClick, exerciseLibrary, userWeight)
         }
     }
 
@@ -130,18 +142,25 @@ class TimelineAdapter(
 
         fun bindExercise(
             activity: com.example.forhealth.models.ActivityItem,
-            onClick: (com.example.forhealth.models.ActivityItem) -> Unit
+            onClick: (com.example.forhealth.models.ActivityItem) -> Unit,
+            exerciseLibrary: List<ExerciseItem>,
+            userWeight: Double?
         ) {
             itemView.findViewById<TextView>(R.id.tvWorkoutType)?.text = "Exercise"
             itemView.findViewById<TextView>(R.id.tvWorkoutTime)?.text = formatWorkoutTime(activity.time)
+            val durationHours = activity.duration / 60.0
+            val matched = exerciseLibrary.find { it.name == activity.name }
+            val recalculated = matched?.let {
+                CalculationUtils.calculateExerciseCalories(it, activity.duration.toDouble(), userWeight)
+            } ?: activity.caloriesBurned
             itemView.findViewById<TextView>(R.id.tvTotalCalories)?.text =
-                activity.caloriesBurned.toInt().toString()
+                recalculated.toInt().toString()
 
             val rvExerciseItems = itemView.findViewById<RecyclerView>(R.id.rvWorkoutItems)
             rvExerciseItems?.let {
                 it.adapter = null
                 it.layoutManager = LinearLayoutManager(itemView.context)
-                it.adapter = ExerciseGroupAdapter(listOf(activity))
+                it.adapter = ExerciseGroupAdapter(listOf(activity.copy(caloriesBurned = recalculated)))
             }
 
             itemView.setOnClickListener { onClick(activity) }

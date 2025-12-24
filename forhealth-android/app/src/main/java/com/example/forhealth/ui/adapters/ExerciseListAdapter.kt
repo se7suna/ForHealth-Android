@@ -50,7 +50,7 @@ class ExerciseListAdapter(
 
         // 设置名称和信息
         holder.tvExerciseName.text = exercise.name
-        holder.tvExerciseInfo.text = "~${exercise.caloriesPerUnit.toInt()} 千卡/分钟"
+        holder.tvExerciseInfo.text = "~${exercise.caloriesPerUnit.toInt()} MET"
 
         // 根据是否已选择显示不同的UI
         if (selected != null) {

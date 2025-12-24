@@ -131,6 +131,7 @@
     <string name="avg_burn">平均消耗</string>
     <string name="sum">合计</string>
     <string name="avg_sum">平均合计</string>
+    <string name="TDEE">TDEE</string>
     
     <!-- AI Insight -->
     <string name="ai_insight">AI健康助手</string>

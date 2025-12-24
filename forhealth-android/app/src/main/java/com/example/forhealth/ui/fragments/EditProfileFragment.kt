@@ -1,4 +1,4 @@
-package com.example.forhealth.ui.fragments
+﻿package com.example.forhealth.ui.fragments
 
 import android.app.AlertDialog
 import android.content.Intent
@@ -112,7 +112,7 @@ class EditProfileFragment : DialogFragment() {
         setupSaveButton()
         loadProfileData()
     }
-    
+
     private fun setupSystemBackButton() {
         // 处理系统返回键
         if (goMainOnSave) {
@@ -125,7 +125,7 @@ class EditProfileFragment : DialogFragment() {
             requireActivity().onBackPressedDispatcher.addCallback(viewLifecycleOwner, callback)
         }
     }
-    
+
     private fun showBackPressDialog() {
         AlertDialog.Builder(requireContext())
             .setTitle("提示")
@@ -169,7 +169,7 @@ class EditProfileFragment : DialogFragment() {
                 dismiss()
             }
         }
-        
+
         // 处理系统返回键
         isCancelable = !goMainOnSave
     }
@@ -332,6 +332,7 @@ class EditProfileFragment : DialogFragment() {
         dialog.setOnValueSelectedListener { value ->
             selectedTargetWeight = value.toDouble()
             binding.etTargetWeight.setText("$value kg")
+            applyGoalTypeByWeights(selectedWeight, selectedTargetWeight)
         }
 
         dialog.show(parentFragmentManager, "TargetWeightPickerDialog")
@@ -453,6 +454,7 @@ class EditProfileFragment : DialogFragment() {
             }
             binding.etGoalType.setText(display)
         }
+        applyGoalTypeByWeights(selectedWeight, selectedTargetWeight)
     }
 
     private fun saveProfile() {
@@ -502,6 +504,8 @@ class EditProfileFragment : DialogFragment() {
                 return
             }
         }
+
+        applyGoalTypeByWeights(resolvedWeight, resolvedTargetWeight)
 
         val requiredFieldsFilled = displayName.isNotEmpty() &&
                 !resolvedBirthdate.isNullOrBlank() &&
@@ -578,6 +582,22 @@ class EditProfileFragment : DialogFragment() {
     override fun onDestroyView() {
         super.onDestroyView()
         _binding = null
+    }
+
+    private fun applyGoalTypeByWeights(currentWeight: Double?, targetWeight: Double?) {
+        if (currentWeight == null || targetWeight == null) return
+        val newGoalType = when {
+            targetWeight > currentWeight -> "gain_weight"
+            targetWeight < currentWeight -> "lose_weight"
+            else -> "maintain_weight"
+        }
+        selectedGoalType = newGoalType
+        val display = when (newGoalType) {
+            "gain_weight" -> "增重"
+            "lose_weight" -> "减重"
+            else -> "保持体重"
+        }
+        binding.etGoalType.setText(display)
     }
 }
 

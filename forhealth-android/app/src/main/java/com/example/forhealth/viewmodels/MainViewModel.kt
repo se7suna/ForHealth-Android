@@ -1287,7 +1287,7 @@ class MainViewModel : ViewModel() {
             ExerciseType.SPORTS -> "SPORTS"
         }
     }
-    
+
     // ==================== AI 助手相关方法 ====================
     
     /**

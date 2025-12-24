@@ -17,6 +17,8 @@ import com.example.forhealth.network.ApiResult
 import com.example.forhealth.ui.adapters.CartExerciseAdapter
 import com.example.forhealth.ui.adapters.ExerciseListAdapter
 import com.example.forhealth.utils.DateUtils
+import com.example.forhealth.utils.CalculationUtils
+import com.example.forhealth.utils.ProfileManager
 import com.example.forhealth.viewmodels.MainViewModel
 import com.google.android.material.button.MaterialButton
 import kotlinx.coroutines.launch
@@ -114,10 +116,8 @@ class AddExerciseFragment : DialogFragment() {
     
     private fun setupCategoryTabs() {
         val categories = listOf(
-            ExerciseType.CARDIO to "Cardio",
-            ExerciseType.STRENGTH to "Strength",
-            ExerciseType.FLEXIBILITY to "Flexibility",
-            ExerciseType.SPORTS to "Sports"
+            ExerciseType.CARDIO to "默认",
+            ExerciseType.STRENGTH to "自定义"
         )
         
         binding.layoutCategories.removeAllViews()
@@ -144,9 +144,7 @@ class AddExerciseFragment : DialogFragment() {
             val button = binding.layoutCategories.getChildAt(i) as MaterialButton
             val type = when (i) {
                 0 -> ExerciseType.CARDIO
-                1 -> ExerciseType.STRENGTH
-                2 -> ExerciseType.FLEXIBILITY
-                else -> ExerciseType.SPORTS
+                else -> ExerciseType.STRENGTH
             }
             button.isChecked = type == selectedCategory
             
@@ -197,13 +195,14 @@ class AddExerciseFragment : DialogFragment() {
     }
     
     private fun filterExercises(query: String) {
-        filteredExercises = if (query.isBlank()) {
-            allExercises.filter { it.category == selectedCategory }
-        } else {
-            allExercises.filter {
-                it.name.contains(query, ignoreCase = true) &&
-                (query.isNotBlank() || it.category == selectedCategory)
+        filteredExercises = allExercises.filter { exercise ->
+            val matchCategory = if (selectedCategory == ExerciseType.STRENGTH) {
+                isCustomExercise(exercise)
+            } else {
+                exercise.category == ExerciseType.CARDIO && !isCustomExercise(exercise)
             }
+            val matchQuery = query.isBlank() || exercise.name.contains(query, ignoreCase = true)
+            matchCategory && matchQuery
         }
         updateExerciseList()
     }
@@ -215,6 +214,11 @@ class AddExerciseFragment : DialogFragment() {
             onAddClick = { exercise -> addToCart(exercise) }
         )
         binding.rvExerciseList.adapter = exerciseAdapter
+    }
+
+    private fun isCustomExercise(item: ExerciseItem): Boolean {
+        // 自定义运动：后端返回 STRENGTH，或本地创建时 image 为空等
+        return item.category == ExerciseType.STRENGTH || item.image.isBlank()
     }
     
     private fun addToCart(exercise: ExerciseItem) {
@@ -258,7 +262,9 @@ class AddExerciseFragment : DialogFragment() {
             onDurationInput = { exerciseId, value -> handleDurationInput(exerciseId, value) },
             onDurationBlur = { exerciseId -> handleDurationBlur(exerciseId) },
             onRemove = { exerciseId -> removeItem(exerciseId) },
-            calculateCalories = { item -> item.exerciseItem.caloriesPerUnit * item.count }
+            calculateCalories = { item ->
+                CalculationUtils.calculateExerciseCalories(item.exerciseItem, item.count, currentUserWeight())
+            }
         )
         
         binding.rvCartItems.layoutManager = LinearLayoutManager(requireContext())
@@ -334,7 +340,9 @@ class AddExerciseFragment : DialogFragment() {
             onDurationInput = { exerciseId, value -> handleDurationInput(exerciseId, value) },
             onDurationBlur = { exerciseId -> handleDurationBlur(exerciseId) },
             onRemove = { exerciseId -> removeItem(exerciseId) },
-            calculateCalories = { item -> item.exerciseItem.caloriesPerUnit * item.count }
+            calculateCalories = { item ->
+                CalculationUtils.calculateExerciseCalories(item.exerciseItem, item.count, currentUserWeight())
+            }
         )
         binding.rvCartItems.adapter = cartAdapter
     }
@@ -345,7 +353,9 @@ class AddExerciseFragment : DialogFragment() {
         } else {
             binding.layoutCart.visibility = View.VISIBLE
             
-            val totalBurn = selectedItems.sumOf { it.exerciseItem.caloriesPerUnit * it.count }
+            val totalBurn = selectedItems.sumOf {
+                CalculationUtils.calculateExerciseCalories(it.exerciseItem, it.count, currentUserWeight())
+            }
             binding.tvCartTotalCalories.text = "${totalBurn.toInt()} kcal"
             
             // 更新徽章
@@ -374,7 +384,11 @@ class AddExerciseFragment : DialogFragment() {
             ActivityItem(
                 id = "${baseTime + index}-${UUID.randomUUID()}",
                 name = item.exerciseItem.name,
-                caloriesBurned = item.exerciseItem.caloriesPerUnit * item.count,
+                caloriesBurned = CalculationUtils.calculateExerciseCalories(
+                    item.exerciseItem,
+                    item.count,
+                    currentUserWeight()
+                ),
                 duration = item.count.toInt(),
                 time = currentTimeString, // 使用 ISO 8601 格式带时区的时间字符串
                 type = item.exerciseItem.category,
@@ -389,5 +403,11 @@ class AddExerciseFragment : DialogFragment() {
     override fun onDestroyView() {
         super.onDestroyView()
         _binding = null
+    }
+
+    private fun currentUserWeight(): Double {
+        return mainViewModel.userProfileResponse.value?.weight
+            ?: ProfileManager.getProfile(requireContext())?.weight
+            ?: 70.0
     }
 }

@@ -52,7 +52,7 @@ class CartExerciseAdapter(
         
         // 设置名称和信息
         holder.tvCartExerciseName.text = item.exerciseItem.name
-        holder.tvCartExerciseInfo.text = "${item.exerciseItem.caloriesPerUnit.toInt()} 千卡/分钟"
+        holder.tvCartExerciseInfo.text = "${item.exerciseItem.caloriesPerUnit.toInt()} MET"
         
         // 设置卡路里
         val calories = calculateCalories(item)
