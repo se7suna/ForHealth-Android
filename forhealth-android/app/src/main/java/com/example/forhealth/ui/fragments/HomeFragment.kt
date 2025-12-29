@@ -1,4 +1,4 @@
-package com.example.forhealth.ui.fragments
+﻿package com.example.forhealth.ui.fragments
 
 import android.os.Bundle
 import android.view.LayoutInflater
@@ -13,6 +13,9 @@ import com.example.forhealth.databinding.FragmentHomeBinding
 import com.example.forhealth.models.DailyStats
 import com.example.forhealth.ui.adapters.TimelineAdapter
 import com.example.forhealth.utils.DateUtils
+import com.example.forhealth.models.ExerciseTimelineItem
+import com.example.forhealth.models.ExerciseItem
+import com.example.forhealth.utils.CalculationUtils
 import com.example.forhealth.viewmodels.MainViewModel
 
 class HomeFragment : Fragment() {
@@ -35,10 +38,10 @@ class HomeFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         
-        // 初始化 ViewModel
-        viewModel = ViewModelProvider(this)[MainViewModel::class.java]
+        // 鍒濆鍖?ViewModel
+        viewModel = ViewModelProvider(requireActivity())[MainViewModel::class.java]
         
-        // 初始化 RecyclerView
+        // 鍒濆鍖?RecyclerView
         timelineAdapter = TimelineAdapter(
             items = emptyList(),
             onMealGroupClick = { mealGroup -> openEditMealDialog(mealGroup) },
@@ -47,76 +50,95 @@ class HomeFragment : Fragment() {
         binding.rvTimeline.layoutManager = LinearLayoutManager(requireContext())
         binding.rvTimeline.adapter = timelineAdapter
         
-        // 设置初始数据
+        // 璁剧疆鍒濆鏁版嵁
         setupInitialData()
         
-        // 设置点击事件
+        // 璁剧疆鐐瑰嚮浜嬩欢
         setupClickListeners()
         
-        // 设置Analytics视图监听器
+        // 璁剧疆Analytics瑙嗗浘鐩戝惉鍣?
         setupAnalyticsListeners()
-        updateRangeButtons() // 初始化范围选择器状态
+        updateRangeButtons() // 鍒濆鍖栬寖鍥撮€夋嫨鍣ㄧ姸鎬?
         
-        // 观察数据变化
+        // 瑙傚療鏁版嵁鍙樺寲
         observeData()
         
-        // 先加载今日运动记录（确保_exercises有数据）
+        // 鍏堝姞杞戒粖鏃ヨ繍鍔ㄨ褰曪紙纭繚_exercises鏈夋暟鎹級
         loadTodayExercises()
         
-        // 从后端加载今日饮食记录
+        // 浠庡悗绔姞杞戒粖鏃ラギ椋熻褰?
         loadTodayMeals()
         
-        // 从后端加载今日统计数据（初始化圆环和宏量营养素）
-        // 注意：必须在loadTodayExercises()之后执行，以便使用_exercises的数据
+        // 浠庡悗绔姞杞戒粖鏃ョ粺璁℃暟鎹紙鍒濆鍖栧渾鐜拰瀹忛噺钀ュ吇绱狅級
+        // 娉ㄦ剰锛氬繀椤诲湪loadTodayExercises()涔嬪悗鎵ц锛屼互渚夸娇鐢╛exercises鐨勬暟鎹?
         loadTodayStats()
         
-        // 加载用户资料（用于显示用户名）
+        // 鍔犺浇鐢ㄦ埛璧勬枡锛堢敤浜庢樉绀虹敤鎴峰悕锛?
         viewModel.loadUserProfile()
     }
     
     private fun setupInitialData() {
-        // 设置日期
+        // 璁剧疆鏃ユ湡
         binding.tvDate.text = DateUtils.getCurrentDate()
         
-        // 显示AI建议（默认显示）
+        // 鏄剧ずAI寤鸿锛堥粯璁ゆ樉绀猴級
         binding.cardAiInsight.visibility = View.VISIBLE
         
-        // 初始化统计数据
+        // 璁剧疆鍦嗙幆瀹藉害涓哄睆骞曞搴︾殑2/5
+        binding.root.post {
+            val screenWidth = resources.displayMetrics.widthPixels
+            val ringSize = screenWidth / 5 * 2
+            val frameLayout = binding.root.findViewById<View>(R.id.frameRingProgress)
+            
+            // 鍚屾鏇存柊鍦嗙幆鑷韩鐨勫昂瀵革紙淇濇寔鍦嗙幆澶у皬涓嶅彉锛?
+            binding.ringProgress.setSize(ringSize)
+            
+            // 绛夊緟鍦嗙幆娴嬮噺瀹屾垚鍚庡啀璁剧疆FrameLayout澶у皬锛屼娇鍏舵洿绱у噾
+            binding.ringProgress.post {
+                // FrameLayout澶у皬璁剧疆涓哄渾鐜殑瀹為檯娴嬮噺澶у皬锛岄伩鍏嶅浣欑┖闂?
+                val measuredSize = maxOf(binding.ringProgress.measuredWidth, binding.ringProgress.measuredHeight)
+                frameLayout?.layoutParams?.width = measuredSize
+                frameLayout?.layoutParams?.height = measuredSize
+                frameLayout?.requestLayout()
+            }
+        }
+        
+        // 鍒濆鍖栫粺璁℃暟鎹?
         updateStatsDisplay(DailyStats.getInitial())
     }
     
     private fun setupClickListeners() {
-        // FAB 主按钮 - 展开/收起菜单
+        // FAB 涓绘寜閽?- 灞曞紑/鏀惰捣鑿滃崟
         binding.fabMain.setOnClickListener {
             toggleFabMenu()
         }
         
-        // FAB 食物按钮 - 打开添加食物覆盖层
+        // FAB 椋熺墿鎸夐挳 - 鎵撳紑娣诲姞椋熺墿瑕嗙洊灞?
         binding.btnFabFood.setOnClickListener {
             openAddMealDialog()
         }
         
-        // FAB 运动按钮 - 打开添加运动覆盖层
+        // FAB 杩愬姩鎸夐挳 - 鎵撳紑娣诲姞杩愬姩瑕嗙洊灞?
         binding.btnFabExercise.setOnClickListener {
             openAddExerciseDialog()
         }
         
-        // 视图切换按钮
+        // 瑙嗗浘鍒囨崲鎸夐挳
         binding.btnToggleView.setOnClickListener {
             toggleViewMode()
         }
         
-        // 个人资料按钮
+        // 涓汉璧勬枡鎸夐挳
         binding.btnProfile.setOnClickListener {
             openProfileFragment()
         }
         
-        // AI Insight 按钮 - 打开AI聊天界面
+        // AI Insight 鎸夐挳 - 鎵撳紑AI鑱婂ぉ鐣岄潰
         binding.cardAiInsight.setOnClickListener {
             openAiChatDialog()
         }
         
-        // AI Insight 刷新按钮
+        // AI Insight 鍒锋柊鎸夐挳
         binding.btnRefreshAiInsight.setOnClickListener {
             viewModel.refreshAiInsight()
         }
@@ -126,17 +148,17 @@ class HomeFragment : Fragment() {
         val isVisible = binding.fabMenuContainer.visibility == View.VISIBLE
         
         if (isVisible) {
-            // 收起菜单
+            // 鏀惰捣鑿滃崟
             binding.fabMenuContainer.visibility = View.GONE
-            // 旋转回原位置
+            // 鏃嬭浆鍥炲師浣嶇疆
             binding.fabMain.rotation = 0f
             binding.fabMain.setBackgroundTintList(android.content.res.ColorStateList.valueOf(
                 resources.getColor(R.color.emerald_600, null)
             ))
         } else {
-            // 展开菜单
+            // 灞曞紑鑿滃崟
             binding.fabMenuContainer.visibility = View.VISIBLE
-            // 旋转45度并改变颜色
+            // 鏃嬭浆45搴﹀苟鏀瑰彉棰滆壊
             binding.fabMain.rotation = 45f
             binding.fabMain.setBackgroundTintList(android.content.res.ColorStateList.valueOf(
                 resources.getColor(R.color.slate_800, null)
@@ -145,27 +167,28 @@ class HomeFragment : Fragment() {
     }
     
     private fun openAddMealDialog() {
-        // 使用 DialogFragment 作为覆盖层，显示添加食物界面
+        // 浣跨敤 DialogFragment 浣滀负瑕嗙洊灞傦紝鏄剧ず娣诲姞椋熺墿鐣岄潰
         val dialog = AddMealFragment().apply {
-            // 设置回调，当添加成功后更新数据
+            // 璁剧疆鍥炶皟锛屽綋娣诲姞鎴愬姛鍚庡埛鏂扮粺璁℃暟鎹?
             setOnMealAddedListener { meals ->
-                viewModel.addMeals(meals)
+                // 閲嶆柊鍔犺浇浠婃棩缁熻鏁版嵁浠ユ洿鏂板渾鐜拰钀ュ吇绱犵粺璁?
+                loadTodayStats()
             }
         }
         dialog.show(parentFragmentManager, "AddMealDialog")
-        toggleFabMenu() // 收起菜单
+        toggleFabMenu() // 鏀惰捣鑿滃崟
     }
     
     private fun openAddExerciseDialog() {
         fun showDialog(exerciseLibrary: List<com.example.forhealth.models.ExerciseItem>) {
             val dialog = AddExerciseFragment().apply {
                 setExerciseLibrary(exerciseLibrary)
-                // 设置回调，当添加成功后通过API创建记录
+                // 璁剧疆鍥炶皟锛屽綋娣诲姞鎴愬姛鍚庨€氳繃API鍒涘缓璁板綍
                 setOnExerciseAddedListener { exercises ->
                     viewModel.createExerciseRecords(exercises) { result ->
                         when (result) {
                             is com.example.forhealth.network.ApiResult.Success -> {
-                                // 数据已通过loadTodayExercises更新
+                                // 鏁版嵁宸查€氳繃loadTodayExercises鏇存柊
                             }
                             is com.example.forhealth.network.ApiResult.Error -> {
                                 android.widget.Toast.makeText(requireContext(), result.message, android.widget.Toast.LENGTH_SHORT).show()
@@ -176,7 +199,7 @@ class HomeFragment : Fragment() {
                 }
             }
             dialog.show(parentFragmentManager, "AddExerciseDialog")
-            toggleFabMenu() // 收起菜单
+            toggleFabMenu() // 鏀惰捣鑿滃崟
         }
 
         val cached = viewModel.exerciseLibrary.value ?: emptyList()
@@ -196,13 +219,13 @@ class HomeFragment : Fragment() {
     }
     
     private fun openProfileFragment() {
-        // 使用 DialogFragment 作为覆盖层，显示个人信息界面
+        // 浣跨敤 DialogFragment 浣滀负瑕嗙洊灞傦紝鏄剧ず涓汉淇℃伅鐣岄潰
         val dialog = ProfileFragment()
         dialog.show(parentFragmentManager, "ProfileDialog")
     }
     
     private fun openAiChatDialog() {
-        // 打开AI聊天界面
+        // 鎵撳紑AI鑱婂ぉ鐣岄潰
         val dialog = AiChatFragment().apply {
             setUserProfile(viewModel.userProfile.value ?: com.example.forhealth.models.UserProfile.getInitial())
             setCurrentStats(viewModel.dailyStats.value ?: DailyStats.getInitial())
@@ -223,7 +246,7 @@ class HomeFragment : Fragment() {
             }
             setOnMealDeletedListener { mealGroupId ->
                 viewModel.deleteMealGroup(mealGroupId)
-                // 删除后也刷新统计数据
+                // 鍒犻櫎鍚庝篃鍒锋柊缁熻鏁版嵁
                 viewModel.recalculateStatsForced()
                 viewModel.dailyStats.value?.let { stats ->
                     updateStatsDisplay(stats)
@@ -239,11 +262,11 @@ class HomeFragment : Fragment() {
                 setExerciseLibrary(exerciseLibrary)
                 setActivity(activity)
                 setOnExerciseUpdatedListener { updatedActivity ->
-                    // 直接传递ActivityItem给ViewModel，ViewModel内部使用ExerciseRepository处理
+                    // 鐩存帴浼犻€扐ctivityItem缁橵iewModel锛孷iewModel鍐呴儴浣跨敤ExerciseRepository澶勭悊
                     viewModel.updateExerciseRecord(updatedActivity) { result ->
                         when (result) {
                             is com.example.forhealth.network.ApiResult.Success -> {
-                                // 数据已通过loadTodayExercises更新
+                                // 鏁版嵁宸查€氳繃loadTodayExercises鏇存柊
                             }
                             is com.example.forhealth.network.ApiResult.Error -> {
                                 android.widget.Toast.makeText(requireContext(), result.message, android.widget.Toast.LENGTH_SHORT).show()
@@ -253,14 +276,14 @@ class HomeFragment : Fragment() {
                     }
                 }
                 setOnExerciseDeletedListener { recordId ->
-                    // ViewModel 的 deleteExerciseRecord 已经处理了删除和重新加载数据
-                    // 这里不需要再次调用，只需要通知即可
+                    // ViewModel 鐨?deleteExerciseRecord 宸茬粡澶勭悊浜嗗垹闄ゅ拰閲嶆柊鍔犺浇鏁版嵁
+                    // 杩欓噷涓嶉渶瑕佸啀娆¤皟鐢紝鍙渶瑕侀€氱煡鍗冲彲
                 }
             }
             dialog.show(parentFragmentManager, "EditExerciseDialog")
         }
         
-        // 从缓存或加载运动库数据
+        // 浠庣紦瀛樻垨鍔犺浇杩愬姩搴撴暟鎹?
         val cached = viewModel.exerciseLibrary.value ?: emptyList()
         if (cached.isNotEmpty()) {
             showDialog(cached)
@@ -287,36 +310,48 @@ class HomeFragment : Fragment() {
         val isChartMode = binding.scrollAnalytics.visibility == View.VISIBLE
         
         if (isChartMode) {
-            // 切换到列表视图 - 恢复header位置
+            // 鍒囨崲鍒板垪琛ㄨ鍥?- 鎭㈠header浣嶇疆
+            val scrollView = binding.scrollViewMain
+            val currentScrollY = scrollView.scrollY
+            
+            // 浣跨敤ValueAnimator瀹炵幇骞虫粦婊氬姩
+            val scrollAnimator = android.animation.ValueAnimator.ofInt(currentScrollY, 0)
+            scrollAnimator.duration = 300
+            scrollAnimator.interpolator = android.view.animation.DecelerateInterpolator()
+            scrollAnimator.addUpdateListener { animator ->
+                val value = animator.animatedValue as Int
+                scrollView.scrollTo(0, value)
+            }
+            scrollAnimator.start()
+            
+            // 鍚屾椂寮€濮嬫贰鍑篴nalytics瑙嗗浘
             binding.scrollAnalytics.animate()
                 .alpha(0f)
                 .translationY(100f)
                 .setDuration(300)
+                .setInterpolator(android.view.animation.AccelerateInterpolator())
                 .withEndAction {
                     binding.scrollAnalytics.visibility = View.GONE
-                    
-                    // 恢复滚动位置
-                    binding.root.findViewById<androidx.core.widget.NestedScrollView>(R.id.scrollViewMain)?.let { scrollView ->
-                        binding.root.post {
-                            scrollView.smoothScrollTo(0, 0)
-                        }
-                    }
-                    
-                    binding.rvTimeline.alpha = 0f
-                    binding.rvTimeline.translationY = -100f
-                    binding.rvTimeline.visibility = View.VISIBLE
-                    binding.rvTimeline.animate()
-                        .alpha(1f)
-                        .translationY(0f)
-                        .setDuration(300)
-                        .start()
                 }
                 .start()
+            
+            // 鍦ㄥ姩鐢昏繘琛屽埌涓€鍗婃椂寮€濮媡imeline娣″叆锛屽疄鐜版洿娴佺晠鐨勮繃娓?
+            binding.root.postDelayed({
+                binding.rvTimeline.alpha = 0f
+                binding.rvTimeline.translationY = -100f
+                binding.rvTimeline.visibility = View.VISIBLE
+                binding.rvTimeline.animate()
+                    .alpha(1f)
+                    .translationY(0f)
+                    .setDuration(300)
+                    .setInterpolator(android.view.animation.DecelerateInterpolator())
+                    .start()
+            }, 150) // 鍦ㄥ姩鐢昏繘琛屼竴鍗婃椂寮€濮嬪垏鎹㈣鍥撅紝瀹炵幇閲嶅彔鏁堟灉
             
             binding.tvViewTitle.text = getString(R.string.timeline)
             binding.btnToggleView.setImageResource(R.drawable.ic_bar_chart)
         } else {
-            // 切换到图表视图 - 实现上推动画
+            // 鍒囨崲鍒板浘琛ㄨ鍥?- 瀹炵幇涓婃帹鍔ㄧ敾
             binding.rvTimeline.animate()
                 .alpha(0f)
                 .translationY(-100f)
@@ -327,26 +362,25 @@ class HomeFragment : Fragment() {
                     binding.scrollAnalytics.translationY = 100f
                     binding.scrollAnalytics.visibility = View.VISIBLE
                     
-                    // 上推动画：将整个NestedScrollView向上滚动，直到Analytics被推到顶部
-                    binding.root.findViewById<androidx.core.widget.NestedScrollView>(R.id.scrollViewMain)?.let { scrollView ->
-                        binding.root.findViewById<View>(R.id.headerSection)?.let { header ->
-                            // 计算需要滚动的距离：headerSection的高度 + 一些额外空间，确保Analytics到达顶部
-                            val scrollDistance = header.height + header.top
-                            // 延迟一下确保视图已经布局完成
-                            binding.root.post {
-                                scrollView.smoothScrollTo(0, scrollDistance)
-                            }
-                        }
+                    // 涓婃帹鍔ㄧ敾锛氬皢鏁翠釜NestedScrollView鍚戜笂婊氬姩鍒板簳锛屾帹鍒颁笉鑳藉啀鎺ㄤ负姝?
+                    // 寤惰繜涓€涓嬬‘淇濊鍥惧凡缁忓竷灞€瀹屾垚
+                    binding.root.post {
+                        val scrollView = binding.scrollViewMain
+                        // 璁＄畻鏈€澶ф粴鍔ㄨ窛绂伙細鍐呭鎬婚珮搴?- 鍙楂樺害
+                        val maxScrollY = scrollView.getChildAt(0).height - scrollView.height
+                        // 婊氬姩鍒板簳
+                        scrollView.smoothScrollTo(0, maxScrollY.coerceAtLeast(0))
                     }
                     
                     binding.scrollAnalytics.animate()
                         .alpha(1f)
                         .translationY(0f)
                         .setDuration(300)
+                        .setInterpolator(android.view.animation.DecelerateInterpolator())
                         .withEndAction {
-                            // 动画完成后，强制加载数据并更新所有图表
+                            // 鍔ㄧ敾瀹屾垚鍚庯紝寮哄埗鍔犺浇鏁版嵁骞舵洿鏂版墍鏈夊浘琛?
                             loadAnalyticsData()
-                            // 延迟一下确保数据加载完成后再更新UI
+                            // 寤惰繜涓€涓嬬‘淇濇暟鎹姞杞藉畬鎴愬悗鍐嶆洿鏂癠I
                             binding.root.postDelayed({
                                 updateAnalyticsDisplay()
                                 updateNutritionDonutChart()
@@ -362,12 +396,12 @@ class HomeFragment : Fragment() {
     }
     
     private fun setupAnalyticsListeners() {
-        // 时间范围选择器
+        // 鏃堕棿鑼冨洿閫夋嫨鍣?
         binding.btnRangeDay.setOnClickListener {
             currentRange = AnalyticsRange.DAY
             updateRangeButtons()
             loadAnalyticsData()
-            // 强制更新UI
+            // 寮哄埗鏇存柊UI
             binding.root.postDelayed({
                 updateAnalyticsDisplay()
                 updateNutritionDonutChart()
@@ -377,7 +411,7 @@ class HomeFragment : Fragment() {
             currentRange = AnalyticsRange.WEEK
             updateRangeButtons()
             loadAnalyticsData()
-            // 强制更新UI
+            // 寮哄埗鏇存柊UI
             binding.root.postDelayed({
                 updateAnalyticsDisplay()
                 updateNutritionDonutChart()
@@ -387,7 +421,7 @@ class HomeFragment : Fragment() {
             currentRange = AnalyticsRange.MONTH
             updateRangeButtons()
             loadAnalyticsData()
-            // 强制更新UI
+            // 寮哄埗鏇存柊UI
             binding.root.postDelayed({
                 updateAnalyticsDisplay()
                 updateNutritionDonutChart()
@@ -396,24 +430,24 @@ class HomeFragment : Fragment() {
     }
     
     /**
-     * 根据当前范围加载Analytics数据
+     * 鏍规嵁褰撳墠鑼冨洿鍔犺浇Analytics鏁版嵁
      */
     private fun loadAnalyticsData() {
         when (currentRange) {
             AnalyticsRange.DAY -> {
-                // 日视图：加载今日的时间序列趋势和营养素分析
+                // 鏃ヨ鍥撅細鍔犺浇浠婃棩鐨勬椂闂村簭鍒楄秼鍔垮拰钀ュ吇绱犲垎鏋?
                 val today = getTodayDateString()
                 viewModel.loadTimeSeriesTrend(today, today, "day")
                 viewModel.loadNutritionAnalysis(today, today, null)
             }
             AnalyticsRange.WEEK -> {
-                // 周视图：加载最近7天的时间序列趋势和营养素分析
+                // 鍛ㄨ鍥撅細鍔犺浇鏈€杩?澶╃殑鏃堕棿搴忓垪瓒嬪娍鍜岃惀鍏荤礌鍒嗘瀽
                 val (startDate, endDate) = getWeekDateRange()
                 viewModel.loadTimeSeriesTrend(startDate, endDate, "day")
                 viewModel.loadNutritionAnalysis(startDate, endDate, null)
             }
             AnalyticsRange.MONTH -> {
-                // 月视图：加载最近28天的时间序列趋势和营养素分析
+                // 鏈堣鍥撅細鍔犺浇鏈€杩?8澶╃殑鏃堕棿搴忓垪瓒嬪娍鍜岃惀鍏荤礌鍒嗘瀽
                 val (startDate, endDate) = getMonthDateRange()
                 viewModel.loadTimeSeriesTrend(startDate, endDate, "week")
                 viewModel.loadNutritionAnalysis(startDate, endDate, null)
@@ -422,7 +456,7 @@ class HomeFragment : Fragment() {
     }
     
     /**
-     * 获取今天的日期字符串（YYYY-MM-DD）
+     * 鑾峰彇浠婂ぉ鐨勬棩鏈熷瓧绗︿覆锛圷YYY-MM-DD锛?
      */
     private fun getTodayDateString(): String {
         val calendar = java.util.Calendar.getInstance()
@@ -433,15 +467,15 @@ class HomeFragment : Fragment() {
     }
     
     /**
-     * 获取周视图的日期范围（最近7天）
-     * @return Pair(startDate, endDate) 格式为 YYYY-MM-DD
+     * 鑾峰彇鍛ㄨ鍥剧殑鏃ユ湡鑼冨洿锛堟渶杩?澶╋級
+     * @return Pair(startDate, endDate) 鏍煎紡涓?YYYY-MM-DD
      */
     private fun getWeekDateRange(): Pair<String, String> {
         val calendar = java.util.Calendar.getInstance()
         val endDate = calendar.clone() as java.util.Calendar
         
-        // 开始日期：7天前
-        calendar.add(java.util.Calendar.DAY_OF_MONTH, -6) // -6 因为包含今天，所以是7天
+        // 寮€濮嬫棩鏈燂細7澶╁墠
+        calendar.add(java.util.Calendar.DAY_OF_MONTH, -6) // -6 鍥犱负鍖呭惈浠婂ぉ锛屾墍浠ユ槸7澶?
         
         val startYear = calendar.get(java.util.Calendar.YEAR)
         val startMonth = calendar.get(java.util.Calendar.MONTH) + 1
@@ -457,15 +491,15 @@ class HomeFragment : Fragment() {
     }
     
     /**
-     * 获取月视图的日期范围（最近30天）
-     * @return Pair(startDate, endDate) 格式为 YYYY-MM-DD
+     * 鑾峰彇鏈堣鍥剧殑鏃ユ湡鑼冨洿锛堟渶杩?0澶╋級
+     * @return Pair(startDate, endDate) 鏍煎紡涓?YYYY-MM-DD
      */
     private fun getMonthDateRange(): Pair<String, String> {
         val calendar = java.util.Calendar.getInstance()
         val endDate = calendar.clone() as java.util.Calendar
         
-        // 开始日期：28天前
-        calendar.add(java.util.Calendar.DAY_OF_MONTH, -29) // -29 因为包含今天，所以是28天
+        // 寮€濮嬫棩鏈燂細28澶╁墠
+        calendar.add(java.util.Calendar.DAY_OF_MONTH, -29) // -29 鍥犱负鍖呭惈浠婂ぉ锛屾墍浠ユ槸28澶?
         
         val startYear = calendar.get(java.util.Calendar.YEAR)
         val startMonth = calendar.get(java.util.Calendar.MONTH) + 1
@@ -499,100 +533,125 @@ class HomeFragment : Fragment() {
             setBackgroundColor(if (currentRange == AnalyticsRange.MONTH) selectedBg else unselectedBg)
         }
     }
+
+    private fun currentUserWeight(): Double {
+        val profileWeight = viewModel.userProfile.value?.weight
+        val responseWeight = viewModel.userProfileResponse.value?.weight
+        return (profileWeight ?: responseWeight)?.toDouble() ?: 70.0
+    }
+
+    private var cachedBurnedFromTimeline: Double? = null
+
+    private fun computeBurnedFromExercises(): Double? {
+        val items = viewModel.timelineItems.value ?: return cachedBurnedFromTimeline
+        val exercises = items.filterIsInstance<ExerciseTimelineItem>()
+        if (exercises.isEmpty()) return cachedBurnedFromTimeline
+
+        val total = exercises.sumOf { recalcCalories(it.activity) }
+        cachedBurnedFromTimeline = total
+        return total
+    }
+
+    private fun recalcCalories(activity: com.example.forhealth.models.ActivityItem): Double {
+        val library = viewModel.exerciseLibrary.value ?: emptyList()
+        val weightKg = currentUserWeight()
+        val match: ExerciseItem? = library.firstOrNull { it.name.equals(activity.name, ignoreCase = true) }
+        val durationMinutes = activity.duration.toDouble()
+        return if (match != null) {
+            CalculationUtils.calculateExerciseCalories(match, durationMinutes, weightKg)
+        } else {
+            activity.caloriesBurned
+        }
+    }
     
     private fun updateAnalyticsDisplay() {
-        // 根据范围更新Activity Trend标题
+        // 根据范围更新 Activity Trend 标题
         val activityTitle = binding.root.findViewById<android.widget.TextView>(R.id.tvActivityTrendTitle)
         activityTitle?.text = if (currentRange == AnalyticsRange.DAY) {
             getString(R.string.todays_activity)
         } else {
             getString(R.string.activity_trend)
         }
-        
-        // 生成图表数据（使用后端数据）
+
+        // 生成图表数据并绘制
         val chartData = generateChartData()
         drawActivityChart(chartData)
-        
+
         // 计算显示值（日：总数，周/月：平均值）
         val stats = viewModel.dailyStats.value ?: DailyStats.getInitial()
+        val burnedFromRecords = computeBurnedFromExercises()
         val (intakeDisplay, burnedDisplay, labelText) = when (currentRange) {
             AnalyticsRange.DAY -> {
-                // 日视图：从活动图表数据或本地统计数据获取
-                val chartData = viewModel.activityChartData.value
-                if (chartData != null && chartData.dataPoints.isNotEmpty()) {
-                    val apiBurned = chartData.dataPoints.first().burned
-                    // 如果API返回的burned为null或0，使用DailyStats数据代替
-                    val burnedValue = if (apiBurned > 0) apiBurned else stats.burned
+                // 日视图：优先使用本地运动记录按 MET×体重×时间重算的消耗
+                if (chartData.isNotEmpty()) {
+                    val firstPoint = chartData.first()
+                    val apiBurned = firstPoint.burned
+                    val burnedValue = burnedFromRecords ?: if (apiBurned > 0) apiBurned else stats.burned
                     Triple(
-                        chartData.dataPoints.first().intake,
+                        firstPoint.intake,
                         burnedValue,
                         getString(R.string.total_intake)
                     )
                 } else {
-                    // 如果数据未加载，使用本地统计数据
                     Triple(
                         stats.calories.current,
-                        stats.burned,
+                        burnedFromRecords ?: stats.burned,
                         getString(R.string.total_intake)
                     )
                 }
             }
             AnalyticsRange.WEEK -> {
-                // 周视图：计算平均值
+                // 周视图：消耗优先用本地记录总和，保持与添加运动一致
                 if (chartData.isNotEmpty()) {
-                    val avgIntake = chartData.sumOf { it.intake } / chartData.size.toDouble()
-                    val avgBurned = chartData.sumOf { it.burned } / chartData.size.toDouble()
-                    // 如果API返回的burned为null或0，使用DailyStats数据代替
-                    val burnedValue = if (avgBurned > 0) avgBurned else stats.burned
-                    Triple(avgIntake, burnedValue, getString(R.string.avg_intake))
+                    val totalIntake = chartData.sumOf { it.intake }
+                    val burnedValue = burnedFromRecords ?: chartData.sumOf { it.burned }.takeIf { it > 0 } ?: stats.burned
+                    Triple(totalIntake, burnedValue, getString(R.string.total_intake))
                 } else {
-                    Triple(0.0, stats.burned, getString(R.string.avg_intake))
+                    Triple(0.0, burnedFromRecords ?: stats.burned, getString(R.string.total_intake))
                 }
             }
             AnalyticsRange.MONTH -> {
-                // 月视图：计算平均值
+                // 月视图：消耗优先用本地记录总和，保持与添加运动一致
                 if (chartData.isNotEmpty()) {
-                    val avgIntake = chartData.sumOf { it.intake } / chartData.size.toDouble()
-                    val avgBurned = chartData.sumOf { it.burned } / chartData.size.toDouble()
-                    // 如果API返回的burned为null或0，使用DailyStats数据代替
-                    val burnedValue = if (avgBurned > 0) avgBurned else stats.burned
-                    Triple(avgIntake, burnedValue, getString(R.string.avg_intake))
+                    val totalIntake = chartData.sumOf { it.intake }
+                    val burnedValue = burnedFromRecords ?: chartData.sumOf { it.burned }.takeIf { it > 0 } ?: stats.burned
+                    Triple(totalIntake, burnedValue, getString(R.string.total_intake))
                 } else {
-                    Triple(0.0, stats.burned, getString(R.string.avg_intake))
+                    Triple(0.0, burnedFromRecords ?: stats.burned, getString(R.string.total_intake))
                 }
             }
         }
-        
+
         // 更新标签文本
         binding.tvTotalIntakeLabel.text = labelText
         binding.tvTotalBurnLabel.text = if (currentRange == AnalyticsRange.DAY) getString(R.string.total_burn) else getString(R.string.avg_burn)
-        
-        // 更新数值，在数值后加上" kcal"
+
+        // 更新数值
         binding.tvTotalIntake.text = "${Math.round(intakeDisplay)} ${getString(R.string.kcal)}"
         binding.tvTotalBurned.text = "${Math.round(burnedDisplay)} ${getString(R.string.kcal)}"
-        
-        // 计算并显示Sum
+
+        // 计算并显示 Sum
         val sumValue = intakeDisplay - burnedDisplay
         val sumLabel = if (currentRange == AnalyticsRange.DAY) getString(R.string.sum) else getString(R.string.avg_sum)
         binding.tvSumLabel.text = sumLabel
         binding.tvSum.text = "${Math.round(sumValue)} ${getString(R.string.kcal)}"
-        
-        // 更新饼图（从后端 nutrition-analysis API 获取数据）
+
+        // 更新营养饼图
         updateNutritionDonutChart()
     }
     
     /**
-     * 更新营养饼图（甜甜圈图）
-     * 从ViewModel获取MacroRatio Model并显示
+     * 鏇存柊钀ュ吇楗煎浘锛堢敎鐢滃湀鍥撅級
+     * 浠嶸iewModel鑾峰彇MacroRatio Model骞舵樉绀?
      */
     private fun updateNutritionDonutChart() {
         val macroRatio = viewModel.macroRatio.value ?: com.example.forhealth.models.MacroRatio.getInitial()
         
-        // 使用百分比总和来判断是否有数据（而不是totalCalories，因为后端可能不返回calories项）
+        // 浣跨敤鐧惧垎姣旀€诲拰鏉ュ垽鏂槸鍚︽湁鏁版嵁锛堣€屼笉鏄痶otalCalories锛屽洜涓哄悗绔彲鑳戒笉杩斿洖calories椤癸級
         val totalPercent = macroRatio.proteinPercent + macroRatio.carbohydratesPercent + macroRatio.fatPercent
         
         if (totalPercent > 0) {
-            // 从activityChartData或dailyStats获取总卡路里用于中心显示
+            // 浠巃ctivityChartData鎴杁ailyStats鑾峰彇鎬诲崱璺噷鐢ㄤ簬涓績鏄剧ず
             val totalCaloriesForDisplay = when (currentRange) {
                 AnalyticsRange.DAY -> {
                     val chartData = viewModel.activityChartData.value
@@ -613,7 +672,7 @@ class HomeFragment : Fragment() {
                 }
             }
             
-            // 使用Model数据更新饼图（直接传入百分比）
+            // 浣跨敤Model鏁版嵁鏇存柊楗煎浘锛堢洿鎺ヤ紶鍏ョ櫨鍒嗘瘮锛?
             binding.macroDonutChart.setMacros(
                 macroRatio.proteinPercent,
                 macroRatio.carbohydratesPercent,
@@ -621,7 +680,7 @@ class HomeFragment : Fragment() {
                 totalCaloriesForDisplay
             )
             
-            // 显示百分比（转换为整数用于显示）
+            // 鏄剧ず鐧惧垎姣旓紙杞崲涓烘暣鏁扮敤浜庢樉绀猴級
             val proteinPctInt = macroRatio.proteinPercent.toInt()
             val carbsPctInt = macroRatio.carbohydratesPercent.toInt()
             val fatPctInt = macroRatio.fatPercent.toInt()
@@ -633,7 +692,7 @@ class HomeFragment : Fragment() {
             binding.tvMacroFat.text = "Fat: ${fatPctInt}%"
             binding.tvMacroFat.setTextColor(resources.getColor(R.color.rose_400, null))
         } else {
-            // 如果百分比总和为0，显示灰色圆环和0%
+            // 濡傛灉鐧惧垎姣旀€诲拰涓?锛屾樉绀虹伆鑹插渾鐜拰0%
             binding.macroDonutChart.setMacros(0.0, 0.0, 0.0, 0.0)
             binding.tvMacroProtein.text = "Protein: 0%"
             binding.tvMacroProtein.setTextColor(resources.getColor(R.color.blue_500, null))
@@ -645,25 +704,18 @@ class HomeFragment : Fragment() {
     }
     
     /**
-     * 生成图表数据（从ViewModel获取Model并转换为View层需要的格式）
-     */
-    private fun generateChartData(): List<com.example.forhealth.ui.views.ChartDataPoint> {
+     * 鐢熸垚鍥捐〃鏁版嵁锛堜粠ViewModel鑾峰彇Model骞惰浆鎹负View灞傞渶瑕佺殑鏍煎紡锛?
+     */    private fun generateChartData(): List<com.example.forhealth.ui.views.ChartDataPoint> {
         return when (currentRange) {
             AnalyticsRange.DAY -> {
-                // 日视图：使用活动图表数据或本地统计数据
-                val chartData = viewModel.activityChartData.value
+                // 日视图：使用后端数据，但若可用则用本地重算的消耗覆盖
+                val apiChart = viewModel.activityChartData.value
                 val stats = viewModel.dailyStats.value ?: DailyStats.getInitial()
-                
-                if (chartData != null && chartData.dataPoints.isNotEmpty()) {
-                    // 将Model转换为View层需要的ChartDataPoint
-                    // 如果burned值为0，尝试使用dailyStats中的burned值
-                    chartData.dataPoints.map { dataPoint ->
-                        val burnedValue = if (dataPoint.burned > 0) {
-                            dataPoint.burned
-                        } else {
-                            // 如果API返回的burned为0，使用dailyStats中的burned值
-                            stats.burned
-                        }
+                val burnedFromRecords = computeBurnedFromExercises()
+
+                if (apiChart != null && apiChart.dataPoints.isNotEmpty()) {
+                    apiChart.dataPoints.map { dataPoint ->
+                        val burnedValue = burnedFromRecords ?: if (dataPoint.burned > 0) dataPoint.burned else stats.burned
                         com.example.forhealth.ui.views.ChartDataPoint(
                             label = dataPoint.label,
                             intake = dataPoint.intake,
@@ -671,22 +723,19 @@ class HomeFragment : Fragment() {
                         )
                     }
                 } else {
-                    // 如果数据未加载，使用本地统计数据创建一个数据点
                     listOf(
                         com.example.forhealth.ui.views.ChartDataPoint(
                             label = "Today",
                             intake = stats.calories.current,
-                            burned = stats.burned
+                            burned = burnedFromRecords ?: stats.burned
                         )
                     )
                 }
             }
             AnalyticsRange.WEEK, AnalyticsRange.MONTH -> {
-                // 周/月视图：使用活动图表数据
-                val chartData = viewModel.activityChartData.value
-                if (chartData != null && chartData.dataPoints.isNotEmpty()) {
-                    // 将Model转换为View层需要的ChartDataPoint
-                    chartData.dataPoints.map {
+                val apiChart = viewModel.activityChartData.value
+                if (apiChart != null && apiChart.dataPoints.isNotEmpty()) {
+                    apiChart.dataPoints.map {
                         com.example.forhealth.ui.views.ChartDataPoint(
                             label = it.label,
                             intake = it.intake,
@@ -703,12 +752,12 @@ class HomeFragment : Fragment() {
     private fun drawActivityChart(data: List<com.example.forhealth.ui.views.ChartDataPoint>) {
         binding.viewActivityChart.removeAllViews()
         if (currentRange == AnalyticsRange.DAY) {
-            // 日视图使用柱状图
+            // 鏃ヨ鍥句娇鐢ㄦ煴鐘跺浘
             val chartView = com.example.forhealth.ui.views.ActivityBarChartView(requireContext())
             chartView.setData(data)
             binding.viewActivityChart.addView(chartView)
         } else {
-            // 周/月视图使用折线图
+            // 鍛?鏈堣鍥句娇鐢ㄦ姌绾垮浘
             val chartView = com.example.forhealth.ui.views.ActivityTrendChartView(requireContext())
             chartView.setData(data)
             binding.viewActivityChart.addView(chartView)
@@ -716,17 +765,29 @@ class HomeFragment : Fragment() {
     }
     
     private fun observeData() {
-        // 观察统计数据
+        // 瑙傚療缁熻鏁版嵁
         viewModel.dailyStats.observe(viewLifecycleOwner) { stats ->
             updateStatsDisplay(stats)
         }
         
-        // 观察时间线数据
+        // 瑙傚療鏃堕棿绾挎暟鎹?
         viewModel.timelineItems.observe(viewLifecycleOwner) { items ->
-            timelineAdapter.updateItems(items)
+            val recalculated = items.map { item ->
+                if (item is ExerciseTimelineItem) {
+                    val activity = item.activity
+                    val newCalories = recalcCalories(activity)
+                    item.copy(activity = activity.copy(caloriesBurned = newCalories))
+                } else item
+            }
+            timelineAdapter.updateItems(recalculated)
+            cachedBurnedFromTimeline = recalculated
+                .filterIsInstance<ExerciseTimelineItem>()
+                .sumOf { it.activity.caloriesBurned }
+            // 时间线更新后，用最新运动消耗刷新仪表盘/首页数值
+            viewModel.dailyStats.value?.let { updateStatsDisplay(it) }
         }
         
-        // 观察AI建议
+        // 瑙傚療AI寤鸿
         viewModel.aiSuggestion.observe(viewLifecycleOwner) { suggestion ->
             if (suggestion.isNotEmpty()) {
                 binding.tvAiSuggestion.text = suggestion
@@ -736,7 +797,7 @@ class HomeFragment : Fragment() {
             }
         }
         
-        // 观察用户资料，更新问候语
+        // 瑙傚療鐢ㄦ埛璧勬枡锛屾洿鏂伴棶鍊欒
         viewModel.userProfileResponse.observe(viewLifecycleOwner) { profileResponse ->
             profileResponse?.username?.let { username ->
                 binding.tvGreeting.text = "Hello, $username"
@@ -746,7 +807,7 @@ class HomeFragment : Fragment() {
         }
         
         
-        // 观察宏量营养素比例数据，更新Analytics视图（饼图）
+        // 瑙傚療瀹忛噺钀ュ吇绱犳瘮渚嬫暟鎹紝鏇存柊Analytics瑙嗗浘锛堥ゼ鍥撅級
         viewModel.macroRatio.observe(viewLifecycleOwner) {
             if (binding.scrollAnalytics.visibility == View.VISIBLE) {
                 updateAnalyticsDisplay()
@@ -755,43 +816,47 @@ class HomeFragment : Fragment() {
     }
     
     /**
-     * 从后端加载今日统计数据（初始化圆环和宏量营养素）
+     * 浠庡悗绔姞杞戒粖鏃ョ粺璁℃暟鎹紙鍒濆鍖栧渾鐜拰瀹忛噺钀ュ吇绱狅級
      */
     private fun loadTodayStats() {
         viewModel.loadTodayStats()
     }
     
     /**
-     * 从后端加载今日饮食记录
+     * 浠庡悗绔姞杞戒粖鏃ラギ椋熻褰?
      */
     private fun loadTodayMeals() {
         viewModel.loadTodayMeals()
     }
     
     /**
-     * 从后端加载今日运动记录
+     * 浠庡悗绔姞杞戒粖鏃ヨ繍鍔ㄨ褰?
      */
     private fun loadTodayExercises() {
         viewModel.loadTodayExercises()
     }
     
     private fun updateStatsDisplay(stats: DailyStats) {
+        // 优先使用本地记录的运动消耗，回退到后端统计
+        val burnedFromRecords = computeBurnedFromExercises()
+        val burned = burnedFromRecords ?: stats.burned
+
         // 更新卡路里显示
-        val netCalories = stats.calories.current - stats.burned
+        val netCalories = stats.calories.current - burned
         binding.tvNetCalories.text = Math.round(netCalories).toString()
         binding.tvCaloriesIn.text = Math.round(stats.calories.current).toString()
-        binding.tvCaloriesBurned.text = Math.round(stats.burned).toString()
-        binding.tvTarget.text = getString(R.string.target) + ": ${stats.calories.target}"
+        binding.tvCaloriesBurned.text = Math.round(burned).toString()
+        binding.tvTarget.text = getString(R.string.TDEE) + ": ${stats.calories.target}"
         
-        // 更新环形进度
+        // 鏇存柊鐜舰杩涘害
         binding.ringProgress.setProgress(netCalories, stats.calories.target)
         
-        // 更新宏量营养素
+        // 鏇存柊瀹忛噺钀ュ吇绱?
         binding.tvCarbs.text = "${Math.round(stats.carbs.current)}/${stats.carbs.target}g"
         binding.tvFat.text = "${Math.round(stats.fat.current)}/${stats.fat.target}g"
         binding.tvProtein.text = "${Math.round(stats.protein.current)}/${stats.protein.target}g"
         
-        // 更新进度条
+        // 鏇存柊杩涘害鏉?
         binding.progressCarbs.setProgress(stats.carbs.current, stats.carbs.target, R.color.amber_400)
         binding.progressFat.setProgress(stats.fat.current, stats.fat.target, R.color.rose_400)
         binding.progressProtein.setProgress(stats.protein.current, stats.protein.target, R.color.blue_400)
@@ -799,12 +864,12 @@ class HomeFragment : Fragment() {
     
     override fun onResume() {
         super.onResume()
-        // 当Fragment重新可见时，先重新加载今日运动记录（确保_exercises有数据）
+        // 褰揊ragment閲嶆柊鍙鏃讹紝鍏堥噸鏂板姞杞戒粖鏃ヨ繍鍔ㄨ褰曪紙纭繚_exercises鏈夋暟鎹級
         viewModel.loadTodayExercises()
-        // 重新加载今日饮食记录
+        // 閲嶆柊鍔犺浇浠婃棩楗璁板綍
         viewModel.loadTodayMeals()
-        // 重新加载今日统计数据（确保数据是最新的）
-        // 注意：loadTodayStats会优先使用本地_exercises的数据，所以即使并行执行也没问题
+        // 閲嶆柊鍔犺浇浠婃棩缁熻鏁版嵁锛堢‘淇濇暟鎹槸鏈€鏂扮殑锛?
+        // 娉ㄦ剰锛歭oadTodayStats浼氫紭鍏堜娇鐢ㄦ湰鍦癬exercises鐨勬暟鎹紝鎵€浠ュ嵆浣垮苟琛屾墽琛屼篃娌￠棶棰?
         viewModel.loadTodayStats()
     }
     
@@ -813,3 +878,7 @@ class HomeFragment : Fragment() {
         _binding = null
     }
 }
+
+
+
+

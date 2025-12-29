@@ -1,14 +1,9 @@
 {
   "permissions": {
     "allow": [
-      "Bash(curl:*)",
-      "Bash(python:*)",
-      "mcp__smithery-ai-gitlab__search_repositories",
-      "mcp__smithery-ai-gitlab__get_file_contents",
-      "mcp__gitlab__search_repositories",
-      "mcp__gitlab__get_file_contents",
-      "Bash(git checkout:*)",
-      "Bash(mkdir:*)"
+      "Bash(./gradlew:*)",
+      "Bash(dir:*)",
+      "Bash(.gradlew assembleDebug)"
     ],
     "deny": [],
     "ask": []

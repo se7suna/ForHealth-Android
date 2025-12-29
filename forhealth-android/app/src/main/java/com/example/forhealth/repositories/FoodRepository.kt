@@ -2,6 +2,7 @@ package com.example.forhealth.repositories
 
 import android.net.Uri
 import com.example.forhealth.network.ApiResult
+import com.example.forhealth.network.dto.ai.FoodRecognitionConfirmResponse
 import com.example.forhealth.network.RetrofitClient
 import com.example.forhealth.network.dto.food.*
 import com.example.forhealth.network.safeApiCall
@@ -12,12 +13,12 @@ import java.io.File
 
 /**
  * 食物数据仓库
- * 负责管理食物数据的获取（只返回DTO，不进行转换）
+ * 负责管理食物数据的获取（只返回DTO，不进
  */
 class FoodRepository {
-    
+
     private val apiService = RetrofitClient.apiService
-    
+
     /**
      * 搜索食物（薄荷健康数据库）
      * @param keyword 搜索关键词
@@ -38,7 +39,7 @@ class FoodRepository {
             )
         }
     }
-    
+
     /**
      * 通过食物名称搜索本地数据库（仅返回ID和名称）
      */
@@ -50,7 +51,7 @@ class FoodRepository {
             apiService.searchFoodById(keyword, limit)
         }
     }
-    
+
     /**
      * 根据ID获取食物详情
      */
@@ -59,7 +60,7 @@ class FoodRepository {
             apiService.getFood(foodId)
         }
     }
-    
+
     /**
      * 创建自定义食物
      */
@@ -92,7 +93,7 @@ class FoodRepository {
             } else {
                 null
             }
-            
+
             // 调用API，使用 Multipart 格式
             apiService.createFood(
                 name = name,
@@ -112,7 +113,7 @@ class FoodRepository {
             )
         }
     }
-    
+
     /**
      * 更新食物信息
      */
@@ -124,7 +125,7 @@ class FoodRepository {
             apiService.updateFood(foodId, request)
         }
     }
-    
+
     /**
      * 删除食物
      */
@@ -133,7 +134,7 @@ class FoodRepository {
             apiService.deleteFood(foodId)
         }
     }
-    
+
     /**
      * 更新食物图片
      */
@@ -151,7 +152,7 @@ class FoodRepository {
             apiService.updateFoodImage(foodId, imagePart)
         }
     }
-    
+
     /**
      * 创建食物记录
      */
@@ -162,7 +163,7 @@ class FoodRepository {
             apiService.createFoodRecord(request)
         }
     }
-    
+
     /**
      * 获取食物记录列表
      */
@@ -177,7 +178,7 @@ class FoodRepository {
             apiService.getFoodRecords(startDate, endDate, mealType, limit, offset)
         }
     }
-    
+
     /**
      * 获取某日的营养摘要
      */
@@ -188,7 +189,7 @@ class FoodRepository {
             apiService.getDailyNutrition(targetDate)
         }
     }
-    
+
     /**
      * 更新食物记录
      */
@@ -200,7 +201,7 @@ class FoodRepository {
             apiService.updateFoodRecord(recordId, request)
         }
     }
-    
+
     /**
      * 删除食物记录
      */
@@ -211,7 +212,7 @@ class FoodRepository {
             apiService.deleteFoodRecord(recordId)
         }
     }
-    
+
     /**
      * 从图片识别条形码
      */
@@ -228,7 +229,7 @@ class FoodRepository {
             apiService.recognizeBarcode(imagePart)
         }
     }
-    
+
     /**
      * 扫描条形码查询食品信息
      */
@@ -237,6 +238,27 @@ class FoodRepository {
     ): ApiResult<BarcodeScanResponse> {
         return safeApiCall {
             apiService.scanBarcode(barcode)
+        }
+    }
+
+    /**
+     * 拍照识别食品信息
+     */
+    suspend fun recognizeFood(
+        imageFile: File,
+        mealType: String? = null,
+        notes: String? = null,
+        recordedAt: String? = null
+    ): ApiResult<FoodRecognitionConfirmResponse> {
+        val requestFile = imageFile.asRequestBody("image/jpeg".toMediaTypeOrNull())
+        val body = MultipartBody.Part.createFormData("file", imageFile.name, requestFile)
+        return safeApiCall {
+            apiService.recognizeFood(
+                file = body,
+                mealType = mealType,
+                notes = notes,
+                recordedAt = recordedAt
+            )
         }
     }
 }

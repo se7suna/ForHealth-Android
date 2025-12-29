@@ -31,15 +31,30 @@ class RingProgressView @JvmOverloads constructor(
     private var current: Double = 0.0
     private var target: Double = 100.0
     
-    private val size: Float = resources.getDimension(R.dimen.progress_ring_size)
+    private val defaultSize: Float = resources.getDimension(R.dimen.progress_ring_size)
+    private var customSize: Float? = null
     private val backgroundStrokeWidth: Float = resources.getDimension(R.dimen.progress_ring_stroke_background)
     private val progressStrokeWidth: Float = resources.getDimension(R.dimen.progress_ring_stroke)
     
+    // Get the current size (custom or default)
+    private val size: Float
+        get() = customSize ?: defaultSize
+    
     // Center radius: the radius of the center line of the ring
     // This ensures both rings share the same center line
-    // Increase the center radius to make the inner radius larger (thinner ring)
-    // Use a larger offset to push the ring outward
-    private val centerRadius: Float = size / 2f - maxOf(backgroundStrokeWidth, progressStrokeWidth) / 2f + resources.getDimension(R.dimen.spacing_24)
+    // Calculate based on available space (container size)
+    private fun getCenterRadius(): Float {
+        val availableSize = if (customSize != null) {
+            customSize!!
+        } else {
+            // If no custom size, use measured dimensions if available
+            val measuredSize = minOf(width, height).toFloat()
+            if (measuredSize > 0) measuredSize else defaultSize
+        }
+        // Use most of the available space, leaving some padding for stroke width
+        val maxStrokeWidth = maxOf(backgroundStrokeWidth, progressStrokeWidth)
+        return (availableSize / 2f) - (maxStrokeWidth / 2f) - resources.getDimension(R.dimen.spacing_8)
+    }
     
     init {
         backgroundPaint.strokeWidth = backgroundStrokeWidth
@@ -52,16 +67,31 @@ class RingProgressView @JvmOverloads constructor(
         invalidate()
     }
     
+    fun setSize(sizeInPixels: Int) {
+        customSize = sizeInPixels.toFloat()
+        requestLayout()
+        invalidate()
+    }
+    
     override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
-        // Calculate the actual outer radius of the ring
-        // Outer radius = centerRadius + max(strokeWidth) / 2
-        val maxStrokeWidth = maxOf(backgroundStrokeWidth, progressStrokeWidth)
-        val outerRadius = centerRadius + maxStrokeWidth / 2f
-        val measuredSize = (outerRadius * 2).toInt()
-        setMeasuredDimension(
-            resolveSize(measuredSize, widthMeasureSpec),
-            resolveSize(measuredSize, heightMeasureSpec)
-        )
+        if (customSize != null) {
+            // If custom size is set, use it directly
+            val sizeInt = customSize!!.toInt()
+            setMeasuredDimension(
+                resolveSize(sizeInt, widthMeasureSpec),
+                resolveSize(sizeInt, heightMeasureSpec)
+            )
+        } else {
+            // Otherwise, calculate based on centerRadius
+            val maxStrokeWidth = maxOf(backgroundStrokeWidth, progressStrokeWidth)
+            val radius = getCenterRadius()
+            val outerRadius = radius + maxStrokeWidth / 2f
+            val measuredSize = (outerRadius * 2).toInt()
+            setMeasuredDimension(
+                resolveSize(measuredSize, widthMeasureSpec),
+                resolveSize(measuredSize, heightMeasureSpec)
+            )
+        }
     }
     
     override fun onDraw(canvas: Canvas) {
@@ -85,11 +115,12 @@ class RingProgressView @JvmOverloads constructor(
         
         // Set rect for drawing arcs
         // The rect is centered and uses centerRadius
+        val radius = getCenterRadius()
         rect.set(
-            centerX - centerRadius,
-            centerY - centerRadius,
-            centerX + centerRadius,
-            centerY + centerRadius
+            centerX - radius,
+            centerY - radius,
+            centerX + radius,
+            centerY + radius
         )
         
         // Draw background circle (full 360 degrees)

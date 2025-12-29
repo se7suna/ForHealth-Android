@@ -87,7 +87,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="-200dp"
-                android:layout_marginHorizontal="@dimen/spacing_24"
+                android:layout_marginHorizontal="@dimen/spacing_12"
                 app:cardCornerRadius="@dimen/card_radius"
                 app:cardElevation="@dimen/card_elevation">
 
@@ -129,21 +129,24 @@
                         <LinearLayout
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:gravity="center_vertical"
+                            android:gravity="center_vertical|start"
                             android:orientation="horizontal"
                             android:layout_marginTop="@dimen/spacing_32">
 
                             <!-- Ring Progress -->
                             <FrameLayout
+                                android:id="@+id/frameRingProgress"
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
-                                android:layout_marginEnd="@dimen/spacing_8">
+                                android:layout_marginStart="0dp"
+                                android:layout_marginEnd="0dp"
+                                android:padding="0dp">
 
                                 <com.example.forhealth.ui.views.RingProgressView
                                     android:id="@+id/ringProgress"
                                     android:layout_width="wrap_content"
                                     android:layout_height="wrap_content"
-                                    android:layout_gravity="center" />
+                                    android:layout_gravity="start|center_vertical" />
 
                                 <LinearLayout
                                     android:layout_width="wrap_content"
@@ -172,7 +175,7 @@
                                             android:layout_height="wrap_content"
                                             android:text="0"
                                             android:textColor="@color/emerald_500"
-                                            android:textSize="@dimen/text_size_base"
+                                            android:textSize="@dimen/text_size_sm"
                                             android:textStyle="bold" />
                                     </LinearLayout>
 
@@ -182,7 +185,7 @@
                                         android:layout_height="wrap_content"
                                         android:text="0"
                                         android:textColor="@color/text_primary"
-                                        android:textSize="@dimen/text_size_4xl"
+                                        android:textSize="@dimen/text_size_3xl"
                                         android:textStyle="bold" />
 
                                     <LinearLayout
@@ -205,7 +208,7 @@
                                             android:layout_height="wrap_content"
                                             android:text="0"
                                             android:textColor="@color/orange_500"
-                                            android:textSize="@dimen/text_size_base"
+                                            android:textSize="@dimen/text_size_sm"
                                             android:textStyle="bold" />
                                     </LinearLayout>
                                 </LinearLayout>
@@ -215,7 +218,7 @@
                             <LinearLayout
                                 android:layout_width="0dp"
                                 android:layout_height="wrap_content"
-                                android:layout_marginStart="@dimen/spacing_20"
+                                android:layout_marginStart="@dimen/spacing_8"
                                 android:layout_weight="1"
                                 android:orientation="vertical"
                                 android:gravity="center_vertical">
@@ -240,23 +243,30 @@
                                             android:src="@drawable/ic_wheat"
                                             app:tint="@color/slate_500" />
 
-                                        <TextView
+                                        <LinearLayout
                                             android:layout_width="0dp"
                                             android:layout_height="wrap_content"
-                                            android:layout_marginStart="@dimen/spacing_4"
                                             android:layout_weight="1"
-                                            android:text="@string/carbs"
-                                            android:textColor="@color/text_secondary"
-                                            android:textSize="@dimen/text_size_xs" />
+                                            android:layout_marginStart="@dimen/spacing_4"
+                                            android:orientation="vertical"
+                                            android:gravity="end">
 
-                                        <TextView
-                                            android:id="@+id/tvCarbs"
-                                            android:layout_width="wrap_content"
-                                            android:layout_height="wrap_content"
-                                            android:text="0/250g"
-                                            android:textColor="@color/text_primary"
-                                            android:textSize="@dimen/text_size_base"
-                                            android:textStyle="bold" />
+                                            <TextView
+                                                android:layout_width="wrap_content"
+                                                android:layout_height="wrap_content"
+                                                android:text="@string/carbs"
+                                                android:textColor="@color/text_secondary"
+                                                android:textSize="@dimen/text_size_xs" />
+
+                                            <TextView
+                                                android:id="@+id/tvCarbs"
+                                                android:layout_width="wrap_content"
+                                                android:layout_height="wrap_content"
+                                                android:text="0/250g"
+                                                android:textColor="@color/text_primary"
+                                                android:textSize="@dimen/text_size_sm"
+                                                android:textStyle="bold" />
+                                        </LinearLayout>
                                     </LinearLayout>
 
                                     <com.example.forhealth.ui.views.ProgressBarView
@@ -285,23 +295,30 @@
                                             android:src="@drawable/ic_droplet"
                                             app:tint="@color/slate_500" />
 
-                                        <TextView
+                                        <LinearLayout
                                             android:layout_width="0dp"
                                             android:layout_height="wrap_content"
-                                            android:layout_marginStart="@dimen/spacing_4"
                                             android:layout_weight="1"
-                                            android:text="@string/fat"
-                                            android:textColor="@color/text_secondary"
-                                            android:textSize="@dimen/text_size_xs" />
+                                            android:layout_marginStart="@dimen/spacing_4"
+                                            android:orientation="vertical"
+                                            android:gravity="end">
 
-                                        <TextView
-                                            android:id="@+id/tvFat"
-                                            android:layout_width="wrap_content"
-                                            android:layout_height="wrap_content"
-                                            android:text="0/70g"
-                                            android:textColor="@color/text_primary"
-                                            android:textSize="@dimen/text_size_base"
-                                            android:textStyle="bold" />
+                                            <TextView
+                                                android:layout_width="wrap_content"
+                                                android:layout_height="wrap_content"
+                                                android:text="@string/fat"
+                                                android:textColor="@color/text_secondary"
+                                                android:textSize="@dimen/text_size_xs" />
+
+                                            <TextView
+                                                android:id="@+id/tvFat"
+                                                android:layout_width="wrap_content"
+                                                android:layout_height="wrap_content"
+                                                android:text="0/70g"
+                                                android:textColor="@color/text_primary"
+                                                android:textSize="@dimen/text_size_sm"
+                                                android:textStyle="bold" />
+                                        </LinearLayout>
                                     </LinearLayout>
 
                                     <com.example.forhealth.ui.views.ProgressBarView
@@ -329,23 +346,30 @@
                                             android:src="@drawable/ic_activity"
                                             app:tint="@color/slate_500" />
 
-                                        <TextView
+                                        <LinearLayout
                                             android:layout_width="0dp"
                                             android:layout_height="wrap_content"
-                                            android:layout_marginStart="@dimen/spacing_4"
                                             android:layout_weight="1"
-                                            android:text="@string/protein"
-                                            android:textColor="@color/text_secondary"
-                                            android:textSize="@dimen/text_size_xs" />
+                                            android:layout_marginStart="@dimen/spacing_4"
+                                            android:orientation="vertical"
+                                            android:gravity="end">
 
-                                        <TextView
-                                            android:id="@+id/tvProtein"
-                                            android:layout_width="wrap_content"
-                                            android:layout_height="wrap_content"
-                                            android:text="0/150g"
-                                            android:textColor="@color/text_primary"
-                                            android:textSize="@dimen/text_size_base"
-                                            android:textStyle="bold" />
+                                            <TextView
+                                                android:layout_width="wrap_content"
+                                                android:layout_height="wrap_content"
+                                                android:text="@string/protein"
+                                                android:textColor="@color/text_secondary"
+                                                android:textSize="@dimen/text_size_xs" />
+
+                                            <TextView
+                                                android:id="@+id/tvProtein"
+                                                android:layout_width="wrap_content"
+                                                android:layout_height="wrap_content"
+                                                android:text="0/150g"
+                                                android:textColor="@color/text_primary"
+                                                android:textSize="@dimen/text_size_sm"
+                                                android:textStyle="bold" />
+                                        </LinearLayout>
                                     </LinearLayout>
 
                                     <com.example.forhealth.ui.views.ProgressBarView
@@ -688,7 +712,7 @@
                                         android:id="@+id/tvMacroProtein"
                                         android:layout_width="wrap_content"
                                         android:layout_height="wrap_content"
-                                        android:text="Protein: 0%"
+                                        android:text="蛋白质: 0%"
                                         android:textColor="@color/text_secondary"
                                         android:textSize="@dimen/text_size_sm"
                                         android:textStyle="bold"
@@ -698,7 +722,7 @@
                                         android:id="@+id/tvMacroCarbs"
                                         android:layout_width="wrap_content"
                                         android:layout_height="wrap_content"
-                                        android:text="Carbs: 0%"
+                                        android:text="碳水: 0%"
                                         android:textColor="@color/text_secondary"
                                         android:textSize="@dimen/text_size_sm"
                                         android:textStyle="bold"
@@ -708,7 +732,7 @@
                                         android:id="@+id/tvMacroFat"
                                         android:layout_width="wrap_content"
                                         android:layout_height="wrap_content"
-                                        android:text="Fat: 0%"
+                                        android:text="脂肪: 0%"
                                         android:textColor="@color/text_secondary"
                                         android:textSize="@dimen/text_size_sm"
                                         android:textStyle="bold" />
@@ -756,7 +780,7 @@
                                             android:layout_height="wrap_content"
                                             android:text="0 kcal"
                                             android:textColor="@color/emerald_600"
-                                            android:textSize="@dimen/text_size_2xl"
+                                            android:textSize="@dimen/text_size_lg"
                                             android:textStyle="bold" />
                                     </LinearLayout>
                                 </androidx.cardview.widget.CardView>
@@ -794,7 +818,7 @@
                                             android:layout_height="wrap_content"
                                             android:text="0 kcal"
                                             android:textColor="@color/orange_600"
-                                            android:textSize="@dimen/text_size_2xl"
+                                            android:textSize="@dimen/text_size_lg"
                                             android:textStyle="bold" />
                                     </LinearLayout>
                                 </androidx.cardview.widget.CardView>
@@ -831,7 +855,7 @@
                                             android:layout_height="wrap_content"
                                             android:text="0 kcal"
                                             android:textColor="@color/slate_700"
-                                            android:textSize="@dimen/text_size_2xl"
+                                            android:textSize="@dimen/text_size_lg"
                                             android:textStyle="bold" />
                                     </LinearLayout>
                                 </androidx.cardview.widget.CardView>
@@ -861,7 +885,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginBottom="@dimen/spacing_12"
-            android:text="Exercise"
+            android:text="运动"
             android:textColor="@color/white"
             android:textStyle="bold"
             android:textSize="@dimen/text_size_sm"
@@ -877,7 +901,7 @@
             android:id="@+id/btnFabFood"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Meal"
+            android:text="餐食"
             android:textColor="@color/white"
             android:textStyle="bold"
             android:textSize="@dimen/text_size_sm"

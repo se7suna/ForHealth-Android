@@ -382,6 +382,7 @@ class AddMealFragment : DialogFragment() {
             onQuantityInput = { foodId, value -> handleQuantityInput(foodId, value) },
             onQuantityBlur = { foodId -> handleQuantityBlur(foodId) },
             onRemove = { foodId -> removeItem(foodId) },
+            onPickImage = { /* 添加界面暂不支持改图 */ },
             calculateMacros = { item -> calculateItemMacros(item).calories }
         )
         
@@ -401,11 +402,27 @@ class AddMealFragment : DialogFragment() {
             binding.layoutCartFooter.visibility = View.VISIBLE
             binding.btnAddNowCollapsed.visibility = View.GONE
             binding.ivCartChevron.setImageResource(R.drawable.ic_chevron_down)
+            // 购物车展开时，增加底部padding（最大高度400dp + 头部 + 底部按钮）
+            val expandedCartPadding = (500 * resources.displayMetrics.density).toInt()
+            binding.rvFoodList.setPadding(
+                binding.rvFoodList.paddingLeft,
+                binding.rvFoodList.paddingTop,
+                binding.rvFoodList.paddingRight,
+                expandedCartPadding
+            )
         } else {
             binding.scrollCartContent.visibility = View.GONE
             binding.layoutCartFooter.visibility = View.GONE
             binding.btnAddNowCollapsed.visibility = View.VISIBLE
             binding.ivCartChevron.setImageResource(R.drawable.ic_chevron_up)
+            // 购物车收起时，使用较小的底部padding（只考虑购物车头部）
+            val collapsedCartPadding = (120 * resources.displayMetrics.density).toInt()
+            binding.rvFoodList.setPadding(
+                binding.rvFoodList.paddingLeft,
+                binding.rvFoodList.paddingTop,
+                binding.rvFoodList.paddingRight,
+                collapsedCartPadding
+            )
         }
     }
     
@@ -489,6 +506,7 @@ class AddMealFragment : DialogFragment() {
             onQuantityInput = { foodId, value -> handleQuantityInput(foodId, value) },
             onQuantityBlur = { foodId -> handleQuantityBlur(foodId) },
             onRemove = { foodId -> removeItem(foodId) },
+            onPickImage = { /* 添加界面暂不支持改图 */ },
             calculateMacros = { item -> calculateItemMacros(item).calories }
         )
         binding.rvCartItems.adapter = cartAdapter
@@ -497,6 +515,13 @@ class AddMealFragment : DialogFragment() {
     private fun updateCart() {
         if (selectedItems.isEmpty()) {
             binding.layoutCart.visibility = View.GONE
+            // 移除食物列表的底部padding
+            binding.rvFoodList.setPadding(
+                binding.rvFoodList.paddingLeft,
+                binding.rvFoodList.paddingTop,
+                binding.rvFoodList.paddingRight,
+                0
+            )
         } else {
             binding.layoutCart.visibility = View.VISIBLE
             
@@ -518,6 +543,16 @@ class AddMealFragment : DialogFragment() {
             if (!isCartExpanded) {
                 binding.btnAddNowCollapsed.visibility = View.VISIBLE
             }
+            
+            // 添加食物列表的底部padding，避免被购物车遮挡
+            // 购物车最小高度96dp，加上一些额外空间，使用120dp
+            val cartPadding = (120 * resources.displayMetrics.density).toInt()
+            binding.rvFoodList.setPadding(
+                binding.rvFoodList.paddingLeft,
+                binding.rvFoodList.paddingTop,
+                binding.rvFoodList.paddingRight,
+                cartPadding
+            )
         }
     }
     

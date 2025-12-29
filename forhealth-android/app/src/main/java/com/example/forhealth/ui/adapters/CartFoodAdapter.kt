@@ -22,6 +22,7 @@ class CartFoodAdapter(
     private val onQuantityInput: (String, String) -> Unit,
     private val onQuantityBlur: (String) -> Unit,
     private val onRemove: (String) -> Unit,
+    private val onPickImage: (String) -> Unit,
     private val calculateMacros: (SelectedFoodItem) -> Double
 ) : RecyclerView.Adapter<CartFoodAdapter.ViewHolder>() {
 
@@ -53,6 +54,9 @@ class CartFoodAdapter(
             placeholder(R.color.slate_100)
             error(R.color.slate_100)
         }
+        holder.ivCartFoodImage.setOnClickListener {
+            onPickImage(item.foodItem.id)
+        }
         
         // 设置名称
         holder.tvCartFoodName.text = item.foodItem.name
@@ -65,7 +69,7 @@ class CartFoodAdapter(
         
         // 设置卡路里
         val calories = calculateMacros(item)
-        holder.tvCartCalories.text = "${calories.toInt()} kcal"
+        holder.tvCartCalories.text = "${calories.toInt()} 千卡"
         
         // 删除按钮
         holder.btnRemove.setOnClickListener {
@@ -79,9 +83,9 @@ class CartFoodAdapter(
         
         val foodId = item.foodItem.id
         
-        // Unit 按钮 - 将"份"和"克"统一显示为"serve"
+        // Unit 按钮 - 将"份"和"克"统一显示为"份"
         val unitText = when (item.foodItem.unit) {
-            "份", "克" -> "serve"
+            "份", "克" -> "份"
             else -> item.foodItem.unit
         }
         val unitButton = TextView(holder.itemView.context).apply {
@@ -101,9 +105,9 @@ class CartFoodAdapter(
             }
         }
         
-        // Gram 按钮 - 改为"grams"
+        // Gram 按钮 - 改为"克"
         val gramButton = TextView(holder.itemView.context).apply {
-            text = "grams"
+            text = "克"
             setPadding(
                 holder.itemView.context.resources.getDimensionPixelSize(R.dimen.spacing_8),
                 holder.itemView.context.resources.getDimensionPixelSize(R.dimen.spacing_4),

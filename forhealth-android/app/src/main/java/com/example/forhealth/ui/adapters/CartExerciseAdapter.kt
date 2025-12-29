@@ -52,11 +52,11 @@ class CartExerciseAdapter(
         
         // 设置名称和信息
         holder.tvCartExerciseName.text = item.exerciseItem.name
-        holder.tvCartExerciseInfo.text = "${item.exerciseItem.caloriesPerUnit.toInt()} kcal/min"
+        holder.tvCartExerciseInfo.text = "${item.exerciseItem.caloriesPerUnit.toInt()} MET"
         
         // 设置卡路里
         val calories = calculateCalories(item)
-        holder.tvCartCalories.text = "Total: ${calories.toInt()} kcal"
+        holder.tvCartCalories.text = "总计: ${calories.toInt()} 千卡"
         
         // 删除按钮
         holder.btnRemove.setOnClickListener {

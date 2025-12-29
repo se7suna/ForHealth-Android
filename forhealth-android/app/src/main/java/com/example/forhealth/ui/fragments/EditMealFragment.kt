@@ -6,6 +6,7 @@ import android.text.TextWatcher
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.fragment.app.DialogFragment
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.lifecycleScope
@@ -39,6 +40,7 @@ class EditMealFragment : DialogFragment() {
     private var currentQuery: String = ""
     private var isCartExpanded = false
     private var originalMealGroup: MealGroup? = null
+    private var pendingImageFoodId: String? = null
     
     private lateinit var foodAdapter: FoodListAdapter
     private lateinit var cartAdapter: CartFoodAdapter
@@ -414,6 +416,7 @@ class EditMealFragment : DialogFragment() {
             onQuantityInput = { foodId, value -> handleQuantityInput(foodId, value) },
             onQuantityBlur = { foodId -> handleQuantityBlur(foodId) },
             onRemove = { foodId -> removeItem(foodId) },
+            onPickImage = { foodId -> pickImageFor(foodId) },
             calculateMacros = { item -> calculateItemMacros(item).calories }
         )
         
@@ -515,6 +518,7 @@ class EditMealFragment : DialogFragment() {
             onQuantityInput = { foodId, value -> handleQuantityInput(foodId, value) },
             onQuantityBlur = { foodId -> handleQuantityBlur(foodId) },
             onRemove = { foodId -> removeItem(foodId) },
+            onPickImage = { foodId -> pickImageFor(foodId) },
             calculateMacros = { item -> calculateItemMacros(item).calories }
         )
         binding.rvCartItems.adapter = cartAdapter
@@ -672,6 +676,22 @@ class EditMealFragment : DialogFragment() {
     override fun onDestroyView() {
         super.onDestroyView()
         _binding = null
+    }
+
+    private val pickImageLauncher = registerForActivityResult(ActivityResultContracts.GetContent()) { uri ->
+        val targetId = pendingImageFoodId
+        pendingImageFoodId = null
+        if (uri != null && targetId != null) {
+            val item = selectedItems.find { it.foodItem.id == targetId } ?: return@registerForActivityResult
+            item.foodItem = item.foodItem.copy(image = uri.toString())
+            updateCartAdapter()
+            updateCart()
+        }
+    }
+
+    private fun pickImageFor(foodId: String) {
+        pendingImageFoodId = foodId
+        pickImageLauncher.launch("image/*")
     }
     
     private data class MacroResult(

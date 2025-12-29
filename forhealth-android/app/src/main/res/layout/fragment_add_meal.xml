@@ -13,7 +13,9 @@
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="vertical">
+            android:orientation="vertical"
+            android:paddingBottom="320dp"
+            android:clipToPadding="false">
 
             <!-- Header -->
             <LinearLayout
@@ -148,12 +150,13 @@
             </LinearLayout>
 
             <!-- Food List -->
-            <androidx.recyclerview.widget.RecyclerView
-                android:id="@+id/rvFoodList"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:padding="@dimen/spacing_24"
-                android:clipToPadding="false" />
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/rvFoodList"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:padding="@dimen/spacing_24"
+            android:paddingBottom="320dp"
+            android:clipToPadding="false" />
         </LinearLayout>
     </androidx.core.widget.NestedScrollView>
 

@@ -49,10 +49,10 @@
                     android:orientation="vertical"
                     android:layout_marginTop="0dp"
                     android:background="@drawable/bg_emerald_500"
-                android:paddingStart="@dimen/spacing_16"
-                android:paddingEnd="@dimen/spacing_16"
-                android:paddingTop="@dimen/spacing_8"
-                android:paddingBottom="@dimen/spacing_8">
+                    android:paddingStart="@dimen/spacing_16"
+                    android:paddingEnd="@dimen/spacing_16"
+                    android:paddingTop="@dimen/spacing_8"
+                    android:paddingBottom="@dimen/spacing_8">
 
                     <!-- Avatar -->
                     <FrameLayout
@@ -91,10 +91,10 @@
                     android:gravity="center"
                     android:orientation="horizontal"
                     android:background="@drawable/bg_emerald_500"
-                android:paddingStart="@dimen/spacing_16"
-                android:paddingEnd="@dimen/spacing_16"
-                android:paddingTop="@dimen/spacing_8"
-                android:paddingBottom="@dimen/spacing_8">
+                    android:paddingStart="@dimen/spacing_16"
+                    android:paddingEnd="@dimen/spacing_16"
+                    android:paddingTop="@dimen/spacing_8"
+                    android:paddingBottom="@dimen/spacing_8">
 
                     <!-- Weight -->
                     <LinearLayout
@@ -282,10 +282,10 @@
                         </LinearLayout>
 
                         <!-- Goals List -->
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:orientation="vertical">
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:orientation="vertical">
 
                             <!-- Activity Level -->
                             <LinearLayout
@@ -309,6 +309,39 @@
                                     android:layout_width="wrap_content"
                                     android:layout_height="wrap_content"
                                     android:text="Moderately Active"
+                                    android:textColor="@color/text_primary"
+                                    android:textSize="@dimen/text_size_lg"
+                                    android:textStyle="bold" />
+                            </LinearLayout>
+
+                            <View
+                                android:layout_width="match_parent"
+                                android:layout_height="1dp"
+                                android:background="@color/slate_50"
+                                android:layout_marginBottom="@dimen/spacing_4" />
+
+                            <!-- Health Goal Type -->
+                            <LinearLayout
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:gravity="center_vertical"
+                                android:orientation="horizontal"
+                                android:paddingVertical="@dimen/spacing_8"
+                                android:layout_marginBottom="@dimen/spacing_4">
+
+                                <TextView
+                                    android:layout_width="0dp"
+                                    android:layout_height="wrap_content"
+                                    android:layout_weight="1"
+                                    android:text="Health Goal"
+                                    android:textColor="@color/text_secondary"
+                                    android:textSize="@dimen/text_size_base" />
+
+                                <TextView
+                                    android:id="@+id/tvHealthGoalType"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="--"
                                     android:textColor="@color/text_primary"
                                     android:textSize="@dimen/text_size_lg"
                                     android:textStyle="bold" />
@@ -543,3 +576,4 @@
         </LinearLayout>
     </androidx.core.widget.NestedScrollView>
 </androidx.coordinatorlayout.widget.CoordinatorLayout>
+

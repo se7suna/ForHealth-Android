@@ -8,7 +8,8 @@
     <androidx.core.widget.NestedScrollView
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:fillViewport="true">
+        android:fillViewport="true"
+        android:paddingBottom="@dimen/spacing_24">
 
         <LinearLayout
             android:layout_width="match_parent"
@@ -227,6 +228,40 @@
                         </LinearLayout>
                     </LinearLayout>
 
+                    <!-- Current Weight -->
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="当前体重 (kg)"
+                        android:textColor="@color/text_primary"
+                        android:textSize="@dimen/text_size_base"
+                        android:textStyle="bold"
+                        android:layout_marginBottom="@dimen/spacing_8" />
+
+                    <com.google.android.material.textfield.TextInputLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginBottom="@dimen/spacing_16"
+                        app:boxBackgroundMode="filled"
+                        app:boxBackgroundColor="@color/slate_50"
+                        app:boxCornerRadiusTopStart="@dimen/card_radius"
+                        app:boxCornerRadiusTopEnd="@dimen/card_radius"
+                        app:boxCornerRadiusBottomStart="@dimen/card_radius"
+                        app:boxCornerRadiusBottomEnd="@dimen/card_radius"
+                        app:boxStrokeWidth="0dp"
+                        app:boxStrokeWidthFocused="2dp"
+                        app:boxStrokeColor="@color/emerald_500">
+
+                        <com.google.android.material.textfield.TextInputEditText
+                            android:id="@+id/etWeight"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:inputType="numberDecimal"
+                            android:textSize="@dimen/text_size_lg"
+                            android:textStyle="bold"
+                            android:padding="@dimen/spacing_16" />
+                    </com.google.android.material.textfield.TextInputLayout>
+
                     <!-- Gender -->
                     <TextView
                         android:layout_width="wrap_content"
@@ -295,6 +330,42 @@
 
                         <com.google.android.material.textfield.TextInputEditText
                             android:id="@+id/etActivityLevel"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:inputType="none"
+                            android:textSize="@dimen/text_size_lg"
+                            android:textStyle="bold"
+                            android:padding="@dimen/spacing_16"
+                            android:focusable="false"
+                            android:clickable="true" />
+                    </com.google.android.material.textfield.TextInputLayout>
+
+                    <!-- Health Goal Type -->
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="健康目标"
+                        android:textColor="@color/text_primary"
+                        android:textSize="@dimen/text_size_base"
+                        android:textStyle="bold"
+                        android:layout_marginBottom="@dimen/spacing_8" />
+
+                    <com.google.android.material.textfield.TextInputLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginBottom="@dimen/spacing_16"
+                        app:boxBackgroundMode="filled"
+                        app:boxBackgroundColor="@color/slate_50"
+                        app:boxCornerRadiusTopStart="@dimen/card_radius"
+                        app:boxCornerRadiusTopEnd="@dimen/card_radius"
+                        app:boxCornerRadiusBottomStart="@dimen/card_radius"
+                        app:boxCornerRadiusBottomEnd="@dimen/card_radius"
+                        app:boxStrokeWidth="0dp"
+                        app:boxStrokeWidthFocused="2dp"
+                        app:boxStrokeColor="@color/emerald_500">
+
+                        <com.google.android.material.textfield.TextInputEditText
+                            android:id="@+id/etGoalType"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:inputType="none"
@@ -400,6 +471,11 @@
                     </LinearLayout>
                 </LinearLayout>
             </LinearLayout>
+
+            <!-- Spacer to avoid overlap with bottom save button -->
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="@dimen/spacing_96" />
         </LinearLayout>
     </androidx.core.widget.NestedScrollView>
 
@@ -427,4 +503,3 @@
     </LinearLayout>
 
 </androidx.coordinatorlayout.widget.CoordinatorLayout>
-

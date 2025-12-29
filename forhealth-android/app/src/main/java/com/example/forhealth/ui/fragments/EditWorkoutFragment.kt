@@ -15,6 +15,8 @@ import com.example.forhealth.ui.adapters.CartExerciseAdapter
 import com.example.forhealth.ui.adapters.ExerciseListAdapter
 import com.example.forhealth.utils.Constants
 import com.example.forhealth.utils.DateUtils
+import com.example.forhealth.utils.CalculationUtils
+import com.example.forhealth.utils.ProfileManager
 import com.google.android.material.button.MaterialButton
 import java.util.*
 
@@ -257,7 +259,9 @@ class EditWorkoutFragment : DialogFragment() {
             onDurationInput = { exerciseId, value -> handleDurationInput(exerciseId, value) },
             onDurationBlur = { exerciseId -> handleDurationBlur(exerciseId) },
             onRemove = { exerciseId -> removeItem(exerciseId) },
-            calculateCalories = { item -> item.exerciseItem.caloriesPerUnit * item.count }
+            calculateCalories = { item ->
+                CalculationUtils.calculateExerciseCalories(item.exerciseItem, item.count, currentUserWeight())
+            }
         )
         
         binding.rvCartItems.layoutManager = LinearLayoutManager(requireContext())
@@ -331,7 +335,9 @@ class EditWorkoutFragment : DialogFragment() {
             onDurationInput = { exerciseId, value -> handleDurationInput(exerciseId, value) },
             onDurationBlur = { exerciseId -> handleDurationBlur(exerciseId) },
             onRemove = { exerciseId -> removeItem(exerciseId) },
-            calculateCalories = { item -> item.exerciseItem.caloriesPerUnit * item.count }
+            calculateCalories = { item ->
+                CalculationUtils.calculateExerciseCalories(item.exerciseItem, item.count, currentUserWeight())
+            }
         )
         binding.rvCartItems.adapter = cartAdapter
     }
@@ -351,7 +357,9 @@ class EditWorkoutFragment : DialogFragment() {
             binding.layoutCart.visibility = View.VISIBLE
             binding.layoutDeleteButton.visibility = View.GONE
             
-            val totalBurn = selectedItems.sumOf { it.exerciseItem.caloriesPerUnit * it.count }
+            val totalBurn = selectedItems.sumOf {
+                CalculationUtils.calculateExerciseCalories(it.exerciseItem, it.count, currentUserWeight())
+            }
             binding.tvCartTotalCalories.text = "${totalBurn.toInt()} kcal"
             
             if (selectedItems.size > 0) {
@@ -399,9 +407,13 @@ class EditWorkoutFragment : DialogFragment() {
             ActivityItem(
                 id = UUID.randomUUID().toString(),
                 name = item.exerciseItem.name,
-                caloriesBurned = item.exerciseItem.caloriesPerUnit * item.count,
+                caloriesBurned = CalculationUtils.calculateExerciseCalories(
+                    item.exerciseItem,
+                    item.count,
+                    currentUserWeight()
+                ),
                 duration = item.count.toInt(),
-                time = originalWorkoutGroup?.time ?: DateUtils.getCurrentTime(),
+                time = originalWorkoutGroup?.time ?: DateUtils.getCurrentDateTimeIso(),
                 type = item.exerciseItem.category,
                 image = item.exerciseItem.image
             )
@@ -410,7 +422,7 @@ class EditWorkoutFragment : DialogFragment() {
         val workoutGroup = WorkoutGroup(
             id = originalWorkoutGroup?.id ?: UUID.randomUUID().toString(),
             activities = activities,
-            time = originalWorkoutGroup?.time ?: DateUtils.getCurrentTime()
+            time = originalWorkoutGroup?.time ?: DateUtils.getCurrentDateTimeIso()
         )
         
         onWorkoutUpdatedListener?.invoke(workoutGroup)
@@ -420,6 +432,10 @@ class EditWorkoutFragment : DialogFragment() {
     override fun onDestroyView() {
         super.onDestroyView()
         _binding = null
+    }
+
+    private fun currentUserWeight(): Double {
+        return ProfileManager.getProfile(requireContext())?.weight ?: 70.0
     }
 }
 
